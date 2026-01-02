@@ -408,3 +408,97 @@ header h1 {
 .back-btn:hover {
     background: rgba(255, 255, 255, 0.3);
 }
+
+/* 로딩 표시 */
+.loading {
+    color: #00d4ff;
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+}
+
+.loading.hidden {
+    display: none;
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-primary:disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+/* D3.js 지도 스타일 */
+#map-svg {
+    width: 100%;
+    height: 600px;
+}
+
+.province {
+    stroke: #fff;
+    stroke-width: 1.5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.province:hover {
+    stroke-width: 3px;
+    filter: brightness(1.2);
+}
+
+.district {
+    stroke: #fff;
+    stroke-width: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.district:hover {
+    stroke-width: 2px;
+    filter: brightness(1.2);
+}
+
+.region-label {
+    font-size: 12px;
+    fill: #fff;
+    pointer-events: none;
+    text-anchor: middle;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8);
+}
+
+.district-label {
+    font-size: 9px;
+    fill: #fff;
+    pointer-events: none;
+    text-anchor: middle;
+    font-weight: 500;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.9);
+}
+
+/* 선택 상태 */
+.province.selected, .district.selected {
+    stroke: #00d4ff;
+    stroke-width: 3px;
+}
+
+.province.correct, .district.correct {
+    fill: #4ade80 !important;
+    stroke: #22c55e;
+    stroke-width: 3px;
+}
+
+.province.incorrect, .district.incorrect {
+    fill: #ef4444 !important;
+    stroke: #dc2626;
+    stroke-width: 3px;
+}
+
+.province.highlight, .district.highlight {
+    fill: #fbbf24 !important;
+    stroke: #f59e0b;
+    stroke-width: 3px;
+}

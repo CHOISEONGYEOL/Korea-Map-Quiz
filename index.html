@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>대한민국 지도 퀴즈</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -42,7 +43,8 @@
                         <li>각 문제당 <strong>5초</strong> 제한시간!</li>
                     </ol>
                 </div>
-                <button id="start-btn" class="btn-primary">게임 시작</button>
+                <div id="loading" class="loading">지도 데이터 로딩 중...</div>
+                <button id="start-btn" class="btn-primary" disabled>게임 시작</button>
             </div>
 
             <div id="game-screen" class="screen">
@@ -51,7 +53,7 @@
                     <p id="step-indicator" class="step-indicator"></p>
                 </div>
                 <div id="map-container" class="map-container">
-                    <!-- SVG 지도가 여기에 렌더링됩니다 -->
+                    <svg id="map-svg"></svg>
                 </div>
                 <div id="feedback" class="feedback"></div>
             </div>
@@ -71,7 +73,6 @@
         </main>
     </div>
 
-    <script src="mapData.js"></script>
     <script src="game.js"></script>
 </body>
 </html>

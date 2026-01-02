@@ -1,4 +1,54 @@
-// 게임 상태 관리
+// 대한민국 지도 퀴즈 - D3.js 버전
+
+// GeoJSON 데이터 URL (raqoon886/Local_HangJeongDong)
+const GEOJSON_BASE_URL = 'https://raw.githubusercontent.com/raqoon886/Local_HangJeongDong/master/';
+
+// 시도별 GeoJSON 파일명
+const PROVINCE_FILES = {
+    '서울특별시': 'hangjeongdong_서울특별시.geojson',
+    '부산광역시': 'hangjeongdong_부산광역시.geojson',
+    '대구광역시': 'hangjeongdong_대구광역시.geojson',
+    '인천광역시': 'hangjeongdong_인천광역시.geojson',
+    '광주광역시': 'hangjeongdong_광주광역시.geojson',
+    '대전광역시': 'hangjeongdong_대전광역시.geojson',
+    '울산광역시': 'hangjeongdong_울산광역시.geojson',
+    '세종특별자치시': 'hangjeongdong_세종특별자치시.geojson',
+    '경기도': 'hangjeongdong_경기도.geojson',
+    '강원도': 'hangjeongdong_강원도.geojson',
+    '충청북도': 'hangjeongdong_충청북도.geojson',
+    '충청남도': 'hangjeongdong_충청남도.geojson',
+    '전라북도': 'hangjeongdong_전라북도.geojson',
+    '전라남도': 'hangjeongdong_전라남도.geojson',
+    '경상북도': 'hangjeongdong_경상북도.geojson',
+    '경상남도': 'hangjeongdong_경상남도.geojson',
+    '제주특별자치도': 'hangjeongdong_제주특별자치도.geojson'
+};
+
+// 시도별 색상
+const PROVINCE_COLORS = {
+    '서울특별시': '#FF6B6B',
+    '부산광역시': '#4ECDC4',
+    '대구광역시': '#9B59B6',
+    '인천광역시': '#3498DB',
+    '광주광역시': '#E67E22',
+    '대전광역시': '#F1C40F',
+    '울산광역시': '#1ABC9C',
+    '세종특별자치시': '#2980B9',
+    '경기도': '#27AE60',
+    '강원도': '#8E44AD',
+    '충청북도': '#D35400',
+    '충청남도': '#C0392B',
+    '전라북도': '#2ECC71',
+    '전라남도': '#1E8449',
+    '경상북도': '#B8860B',
+    '경상남도': '#8B4513',
+    '제주특별자치도': '#FF7F50'
+};
+
+// 북부/남부 구분이 필요한 도 지역
+const LARGE_PROVINCES = ['경기도', '강원도', '충청북도', '충청남도', '전라북도', '전라남도', '경상북도', '경상남도'];
+
+// 게임 상태
 const GameState = {
     IDLE: 'idle',
     SELECT_PROVINCE: 'select_province',
@@ -9,10 +59,13 @@ const GameState = {
 
 class KoreaMapQuiz {
     constructor() {
+        this.geoData = {};           // 시도별 GeoJSON 데이터
+        this.provinceGeoData = null; // 시도 경계 데이터 (병합된)
+        this.allDistricts = [];      // 모든 시군구 목록
         this.score = 0;
         this.currentQuestion = 0;
         this.totalQuestions = 10;
-        this.timeLimit = 5000; // 5초
+        this.timeLimit = 5000;
         this.timer = null;
         this.timeRemaining = 5000;
         this.state = GameState.IDLE;
@@ -22,8 +75,13 @@ class KoreaMapQuiz {
         this.questions = [];
         this.results = [];
 
+        this.svg = null;
+        this.projection = null;
+        this.path = null;
+
         this.initElements();
         this.initEventListeners();
+        this.loadAllGeoData();
     }
 
     initElements() {
@@ -32,6 +90,7 @@ class KoreaMapQuiz {
         this.resultScreen = document.getElementById('result-screen');
         this.startBtn = document.getElementById('start-btn');
         this.restartBtn = document.getElementById('restart-btn');
+        this.loadingEl = document.getElementById('loading');
         this.scoreEl = document.getElementById('score');
         this.questionNumEl = document.getElementById('question-num');
         this.timerEl = document.getElementById('timer');
@@ -39,6 +98,7 @@ class KoreaMapQuiz {
         this.questionTextEl = document.getElementById('question-text');
         this.stepIndicatorEl = document.getElementById('step-indicator');
         this.mapContainer = document.getElementById('map-container');
+        this.mapSvg = document.getElementById('map-svg');
         this.feedbackEl = document.getElementById('feedback');
         this.finalScoreEl = document.getElementById('final-score');
         this.resultDetailsEl = document.getElementById('result-details');
@@ -47,6 +107,108 @@ class KoreaMapQuiz {
     initEventListeners() {
         this.startBtn.addEventListener('click', () => this.startGame());
         this.restartBtn.addEventListener('click', () => this.startGame());
+    }
+
+    async loadAllGeoData() {
+        this.loadingEl.textContent = '지도 데이터 로딩 중... (0/17)';
+
+        let loaded = 0;
+        const total = Object.keys(PROVINCE_FILES).length;
+
+        try {
+            // 모든 시도 데이터 병렬 로드
+            const promises = Object.entries(PROVINCE_FILES).map(async ([name, file]) => {
+                const url = GEOJSON_BASE_URL + file;
+                const response = await fetch(url);
+                const data = await response.json();
+                this.geoData[name] = data;
+                loaded++;
+                this.loadingEl.textContent = `지도 데이터 로딩 중... (${loaded}/${total})`;
+            });
+
+            await Promise.all(promises);
+
+            // 시군구 목록 생성
+            this.buildDistrictList();
+
+            // 시도 경계 데이터 생성
+            this.buildProvinceGeoData();
+
+            this.loadingEl.classList.add('hidden');
+            this.startBtn.disabled = false;
+
+        } catch (error) {
+            console.error('GeoJSON 로딩 실패:', error);
+            this.loadingEl.textContent = '지도 데이터 로딩 실패. 페이지를 새로고침해주세요.';
+        }
+    }
+
+    buildDistrictList() {
+        this.allDistricts = [];
+
+        for (const [provinceName, geoData] of Object.entries(this.geoData)) {
+            // 시군구별로 그룹화
+            const districtMap = new Map();
+
+            geoData.features.forEach(feature => {
+                const props = feature.properties;
+                const sggnm = props.sggnm; // 시군구명
+
+                if (!districtMap.has(sggnm)) {
+                    districtMap.set(sggnm, {
+                        name: sggnm,
+                        provinceName: provinceName,
+                        features: []
+                    });
+                }
+                districtMap.get(sggnm).features.push(feature);
+            });
+
+            // 목록에 추가
+            districtMap.forEach((district, name) => {
+                this.allDistricts.push({
+                    name: name,
+                    provinceName: provinceName,
+                    fullName: `${provinceName} ${name}`
+                });
+            });
+        }
+
+        console.log(`총 ${this.allDistricts.length}개 시군구 로드됨`);
+    }
+
+    buildProvinceGeoData() {
+        // 각 시도의 외곽선을 생성
+        const features = [];
+
+        for (const [provinceName, geoData] of Object.entries(this.geoData)) {
+            // 해당 시도의 모든 geometry를 하나로 합침
+            const mergedFeature = {
+                type: 'Feature',
+                properties: {
+                    name: provinceName
+                },
+                geometry: {
+                    type: 'MultiPolygon',
+                    coordinates: []
+                }
+            };
+
+            geoData.features.forEach(feature => {
+                if (feature.geometry.type === 'Polygon') {
+                    mergedFeature.geometry.coordinates.push(feature.geometry.coordinates);
+                } else if (feature.geometry.type === 'MultiPolygon') {
+                    mergedFeature.geometry.coordinates.push(...feature.geometry.coordinates);
+                }
+            });
+
+            features.push(mergedFeature);
+        }
+
+        this.provinceGeoData = {
+            type: 'FeatureCollection',
+            features: features
+        };
     }
 
     startGame() {
@@ -60,9 +222,8 @@ class KoreaMapQuiz {
     }
 
     generateQuestions() {
-        const allDistricts = getAllDistricts();
         // 셔플하고 10개 선택
-        const shuffled = allDistricts.sort(() => Math.random() - 0.5);
+        const shuffled = [...this.allDistricts].sort(() => Math.random() - 0.5);
         this.questions = shuffled.slice(0, this.totalQuestions);
     }
 
@@ -157,7 +318,7 @@ class KoreaMapQuiz {
 
     handleTimeout() {
         this.state = GameState.SHOWING_RESULT;
-        this.feedbackEl.textContent = `시간 초과! 정답: ${this.currentAnswer.provinceName} - ${this.currentAnswer.name}`;
+        this.feedbackEl.textContent = `시간 초과! 정답: ${this.currentAnswer.provinceName} ${this.currentAnswer.name}`;
         this.feedbackEl.className = 'feedback timeout';
 
         this.results.push({
@@ -170,201 +331,350 @@ class KoreaMapQuiz {
     }
 
     renderProvinceMap() {
-        const svg = this.createSVG();
+        // SVG 초기화
+        d3.select(this.mapSvg).selectAll('*').remove();
 
-        for (const [id, province] of Object.entries(PROVINCES)) {
-            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            path.setAttribute('d', province.path);
-            path.setAttribute('fill', province.color);
-            path.setAttribute('data-id', id);
-            path.setAttribute('data-name', province.name);
+        const width = this.mapContainer.clientWidth - 40;
+        const height = 600;
 
-            path.addEventListener('click', (e) => this.handleProvinceClick(id, e));
-            svg.appendChild(path);
+        this.svg = d3.select(this.mapSvg)
+            .attr('width', width)
+            .attr('height', height);
 
-            // 라벨 추가
-            const label = this.createLabel(province.name, this.getPathCenter(province.path));
-            svg.appendChild(label);
-        }
+        // 대한민국 중심 좌표로 투영 설정
+        this.projection = d3.geoMercator()
+            .center([127.5, 36.0])
+            .scale(5000)
+            .translate([width / 2, height / 2]);
 
-        this.mapContainer.innerHTML = '';
-        this.mapContainer.appendChild(svg);
+        this.path = d3.geoPath().projection(this.projection);
+
+        // 시도 경계 그리기
+        const provinces = this.svg.selectAll('.province')
+            .data(this.provinceGeoData.features)
+            .enter()
+            .append('path')
+            .attr('class', 'province')
+            .attr('d', this.path)
+            .attr('fill', d => PROVINCE_COLORS[d.properties.name] || '#666')
+            .attr('data-name', d => d.properties.name)
+            .on('click', (event, d) => this.handleProvinceClick(d.properties.name, event));
+
+        // 시도 라벨
+        this.svg.selectAll('.region-label')
+            .data(this.provinceGeoData.features)
+            .enter()
+            .append('text')
+            .attr('class', 'region-label')
+            .attr('transform', d => {
+                const centroid = this.path.centroid(d);
+                return `translate(${centroid[0]}, ${centroid[1]})`;
+            })
+            .text(d => this.getShortProvinceName(d.properties.name));
     }
 
-    renderSubRegionSelection(provinceId) {
-        const province = PROVINCES[provinceId];
-        const svg = this.createSVG();
+    getShortProvinceName(name) {
+        const shortNames = {
+            '서울특별시': '서울',
+            '부산광역시': '부산',
+            '대구광역시': '대구',
+            '인천광역시': '인천',
+            '광주광역시': '광주',
+            '대전광역시': '대전',
+            '울산광역시': '울산',
+            '세종특별자치시': '세종',
+            '경기도': '경기',
+            '강원도': '강원',
+            '충청북도': '충북',
+            '충청남도': '충남',
+            '전라북도': '전북',
+            '전라남도': '전남',
+            '경상북도': '경북',
+            '경상남도': '경남',
+            '제주특별자치도': '제주'
+        };
+        return shortNames[name] || name;
+    }
+
+    handleProvinceClick(provinceName, event) {
+        if (this.state !== GameState.SELECT_PROVINCE) return;
+
+        const correctProvince = this.currentAnswer.provinceName;
+
+        if (provinceName === correctProvince) {
+            this.selectedProvince = provinceName;
+
+            // 선택 표시
+            d3.selectAll('.province').classed('selected', false);
+            d3.select(event.target).classed('selected', true);
+
+            if (LARGE_PROVINCES.includes(provinceName)) {
+                // 큰 도는 북부/남부 선택
+                this.state = GameState.SELECT_SUBREGION;
+                this.updateStepIndicator();
+                setTimeout(() => this.renderSubRegionSelection(provinceName), 300);
+            } else {
+                // 바로 시군구 선택
+                this.state = GameState.SELECT_DISTRICT;
+                this.updateStepIndicator();
+                setTimeout(() => this.renderDistrictMap(provinceName), 300);
+            }
+        } else {
+            this.handleWrongAnswer(event.target, `틀렸습니다! ${this.getShortProvinceName(correctProvince)}가 정답입니다.`);
+        }
+    }
+
+    renderSubRegionSelection(provinceName) {
+        // SVG 초기화
+        d3.select(this.mapSvg).selectAll('*').remove();
+
+        const width = this.mapContainer.clientWidth - 40;
+        const height = 600;
+
+        // 해당 시도의 GeoJSON만 사용
+        const provinceData = this.geoData[provinceName];
+
+        // 북부/남부 구분 (위도 기준)
+        const allCoords = [];
+        provinceData.features.forEach(f => {
+            const centroid = d3.geoCentroid(f);
+            allCoords.push({ feature: f, lat: centroid[1] });
+        });
+
+        const avgLat = d3.mean(allCoords, d => d.lat);
+
+        const northFeatures = allCoords.filter(d => d.lat >= avgLat).map(d => d.feature);
+        const southFeatures = allCoords.filter(d => d.lat < avgLat).map(d => d.feature);
+
+        // 북부/남부 MultiPolygon 생성
+        const createMultiPolygon = (features) => {
+            const coords = [];
+            features.forEach(f => {
+                if (f.geometry.type === 'Polygon') {
+                    coords.push(f.geometry.coordinates);
+                } else if (f.geometry.type === 'MultiPolygon') {
+                    coords.push(...f.geometry.coordinates);
+                }
+            });
+            return {
+                type: 'Feature',
+                geometry: { type: 'MultiPolygon', coordinates: coords }
+            };
+        };
+
+        const northGeo = createMultiPolygon(northFeatures);
+        const southGeo = createMultiPolygon(southFeatures);
+
+        // 정답의 위도 확인
+        const answerDistricts = provinceData.features.filter(f =>
+            f.properties.sggnm === this.currentAnswer.name
+        );
+
+        if (answerDistricts.length > 0) {
+            const answerCentroid = d3.geoCentroid(answerDistricts[0]);
+            this.correctSubRegion = answerCentroid[1] >= avgLat ? 'north' : 'south';
+        }
+
+        // 투영 설정
+        const combinedFeatures = { type: 'FeatureCollection', features: provinceData.features };
+        this.projection = d3.geoMercator().fitSize([width, height], combinedFeatures);
+        this.path = d3.geoPath().projection(this.projection);
+
+        this.svg = d3.select(this.mapSvg)
+            .attr('width', width)
+            .attr('height', height);
 
         // 뒤로가기 버튼
         const backBtn = document.createElement('button');
         backBtn.className = 'back-btn';
         backBtn.textContent = '← 뒤로';
-        backBtn.addEventListener('click', () => {
+        backBtn.onclick = () => {
+            backBtn.remove();
             this.state = GameState.SELECT_PROVINCE;
             this.selectedProvince = null;
             this.updateStepIndicator();
             this.renderProvinceMap();
-        });
+        };
+        this.mapContainer.insertBefore(backBtn, this.mapSvg);
 
-        for (const [regionId, region] of Object.entries(province.subRegions)) {
-            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            path.setAttribute('d', region.path);
-            path.setAttribute('fill', regionId === 'north' ? '#3498db' : '#e74c3c');
-            path.setAttribute('data-id', regionId);
+        // 북부 그리기
+        this.svg.append('path')
+            .datum(northGeo)
+            .attr('class', 'province')
+            .attr('d', this.path)
+            .attr('fill', '#3498db')
+            .attr('data-region', 'north')
+            .on('click', (event) => this.handleSubRegionClick('north', event));
 
-            path.addEventListener('click', () => this.handleSubRegionClick(regionId));
-            svg.appendChild(path);
+        // 남부 그리기
+        this.svg.append('path')
+            .datum(southGeo)
+            .attr('class', 'province')
+            .attr('d', this.path)
+            .attr('fill', '#e74c3c')
+            .attr('data-region', 'south')
+            .on('click', (event) => this.handleSubRegionClick('south', event));
 
-            const label = this.createLabel(region.name, this.getPathCenter(region.path));
-            svg.appendChild(label);
-        }
+        // 라벨
+        this.svg.append('text')
+            .attr('class', 'region-label')
+            .attr('transform', `translate(${this.path.centroid(northGeo)})`)
+            .text(`${this.getShortProvinceName(provinceName)} 북부`);
 
-        this.mapContainer.innerHTML = '';
-        this.mapContainer.appendChild(backBtn);
-        this.mapContainer.appendChild(svg);
+        this.svg.append('text')
+            .attr('class', 'region-label')
+            .attr('transform', `translate(${this.path.centroid(southGeo)})`)
+            .text(`${this.getShortProvinceName(provinceName)} 남부`);
     }
 
-    renderDistrictMap(provinceId, subRegion = null) {
-        const province = PROVINCES[provinceId];
-        const svg = this.createSVG();
+    handleSubRegionClick(region, event) {
+        if (this.state !== GameState.SELECT_SUBREGION) return;
+
+        // 뒤로가기 버튼 제거
+        const backBtn = this.mapContainer.querySelector('.back-btn');
+        if (backBtn) backBtn.remove();
+
+        if (region === this.correctSubRegion) {
+            this.selectedSubRegion = region;
+            this.state = GameState.SELECT_DISTRICT;
+            this.updateStepIndicator();
+            setTimeout(() => this.renderDistrictMap(this.selectedProvince, region), 300);
+        } else {
+            const regionName = region === 'north' ? '북부' : '남부';
+            const correctName = this.correctSubRegion === 'north' ? '북부' : '남부';
+            this.handleWrongAnswer(event.target, `틀렸습니다! ${correctName}가 정답입니다.`);
+        }
+    }
+
+    renderDistrictMap(provinceName, subRegion = null) {
+        // SVG 초기화
+        d3.select(this.mapSvg).selectAll('*').remove();
+
+        const width = this.mapContainer.clientWidth - 40;
+        const height = 600;
+
+        const provinceData = this.geoData[provinceName];
+
+        // 시군구별로 그룹화하고 필터링
+        let features = provinceData.features;
+
+        if (subRegion) {
+            // 북부/남부 필터링
+            const allCoords = [];
+            provinceData.features.forEach(f => {
+                const centroid = d3.geoCentroid(f);
+                allCoords.push({ feature: f, lat: centroid[1] });
+            });
+            const avgLat = d3.mean(allCoords, d => d.lat);
+
+            if (subRegion === 'north') {
+                features = allCoords.filter(d => d.lat >= avgLat).map(d => d.feature);
+            } else {
+                features = allCoords.filter(d => d.lat < avgLat).map(d => d.feature);
+            }
+        }
+
+        // 시군구별로 병합
+        const districtMap = new Map();
+        features.forEach(f => {
+            const sggnm = f.properties.sggnm;
+            if (!districtMap.has(sggnm)) {
+                districtMap.set(sggnm, []);
+            }
+            districtMap.get(sggnm).push(f);
+        });
+
+        // 각 시군구의 MultiPolygon 생성
+        const districtFeatures = [];
+        const colors = ['#e74c3c', '#3498db', '#2ecc71', '#9b59b6', '#f39c12', '#1abc9c', '#e67e22', '#16a085', '#8e44ad', '#27ae60', '#d35400', '#c0392b', '#2980b9', '#f1c40f'];
+        let colorIndex = 0;
+
+        districtMap.forEach((districtFeatureList, name) => {
+            const coords = [];
+            districtFeatureList.forEach(f => {
+                if (f.geometry.type === 'Polygon') {
+                    coords.push(f.geometry.coordinates);
+                } else if (f.geometry.type === 'MultiPolygon') {
+                    coords.push(...f.geometry.coordinates);
+                }
+            });
+
+            districtFeatures.push({
+                type: 'Feature',
+                properties: { name: name },
+                geometry: { type: 'MultiPolygon', coordinates: coords },
+                color: colors[colorIndex % colors.length]
+            });
+            colorIndex++;
+        });
+
+        // 투영 설정
+        const featureCollection = { type: 'FeatureCollection', features: districtFeatures };
+        this.projection = d3.geoMercator().fitSize([width - 40, height - 40], featureCollection);
+        this.path = d3.geoPath().projection(this.projection);
+
+        this.svg = d3.select(this.mapSvg)
+            .attr('width', width)
+            .attr('height', height);
 
         // 뒤로가기 버튼
+        let existingBtn = this.mapContainer.querySelector('.back-btn');
+        if (existingBtn) existingBtn.remove();
+
         const backBtn = document.createElement('button');
         backBtn.className = 'back-btn';
         backBtn.textContent = '← 뒤로';
-        backBtn.addEventListener('click', () => {
-            if (province.hasSubRegions && subRegion) {
+        backBtn.onclick = () => {
+            backBtn.remove();
+            if (LARGE_PROVINCES.includes(provinceName) && subRegion) {
                 this.state = GameState.SELECT_SUBREGION;
                 this.selectedSubRegion = null;
                 this.updateStepIndicator();
-                this.renderSubRegionSelection(provinceId);
+                this.renderSubRegionSelection(provinceName);
             } else {
                 this.state = GameState.SELECT_PROVINCE;
                 this.selectedProvince = null;
                 this.updateStepIndicator();
                 this.renderProvinceMap();
             }
-        });
+        };
+        this.mapContainer.insertBefore(backBtn, this.mapSvg);
 
-        // 필터링된 시군구만 표시
-        const filteredDistricts = Object.entries(province.districts).filter(([id, district]) => {
-            if (!subRegion) return true;
-            return district.region === subRegion;
-        });
+        // 시군구 그리기
+        this.svg.selectAll('.district')
+            .data(districtFeatures)
+            .enter()
+            .append('path')
+            .attr('class', 'district')
+            .attr('d', this.path)
+            .attr('fill', d => d.color)
+            .attr('data-name', d => d.properties.name)
+            .on('click', (event, d) => this.handleDistrictClick(d.properties.name, event));
 
-        const colors = ['#e74c3c', '#3498db', '#2ecc71', '#9b59b6', '#f39c12', '#1abc9c', '#e67e22', '#16a085', '#8e44ad', '#27ae60'];
-        let colorIndex = 0;
-
-        for (const [id, district] of filteredDistricts) {
-            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            path.setAttribute('d', district.path);
-            path.setAttribute('fill', colors[colorIndex % colors.length]);
-            path.setAttribute('data-id', id);
-            path.setAttribute('data-name', district.name);
-
-            path.addEventListener('click', (e) => this.handleDistrictClick(id, e));
-            svg.appendChild(path);
-
-            const label = this.createLabel(district.name, this.getPathCenter(district.path));
-            svg.appendChild(label);
-
-            colorIndex++;
-        }
-
-        this.mapContainer.innerHTML = '';
-        this.mapContainer.appendChild(backBtn);
-        this.mapContainer.appendChild(svg);
+        // 시군구 라벨
+        this.svg.selectAll('.district-label')
+            .data(districtFeatures)
+            .enter()
+            .append('text')
+            .attr('class', 'district-label')
+            .attr('transform', d => `translate(${this.path.centroid(d)})`)
+            .text(d => d.properties.name);
     }
 
-    createSVG() {
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('viewBox', '50 50 450 680');
-        svg.setAttribute('width', '100%');
-        svg.setAttribute('height', '100%');
-        return svg;
-    }
-
-    createLabel(text, position) {
-        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        label.setAttribute('x', position.x);
-        label.setAttribute('y', position.y);
-        label.setAttribute('class', 'map-label');
-        label.textContent = text;
-        return label;
-    }
-
-    getPathCenter(pathData) {
-        // 간단한 경로 중심점 계산
-        const coords = pathData.match(/[\d.]+/g).map(Number);
-        let sumX = 0, sumY = 0, count = 0;
-
-        for (let i = 0; i < coords.length; i += 2) {
-            if (i + 1 < coords.length) {
-                sumX += coords[i];
-                sumY += coords[i + 1];
-                count++;
-            }
-        }
-
-        return { x: sumX / count, y: sumY / count };
-    }
-
-    handleProvinceClick(provinceId, event) {
-        if (this.state !== GameState.SELECT_PROVINCE) return;
-
-        const correctProvinceId = this.currentAnswer.provinceId;
-
-        if (provinceId === correctProvinceId) {
-            this.selectedProvince = provinceId;
-            const province = PROVINCES[provinceId];
-
-            // 하이라이트 효과
-            event.target.classList.add('selected');
-
-            if (province.hasSubRegions && this.currentAnswer.region) {
-                // 북부/남부 선택 필요
-                this.state = GameState.SELECT_SUBREGION;
-                this.updateStepIndicator();
-                setTimeout(() => this.renderSubRegionSelection(provinceId), 300);
-            } else {
-                // 바로 시군구 선택
-                this.state = GameState.SELECT_DISTRICT;
-                this.updateStepIndicator();
-                setTimeout(() => this.renderDistrictMap(provinceId), 300);
-            }
-        } else {
-            // 틀린 도/광역시 선택
-            this.handleWrongAnswer(event.target, `틀렸습니다! ${this.currentAnswer.provinceName}가 정답입니다.`);
-        }
-    }
-
-    handleSubRegionClick(regionId) {
-        if (this.state !== GameState.SELECT_SUBREGION) return;
-
-        const correctRegion = this.currentAnswer.region;
-
-        if (regionId === correctRegion) {
-            this.selectedSubRegion = regionId;
-            this.state = GameState.SELECT_DISTRICT;
-            this.updateStepIndicator();
-            setTimeout(() => this.renderDistrictMap(this.selectedProvince, regionId), 300);
-        } else {
-            const regionName = regionId === 'north' ? '북부' : '남부';
-            const correctName = correctRegion === 'north' ? '북부' : '남부';
-            this.handleWrongAnswer(null, `틀렸습니다! ${correctName}가 정답입니다.`);
-        }
-    }
-
-    handleDistrictClick(districtId, event) {
+    handleDistrictClick(districtName, event) {
         if (this.state !== GameState.SELECT_DISTRICT) return;
 
         clearInterval(this.timer);
 
-        const correctDistrictId = this.currentAnswer.id;
+        // 뒤로가기 버튼 제거
+        const backBtn = this.mapContainer.querySelector('.back-btn');
+        if (backBtn) backBtn.remove();
 
-        if (districtId === correctDistrictId) {
+        const correctDistrict = this.currentAnswer.name;
+
+        if (districtName === correctDistrict) {
             // 정답!
-            event.target.classList.add('correct');
+            d3.select(event.target).classed('correct', true);
             this.score += 10;
             this.updateUI();
 
@@ -374,24 +684,25 @@ class KoreaMapQuiz {
             this.results.push({
                 question: this.currentAnswer.name,
                 correct: true,
-                answer: this.currentAnswer.name
+                answer: districtName
             });
         } else {
             // 오답
-            event.target.classList.add('incorrect');
-            const correctDistrict = PROVINCES[this.selectedProvince].districts[correctDistrictId];
+            d3.select(event.target).classed('incorrect', true);
 
-            this.feedbackEl.textContent = `틀렸습니다! 정답: ${correctDistrict.name}`;
+            this.feedbackEl.textContent = `틀렸습니다! 정답: ${correctDistrict}`;
             this.feedbackEl.className = 'feedback incorrect';
 
             this.results.push({
                 question: this.currentAnswer.name,
                 correct: false,
-                answer: PROVINCES[this.selectedProvince].districts[districtId].name
+                answer: districtName
             });
 
-            // 정답 위치 표시
-            this.highlightCorrectAnswer(correctDistrictId);
+            // 정답 위치 하이라이트
+            d3.selectAll('.district')
+                .filter(d => d.properties.name === correctDistrict)
+                .classed('highlight', true);
         }
 
         this.state = GameState.SHOWING_RESULT;
@@ -401,8 +712,12 @@ class KoreaMapQuiz {
     handleWrongAnswer(element, message) {
         clearInterval(this.timer);
 
+        // 뒤로가기 버튼 제거
+        const backBtn = this.mapContainer.querySelector('.back-btn');
+        if (backBtn) backBtn.remove();
+
         if (element) {
-            element.classList.add('incorrect');
+            d3.select(element).classed('incorrect', true);
         }
 
         this.feedbackEl.textContent = message;
@@ -416,15 +731,6 @@ class KoreaMapQuiz {
 
         this.state = GameState.SHOWING_RESULT;
         setTimeout(() => this.nextQuestion(), 2000);
-    }
-
-    highlightCorrectAnswer(districtId) {
-        const paths = this.mapContainer.querySelectorAll('path');
-        paths.forEach(path => {
-            if (path.getAttribute('data-id') === districtId) {
-                path.classList.add('correct');
-            }
-        });
     }
 
     endGame() {
