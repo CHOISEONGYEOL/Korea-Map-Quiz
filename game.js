@@ -1,6 +1,26 @@
 // 대한민국 지도 퀴즈 - TopoJSON 버전 (최적화)
 
-// 시도별 색상
+// 퀴즈에 사용할 지역 목록 (사용자 정의)
+const QUIZ_REGIONS = {
+    '서울특별시': ['도봉구', '노원구', '강북구', '은평구', '성북구', '중랑구', '서대문구', '종로구', '동대문구', '강서구', '마포구', '중구', '성동구', '광진구', '강동구', '양천구', '영등포구', '용산구', '동작구', '송파구', '구로구', '금천구', '관악구', '서초구', '강남구'],
+    '부산광역시': [],  // 인접 지역으로만 표시
+    '대구광역시': [],  // 인접 지역으로만 표시 (달성군 포함)
+    '인천광역시': [],  // 인접 지역으로만 표시 (강화군, 옹진군 포함)
+    '광주광역시': [],  // 인접 지역으로만 표시
+    '대전광역시': [],  // 인접 지역으로만 표시
+    '울산광역시': [],  // 인접 지역으로만 표시
+    '세종특별자치시': [],  // 인접 지역으로만 표시
+    '경기도': ['연천군', '포천시', '가평군', '동두천시', '양주시', '파주시', '의정부시', '남양주시', '고양시', '구리시', '김포시', '하남시', '양평군', '부천시', '광명시', '시흥시', '안양시', '과천시', '의왕시', '성남시', '광주시', '여주시', '군포시', '안산시', '수원시', '용인시', '이천시', '화성시', '오산시', '평택시', '안성시'],
+    '강원도': ['고성군', '철원군', '화천군', '양구군', '속초시', '인제군', '양양군', '춘천시', '홍천군', '강릉시', '횡성군', '평창군', '원주시', '정선군', '동해시', '영월군', '태백시', '삼척시'],
+    '충청북도': ['제천시', '단양군', '충주시', '음성군', '진천군', '증평군', '괴산군', '청주시', '보은군', '옥천군', '영동군'],
+    '충청남도': ['당진시', '아산시', '천안시', '서산시', '예산군', '홍성군', '태안군', '청양군', '공주시', '보령시', '부여군', '논산시', '계룡시', '서천군', '금산군'],
+    '전라북도': ['군산시', '익산시', '완주군', '진안군', '무주군', '김제시', '전주시', '부안군', '정읍시', '임실군', '장수군', '고창군', '순창군', '남원시'],
+    '전라남도': ['영광군', '장성군', '담양군', '곡성군', '구례군', '함평군', '화순군', '순천시', '광양시', '신안군', '무안군', '나주시', '목포시', '영암군', '장흥군', '보성군', '여수시', '진도군', '해남군', '강진군', '고흥군', '완도군'],
+    '경상북도': ['봉화군', '울진군', '영주시', '예천군', '문경시', '안동시', '영양군', '상주시', '의성군', '청송군', '영덕군', '김천시', '구미시', '군위군', '칠곡군', '영천시', '포항시', '성주군', '고령군', '경산시', '경주시', '청도군', '울릉군'],
+    '경상남도': ['거창군', '함양군', '합천군', '창녕군', '밀양시', '양산시', '산청군', '의령군', '함안군', '창원시', '김해시', '하동군', '진주시', '사천시', '고성군', '남해군', '통영시', '거제시']
+};
+
+// 시도별 색상 (제주도 제외)
 const PROVINCE_COLORS = {
     '서울특별시': '#FF6B6B',
     '부산광역시': '#4ECDC4',
@@ -17,11 +37,10 @@ const PROVINCE_COLORS = {
     '전라북도': '#2ECC71',
     '전라남도': '#1E8449',
     '경상북도': '#B8860B',
-    '경상남도': '#8B4513',
-    '제주특별자치도': '#FF7F50'
+    '경상남도': '#8B4513'
 };
 
-// 시도 약칭
+// 시도 약칭 (제주도 제외)
 const SHORT_NAMES = {
     '서울특별시': '서울',
     '부산광역시': '부산',
@@ -38,11 +57,10 @@ const SHORT_NAMES = {
     '전라북도': '전북',
     '전라남도': '전남',
     '경상북도': '경북',
-    '경상남도': '경남',
-    '제주특별자치도': '제주'
+    '경상남도': '경남'
 };
 
-// 시도코드로 시도명 매핑 (시군구 코드 앞 2자리)
+// 시도코드로 시도명 매핑 (시군구 코드 앞 2자리, 제주도 제외)
 const CODE_TO_PROVINCE = {
     '11': '서울특별시',
     '26': '부산광역시',
@@ -59,8 +77,7 @@ const CODE_TO_PROVINCE = {
     '45': '전라북도',
     '46': '전라남도',
     '47': '경상북도',
-    '48': '경상남도',
-    '50': '제주특별자치도'
+    '48': '경상남도'
 };
 
 // 북부/남부 구분이 필요한 도 지역
@@ -173,15 +190,21 @@ class KoreaMapQuiz {
             const provinceCode = code.substring(0, 2);
             const provinceName = CODE_TO_PROVINCE[provinceCode];
 
-            if (provinceName) {
-                this.allDistricts.push({
-                    name: name,
-                    provinceName: provinceName,
-                    code: code,
-                    feature: feature
-                });
+            if (provinceName && QUIZ_REGIONS[provinceName]) {
+                // QUIZ_REGIONS에 정의된 지역만 퀴즈에 포함
+                const allowedDistricts = QUIZ_REGIONS[provinceName];
+                if (allowedDistricts.length > 0 && allowedDistricts.includes(name)) {
+                    this.allDistricts.push({
+                        name: name,
+                        provinceName: provinceName,
+                        code: code,
+                        feature: feature
+                    });
+                }
             }
         });
+
+        console.log(`퀴즈 대상 시군구: ${this.allDistricts.length}개`);
     }
 
     startGame() {
@@ -321,9 +344,13 @@ class KoreaMapQuiz {
 
         this.path = d3.geoPath().projection(this.projection);
 
-        // 시도 경계 그리기
+        // 시도 경계 그리기 (제주도 제외)
+        const filteredProvinces = this.provincesGeo.features.filter(f =>
+            f.properties.name !== '제주특별자치도'
+        );
+
         this.svg.selectAll('.province')
-            .data(this.provincesGeo.features)
+            .data(filteredProvinces)
             .enter()
             .append('path')
             .attr('class', 'province')
@@ -332,9 +359,9 @@ class KoreaMapQuiz {
             .attr('data-name', d => d.properties.name)
             .on('click', (event, d) => this.handleProvinceClick(d.properties.name, event));
 
-        // 시도 라벨
+        // 시도 라벨 (제주도 제외)
         this.svg.selectAll('.region-label')
-            .data(this.provincesGeo.features)
+            .data(filteredProvinces)
             .enter()
             .append('text')
             .attr('class', 'region-label')
