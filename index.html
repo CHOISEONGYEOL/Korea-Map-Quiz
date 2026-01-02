@@ -11,6 +11,10 @@
 <body>
     <div class="container">
         <header>
+            <button id="theme-toggle" class="theme-toggle" title="테마 전환">
+                <span class="theme-icon-light">☀️</span>
+                <span class="theme-icon-dark">🌙</span>
+            </button>
             <h1>대한민국 지도 퀴즈</h1>
             <div class="stats">
                 <div class="stat-item">
@@ -32,10 +36,40 @@
         </header>
 
         <main>
-            <div id="start-screen" class="screen active">
-                <h2>전국 백지도 퀴즈</h2>
-                <p>문제로 나오는 시/군/구의 위치를 클릭하세요!</p>
-                <div class="instructions">
+            <!-- 모드 선택 화면 (랜딩) -->
+            <div id="mode-screen" class="screen active">
+                <h2>대한민국 지도 퀴즈</h2>
+                <p>학습 단계를 선택하세요</p>
+                <div id="loading" class="loading">지도 데이터 로딩 중...</div>
+                <div id="mode-buttons" class="mode-buttons hidden">
+                    <a href="?mode=explore" class="mode-btn mode-explore">
+                        <span class="mode-step">1단계</span>
+                        <span class="mode-title">지도 둘러보기</span>
+                        <span class="mode-desc">퀴즈 없이 자유롭게 전국 지도를 탐색해보세요</span>
+                    </a>
+                    <a href="?mode=practice" class="mode-btn mode-practice">
+                        <span class="mode-step">2단계</span>
+                        <span class="mode-title">연습 모드</span>
+                        <span class="mode-desc">시간제한 없이 천천히 문제를 풀어보세요</span>
+                    </a>
+                    <a href="?mode=quiz" class="mode-btn mode-quiz">
+                        <span class="mode-step">3단계</span>
+                        <span class="mode-title">익숙해지기</span>
+                        <span class="mode-desc">5초 제한시간 내에 지역을 찾아보세요</span>
+                    </a>
+                    <a href="?mode=test" class="mode-btn mode-test">
+                        <span class="mode-step">4단계</span>
+                        <span class="mode-title">실전 테스트</span>
+                        <span class="mode-desc">지역 이름 없이 지도 모양만 보고 맞춰보세요</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- 게임 시작 화면 (모드 선택 후) -->
+            <div id="start-screen" class="screen">
+                <h2 id="mode-title">전국 백지도 퀴즈</h2>
+                <p id="mode-description">문제로 나오는 시/군/구의 위치를 클릭하세요!</p>
+                <div class="instructions" id="instructions">
                     <h3>게임 방법</h3>
                     <ol>
                         <li>문제가 출제되면 해당 지역이 속한 <strong>도/광역시</strong>를 먼저 클릭</li>
@@ -44,8 +78,8 @@
                         <li>각 문제당 <strong>5초</strong> 제한시간!</li>
                     </ol>
                 </div>
-                <div id="loading" class="loading">지도 데이터 로딩 중...</div>
-                <button id="start-btn" class="btn-primary" disabled>게임 시작</button>
+                <button id="start-btn" class="btn-primary">시작하기</button>
+                <a href="./" class="btn-secondary">모드 선택으로 돌아가기</a>
             </div>
 
             <div id="game-screen" class="screen">
@@ -57,6 +91,7 @@
                     <svg id="map-svg"></svg>
                 </div>
                 <div id="feedback" class="feedback"></div>
+                <a href="./" class="btn-secondary game-back-btn">모드 선택으로 돌아가기</a>
             </div>
 
             <div id="result-screen" class="screen">
