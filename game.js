@@ -3,25 +3,25 @@
 // GeoJSON 데이터 URL (raqoon886/Local_HangJeongDong)
 const GEOJSON_BASE_URL = 'https://raw.githubusercontent.com/raqoon886/Local_HangJeongDong/master/';
 
-// 시도별 GeoJSON 파일명
+// 시도별 GeoJSON 파일명 (URL 인코딩된 한글)
 const PROVINCE_FILES = {
-    '서울특별시': 'hangjeongdong_서울특별시.geojson',
-    '부산광역시': 'hangjeongdong_부산광역시.geojson',
-    '대구광역시': 'hangjeongdong_대구광역시.geojson',
-    '인천광역시': 'hangjeongdong_인천광역시.geojson',
-    '광주광역시': 'hangjeongdong_광주광역시.geojson',
-    '대전광역시': 'hangjeongdong_대전광역시.geojson',
-    '울산광역시': 'hangjeongdong_울산광역시.geojson',
-    '세종특별자치시': 'hangjeongdong_세종특별자치시.geojson',
-    '경기도': 'hangjeongdong_경기도.geojson',
-    '강원도': 'hangjeongdong_강원도.geojson',
-    '충청북도': 'hangjeongdong_충청북도.geojson',
-    '충청남도': 'hangjeongdong_충청남도.geojson',
-    '전라북도': 'hangjeongdong_전라북도.geojson',
-    '전라남도': 'hangjeongdong_전라남도.geojson',
-    '경상북도': 'hangjeongdong_경상북도.geojson',
-    '경상남도': 'hangjeongdong_경상남도.geojson',
-    '제주특별자치도': 'hangjeongdong_제주특별자치도.geojson'
+    '서울특별시': 'hangjeongdong_%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C.geojson',
+    '부산광역시': 'hangjeongdong_%EB%B6%80%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C.geojson',
+    '대구광역시': 'hangjeongdong_%EB%8C%80%EA%B5%AC%EA%B4%91%EC%97%AD%EC%8B%9C.geojson',
+    '인천광역시': 'hangjeongdong_%EC%9D%B8%EC%B2%9C%EA%B4%91%EC%97%AD%EC%8B%9C.geojson',
+    '광주광역시': 'hangjeongdong_%EA%B4%91%EC%A3%BC%EA%B4%91%EC%97%AD%EC%8B%9C.geojson',
+    '대전광역시': 'hangjeongdong_%EB%8C%80%EC%A0%84%EA%B4%91%EC%97%AD%EC%8B%9C.geojson',
+    '울산광역시': 'hangjeongdong_%EC%9A%B8%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C.geojson',
+    '세종특별자치시': 'hangjeongdong_%EC%84%B8%EC%A2%85%ED%8A%B9%EB%B3%84%EC%9E%90%EC%B9%98%EC%8B%9C.geojson',
+    '경기도': 'hangjeongdong_%EA%B2%BD%EA%B8%B0%EB%8F%84.geojson',
+    '강원도': 'hangjeongdong_%EA%B0%95%EC%9B%90%EB%8F%84.geojson',
+    '충청북도': 'hangjeongdong_%EC%B6%A9%EC%B2%AD%EB%B6%81%EB%8F%84.geojson',
+    '충청남도': 'hangjeongdong_%EC%B6%A9%EC%B2%AD%EB%82%A8%EB%8F%84.geojson',
+    '전라북도': 'hangjeongdong_%EC%A0%84%EB%9D%BC%EB%B6%81%EB%8F%84.geojson',
+    '전라남도': 'hangjeongdong_%EC%A0%84%EB%9D%BC%EB%82%A8%EB%8F%84.geojson',
+    '경상북도': 'hangjeongdong_%EA%B2%BD%EC%83%81%EB%B6%81%EB%8F%84.geojson',
+    '경상남도': 'hangjeongdong_%EA%B2%BD%EC%83%81%EB%82%A8%EB%8F%84.geojson',
+    '제주특별자치도': 'hangjeongdong_%EC%A0%9C%EC%A3%BC%ED%8A%B9%EB%B3%84%EC%9E%90%EC%B9%98%EB%8F%84.geojson'
 };
 
 // 시도별 색상
