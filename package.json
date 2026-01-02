@@ -1,0 +1,12 @@
+{
+  "name": "korea-map-quiz",
+  "version": "1.0.0",
+  "description": "대한민국 지도 퀴즈 게임",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "dependencies": {
+    "serve": "^14.2.0"
+  }
+}
