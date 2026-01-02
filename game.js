@@ -204,7 +204,19 @@ class KoreaMapQuiz {
             }
         });
 
+        // 초기 목록도 완전히 셔플 (시도별 순서 제거)
+        this.shuffleArray(this.allDistricts);
+
         console.log(`퀴즈 대상 시군구: ${this.allDistricts.length}개`);
+    }
+
+    // Fisher-Yates 셔플 알고리즘
+    shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
     }
 
     startGame() {
@@ -218,12 +230,9 @@ class KoreaMapQuiz {
     }
 
     generateQuestions() {
-        // Fisher-Yates 셔플 알고리즘으로 완전 랜덤 섞기
+        // 매 게임마다 완전히 새로 셔플
         const shuffled = [...this.allDistricts];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
+        this.shuffleArray(shuffled);
         this.questions = shuffled.slice(0, this.totalQuestions);
     }
 
