@@ -21,6 +21,8 @@ class WorldMapQuiz {
         this.svg = null;
         this.projection = null;
         this.path = null;
+        this.zoom = null;
+        this.mapGroup = null;
 
         // 퀴즈 상태
         this.targetCountry = null;
@@ -270,6 +272,49 @@ class WorldMapQuiz {
         }
     }
 
+    // 줌 기능 설정 (핀치 줌 + 마우스 휠)
+    setupZoom(svg, width, height) {
+        this.zoom = d3.zoom()
+            .scaleExtent([1, 8])
+            .translateExtent([[0, 0], [width, height]])
+            .on('zoom', (event) => {
+                if (this.mapGroup) {
+                    this.mapGroup.attr('transform', event.transform);
+                }
+            });
+
+        svg.call(this.zoom)
+            .on('dblclick.zoom', null);
+
+        this.addZoomResetButton(svg, width);
+    }
+
+    addZoomResetButton(svg, width) {
+        const btnGroup = svg.append('g')
+            .attr('class', 'zoom-reset-btn')
+            .attr('transform', `translate(${width - 40}, 10)`)
+            .attr('cursor', 'pointer')
+            .on('click', () => {
+                svg.transition().duration(300).call(this.zoom.transform, d3.zoomIdentity);
+            });
+
+        btnGroup.append('rect')
+            .attr('width', 30)
+            .attr('height', 30)
+            .attr('rx', 5)
+            .attr('fill', 'var(--bg-secondary)')
+            .attr('stroke', 'var(--border-color)')
+            .attr('stroke-width', 1);
+
+        btnGroup.append('text')
+            .attr('x', 15)
+            .attr('y', 20)
+            .attr('text-anchor', 'middle')
+            .attr('fill', 'var(--text-primary)')
+            .attr('font-size', '14px')
+            .text('⟲');
+    }
+
     // 전 세계 지도 그리기 (대륙별로 색상 구분)
     drawWorldMap() {
         this.mapView = 'world';
@@ -281,6 +326,12 @@ class WorldMapQuiz {
         const height = Math.min(600, window.innerHeight * 0.6);
 
         svg.attr('width', width).attr('height', height);
+
+        // 줌 기능 설정
+        this.setupZoom(svg, width, height);
+
+        // 지도 그룹 생성 (줌 적용 대상)
+        this.mapGroup = svg.append('g').attr('class', 'map-group');
 
         const settings = CONTINENT_SETTINGS.world;
 
@@ -294,7 +345,7 @@ class WorldMapQuiz {
         const countries = topojson.feature(this.topoData, this.topoData.objects.countries);
 
         // 배경
-        svg.append('rect')
+        this.mapGroup.append('rect')
             .attr('width', width)
             .attr('height', height)
             .attr('fill', 'var(--bg-tertiary)');
@@ -309,7 +360,7 @@ class WorldMapQuiz {
             const countryIds = getAllCountriesInContinent(continentKey).map(c => c.id);
             const continentColor = palette[i % palette.length];
 
-            svg.selectAll(`.continent-${continentKey}`)
+            this.mapGroup.selectAll(`.continent-${continentKey}`)
                 .data(countries.features.filter(d => countryIds.includes(String(d.id))))
                 .enter()
                 .append('path')
@@ -330,7 +381,7 @@ class WorldMapQuiz {
 
         // 대륙 라벨
         if (this.currentMode !== 'test') {
-            this.drawContinentLabels(svg);
+            this.drawContinentLabels(this.mapGroup);
         }
 
         this.svg = svg;
@@ -411,6 +462,12 @@ class WorldMapQuiz {
 
         svg.attr('width', width).attr('height', height);
 
+        // 줌 기능 설정
+        this.setupZoom(svg, width, height);
+
+        // 지도 그룹 생성 (줌 적용 대상)
+        this.mapGroup = svg.append('g').attr('class', 'map-group');
+
         // 전 세계 모드에서는 selectedContinent 사용, 아니면 currentContinent 사용
         const activeContinentKey = this.selectedContinent || this.currentContinent;
         const continent = WORLD_DATA[activeContinentKey];
@@ -428,13 +485,13 @@ class WorldMapQuiz {
         const countries = topojson.feature(this.topoData, this.topoData.objects.countries);
 
         // 배경
-        svg.append('rect')
+        this.mapGroup.append('rect')
             .attr('width', width)
             .attr('height', height)
             .attr('fill', 'var(--bg-tertiary)');
 
         // 모든 국가 (연한 배경)
-        svg.selectAll('.country-bg')
+        this.mapGroup.selectAll('.country-bg')
             .data(countries.features)
             .enter()
             .append('path')
@@ -451,7 +508,7 @@ class WorldMapQuiz {
             const countryIds = subregion.countries.map(c => c.id);
             const color = subregionColors[subregionKey];
 
-            svg.selectAll(`.subregion-${subregionKey}`)
+            this.mapGroup.selectAll(`.subregion-${subregionKey}`)
                 .data(countries.features.filter(d => countryIds.includes(d.id)))
                 .enter()
                 .append('path')
@@ -472,10 +529,10 @@ class WorldMapQuiz {
 
         // 하위지역 라벨 (explore 모드 또는 test가 아닌 경우)
         if (this.currentMode !== 'test') {
-            this.drawSubregionLabels(svg, continent);
+            this.drawSubregionLabels(this.mapGroup, continent);
         }
 
-        // 전 세계 모드 + 탐색 모드일 때 뒤로가기 버튼 추가
+        // 전 세계 모드 + 탐색 모드일 때 뒤로가기 버튼 추가 (줌 그룹 밖)
         if (this.currentContinent === 'world' && this.currentMode === 'explore') {
             svg.append('rect')
                 .attr('x', 10)
@@ -744,6 +801,12 @@ class WorldMapQuiz {
 
         svg.attr('width', width).attr('height', height);
 
+        // 줌 기능 설정
+        this.setupZoom(svg, width, height);
+
+        // 지도 그룹 생성 (줌 적용 대상)
+        this.mapGroup = svg.append('g').attr('class', 'map-group');
+
         // 전 세계 모드에서는 selectedContinent 사용
         const activeContinentKey = this.selectedContinent || this.currentContinent;
         const continent = WORLD_DATA[activeContinentKey];
@@ -760,13 +823,13 @@ class WorldMapQuiz {
         const subregionCountryIds = subregion.countries.map(c => c.id);
 
         // 배경
-        svg.append('rect')
+        this.mapGroup.append('rect')
             .attr('width', width)
             .attr('height', height)
             .attr('fill', 'var(--bg-tertiary)');
 
         // 모든 국가 (연한 배경)
-        svg.selectAll('.country-bg')
+        this.mapGroup.selectAll('.country-bg')
             .data(countries.features)
             .enter()
             .append('path')
@@ -783,7 +846,7 @@ class WorldMapQuiz {
         // 인접 국가 색상 분리
         const colorAssignment = this.assignColorsToFeatures(countryFeatures);
 
-        svg.selectAll('.country')
+        this.mapGroup.selectAll('.country')
             .data(countryFeatures)
             .enter()
             .append('path')
@@ -802,10 +865,10 @@ class WorldMapQuiz {
 
         // 국가 라벨 (test 모드 제외)
         if (this.currentMode !== 'test') {
-            this.drawCountryLabels(svg, countries.features.filter(d => subregionCountryIds.includes(d.id)));
+            this.drawCountryLabels(this.mapGroup, countries.features.filter(d => subregionCountryIds.includes(d.id)));
         }
 
-        // 뒤로가기 버튼
+        // 뒤로가기 버튼 (줌 그룹 밖)
         svg.append('rect')
             .attr('x', 10)
             .attr('y', 10)

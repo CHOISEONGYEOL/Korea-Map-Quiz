@@ -20,6 +20,8 @@ class USStatesQuiz {
         this.path = null;
         this.targetState = null;
         this.shuffledStates = [];
+        this.zoom = null;
+        this.mapGroup = null;
 
         this.init();
     }
@@ -165,6 +167,54 @@ class USStatesQuiz {
         }
     }
 
+    // 줌 기능 설정
+    setupZoom(svg, width, height) {
+        const self = this;
+
+        this.zoom = d3.zoom()
+            .scaleExtent([1, 8])  // 1배 ~ 8배 확대
+            .translateExtent([[0, 0], [width, height]])
+            .on('zoom', (event) => {
+                if (this.mapGroup) {
+                    this.mapGroup.attr('transform', event.transform);
+                }
+            });
+
+        svg.call(this.zoom)
+            .on('dblclick.zoom', null);  // 더블클릭 줌 비활성화
+
+        // 줌 리셋 버튼 추가
+        this.addZoomResetButton(svg, width);
+    }
+
+    // 줌 리셋 버튼
+    addZoomResetButton(svg, width) {
+        const self = this;
+        const btnGroup = svg.append('g')
+            .attr('class', 'zoom-reset-btn')
+            .attr('transform', `translate(${width - 40}, 10)`)
+            .attr('cursor', 'pointer')
+            .on('click', () => {
+                svg.transition().duration(300).call(this.zoom.transform, d3.zoomIdentity);
+            });
+
+        btnGroup.append('rect')
+            .attr('width', 30)
+            .attr('height', 30)
+            .attr('rx', 5)
+            .attr('fill', 'var(--bg-secondary)')
+            .attr('stroke', 'var(--border-color)')
+            .attr('stroke-width', 1);
+
+        btnGroup.append('text')
+            .attr('x', 15)
+            .attr('y', 20)
+            .attr('text-anchor', 'middle')
+            .attr('fill', 'var(--text-primary)')
+            .attr('font-size', '14px')
+            .text('⟲');
+    }
+
     // 전체 미국 지도 그리기 (지역별로 색상 구분)
     drawCountryMap() {
         this.mapView = 'country';
@@ -177,23 +227,38 @@ class USStatesQuiz {
 
         svg.attr('width', width).attr('height', height);
 
+        // 줌 기능 설정
+        this.setupZoom(svg, width, height);
+
+        // 지도 그룹 생성 (줌 적용 대상)
+        this.mapGroup = svg.append('g').attr('class', 'map-group');
+
+        // 본토용 프로젝션 (알래스카/하와이 제외)
         this.projection = d3.geoAlbersUsa()
-            .scale(width * 1.1)
+            .scale(width * 1.3)
             .translate([width / 2, height / 2]);
 
         this.path = d3.geoPath().projection(this.projection);
 
         const states = topojson.feature(this.topoData, this.topoData.objects.states);
 
+        // 알래스카(02), 하와이(15) 분리
+        const mainlandStates = states.features.filter(d => {
+            const stateId = String(d.id).padStart(2, '0');
+            return stateId !== '02' && stateId !== '15';
+        });
+        const alaska = states.features.find(d => String(d.id).padStart(2, '0') === '02');
+        const hawaii = states.features.find(d => String(d.id).padStart(2, '0') === '15');
+
         // 배경
-        svg.append('rect')
+        this.mapGroup.append('rect')
             .attr('width', width)
             .attr('height', height)
             .attr('fill', 'var(--bg-tertiary)');
 
-        // 주 그리기 (지역별 색상)
-        svg.selectAll('.state')
-            .data(states.features)
+        // 본토 주 그리기 (지역별 색상)
+        this.mapGroup.selectAll('.state')
+            .data(mainlandStates)
             .enter()
             .append('path')
             .attr('class', 'state country')
@@ -212,9 +277,19 @@ class USStatesQuiz {
                 d3.select(this).attr('stroke-width', 0.8).style('filter', 'none');
             });
 
+        // 알래스카 인셋 박스 (좌하단)
+        if (alaska) {
+            this.drawStateInset(this.mapGroup, alaska, '02', 10, height - 110, 100, 70, '알래스카');
+        }
+
+        // 하와이 인셋 박스 (알래스카 오른쪽)
+        if (hawaii) {
+            this.drawStateInset(this.mapGroup, hawaii, '15', 120, height - 110, 80, 70, '하와이');
+        }
+
         // 지역 라벨
         if (this.currentMode !== 'test') {
-            this.drawRegionLabels(svg);
+            this.drawRegionLabels(this.mapGroup);
         }
 
         this.svg = svg;
@@ -222,6 +297,59 @@ class USStatesQuiz {
         // 단계 표시
         if (this.currentMode !== 'explore') {
             document.getElementById('state-info').textContent = '▶ 1단계: 지역을 선택하세요';
+        }
+    }
+
+    // 인셋 박스로 주 그리기 (알래스카/하와이용)
+    drawStateInset(svg, feature, stateId, x, y, boxWidth, boxHeight, label) {
+        const insetGroup = svg.append('g')
+            .attr('class', 'state-inset')
+            .attr('transform', `translate(${x}, ${y})`);
+
+        // 박스 배경
+        insetGroup.append('rect')
+            .attr('width', boxWidth)
+            .attr('height', boxHeight)
+            .attr('fill', 'rgba(0, 0, 0, 0.3)')
+            .attr('stroke', 'var(--border-color)')
+            .attr('stroke-width', 1)
+            .attr('rx', 5);
+
+        // 해당 주 전용 프로젝션
+        const featureCollection = { type: 'FeatureCollection', features: [feature] };
+        const insetProjection = d3.geoMercator()
+            .fitSize([boxWidth - 10, boxHeight - 20], featureCollection);
+        const insetPath = d3.geoPath().projection(insetProjection);
+
+        const self = this;
+        insetGroup.append('path')
+            .datum(feature)
+            .attr('class', 'state country')
+            .attr('d', insetPath)
+            .attr('transform', 'translate(5, 5)')
+            .attr('fill', getStateColor(stateId))
+            .attr('stroke', 'var(--map-stroke)')
+            .attr('stroke-width', 0.5)
+            .attr('data-state-id', stateId)
+            .on('click', function() {
+                self.handleCountryMapClick(feature);
+            })
+            .on('mouseover', function() {
+                d3.select(this).attr('stroke-width', 1.5).style('filter', 'brightness(1.2)');
+            })
+            .on('mouseout', function() {
+                d3.select(this).attr('stroke-width', 0.5).style('filter', 'none');
+            });
+
+        // 라벨 (test 모드 제외)
+        if (this.currentMode !== 'test') {
+            insetGroup.append('text')
+                .attr('class', 'district-label')
+                .attr('x', boxWidth / 2)
+                .attr('y', boxHeight - 3)
+                .attr('text-anchor', 'middle')
+                .style('font-size', '9px')
+                .text(label);
         }
     }
 
@@ -294,15 +422,34 @@ class USStatesQuiz {
 
         svg.attr('width', width).attr('height', height);
 
+        // 줌 기능 설정
+        this.setupZoom(svg, width, height);
+
+        // 지도 그룹 생성 (줌 적용 대상)
+        this.mapGroup = svg.append('g').attr('class', 'map-group');
+
         const region = US_STATES_DATA.regions[regionKey];
 
         const states = topojson.feature(this.topoData, this.topoData.objects.states);
         const regionStateIds = getStatesInRegion(regionKey).map(s => s.id);
 
         // 해당 지역 주들만 필터링
-        const regionFeatures = states.features.filter(d =>
+        let regionFeatures = states.features.filter(d =>
             regionStateIds.includes(String(d.id).padStart(2, '0'))
         );
+
+        // 서부 지역일 때 알래스카/하와이는 인셋으로 분리
+        let alaskaFeature = null;
+        let hawaiiFeature = null;
+        if (regionKey === 'west') {
+            alaskaFeature = regionFeatures.find(d => String(d.id).padStart(2, '0') === '02');
+            hawaiiFeature = regionFeatures.find(d => String(d.id).padStart(2, '0') === '15');
+            // 본토 주만 필터링 (알래스카/하와이 제외)
+            regionFeatures = regionFeatures.filter(d => {
+                const stateId = String(d.id).padStart(2, '0');
+                return stateId !== '02' && stateId !== '15';
+            });
+        }
 
         // 지역 주들을 하나의 FeatureCollection으로 만들기
         const regionCollection = {
@@ -318,14 +465,18 @@ class USStatesQuiz {
         this.path = d3.geoPath().projection(this.projection);
 
         // 배경
-        svg.append('rect')
+        this.mapGroup.append('rect')
             .attr('width', width)
             .attr('height', height)
             .attr('fill', 'var(--bg-tertiary)');
 
-        // 모든 주 (연한 배경)
-        svg.selectAll('.state-bg')
-            .data(states.features)
+        // 모든 주 (연한 배경) - 알래스카/하와이 제외
+        const bgStates = states.features.filter(d => {
+            const stateId = String(d.id).padStart(2, '0');
+            return stateId !== '02' && stateId !== '15';
+        });
+        this.mapGroup.selectAll('.state-bg')
+            .data(bgStates)
             .enter()
             .append('path')
             .attr('class', 'state-bg')
@@ -338,7 +489,7 @@ class USStatesQuiz {
         const colorPalette = this.getColorPalette();
         const colorAssignment = this.assignColorsToFeatures(regionFeatures);
 
-        svg.selectAll('.state')
+        this.mapGroup.selectAll('.state')
             .data(regionFeatures)
             .enter()
             .append('path')
@@ -355,12 +506,32 @@ class USStatesQuiz {
                 d3.select(this).attr('stroke-width', 1).style('filter', 'none');
             });
 
-        // 주 라벨 (test 모드 제외)
-        if (this.currentMode !== 'test') {
-            this.drawStateLabels(svg, regionFeatures);
+        // 서부 지역일 때 알래스카/하와이 인셋 추가 (왼쪽 절반 차지)
+        if (regionKey === 'west') {
+            // 왼쪽 영역의 절반을 인셋이 차지하도록 크기 설정
+            const insetWidth = Math.floor(width * 0.35);  // 화면 너비의 35%
+            const insetMargin = 10;
+            const totalInsetHeight = height - 80;  // 뒤로가기 버튼 영역 제외
+
+            // 알래스카가 더 크므로 60%, 하와이 40%
+            const alaskaHeight = Math.floor(totalInsetHeight * 0.55);
+            const hawaiiHeight = Math.floor(totalInsetHeight * 0.40);
+            const gap = 10;  // 두 인셋 사이 간격
+
+            if (alaskaFeature) {
+                this.drawRegionStateInset(this.mapGroup, alaskaFeature, '02', insetMargin, 50, insetWidth, alaskaHeight, '알래스카', colorPalette, colorAssignment);
+            }
+            if (hawaiiFeature) {
+                this.drawRegionStateInset(this.mapGroup, hawaiiFeature, '15', insetMargin, 50 + alaskaHeight + gap, insetWidth, hawaiiHeight, '하와이', colorPalette, colorAssignment);
+            }
         }
 
-        // 뒤로가기 버튼
+        // 주 라벨 (test 모드 제외)
+        if (this.currentMode !== 'test') {
+            this.drawStateLabels(this.mapGroup, regionFeatures);
+        }
+
+        // 뒤로가기 버튼 (줌 그룹 밖에 배치)
         svg.append('rect')
             .attr('x', 10)
             .attr('y', 10)
@@ -383,6 +554,61 @@ class USStatesQuiz {
             .on('click', () => this.goBackToCountry());
 
         this.svg = svg;
+    }
+
+    // 지역 상세 지도용 인셋 박스 (색상 할당 적용)
+    drawRegionStateInset(svg, feature, stateId, x, y, boxWidth, boxHeight, label, colorPalette, colorAssignment) {
+        const insetGroup = svg.append('g')
+            .attr('class', 'state-inset')
+            .attr('transform', `translate(${x}, ${y})`);
+
+        // 박스 배경
+        insetGroup.append('rect')
+            .attr('width', boxWidth)
+            .attr('height', boxHeight)
+            .attr('fill', 'rgba(0, 0, 0, 0.3)')
+            .attr('stroke', 'var(--border-color)')
+            .attr('stroke-width', 1)
+            .attr('rx', 5);
+
+        // 해당 주 전용 프로젝션 - 큰 박스에 맞게 여유 있는 패딩
+        const padding = Math.min(boxWidth, boxHeight) * 0.1;
+        const featureCollection = { type: 'FeatureCollection', features: [feature] };
+        const insetProjection = d3.geoMercator()
+            .fitSize([boxWidth - padding * 2, boxHeight - padding * 2 - 15], featureCollection);
+        const insetPath = d3.geoPath().projection(insetProjection);
+
+        const self = this;
+        insetGroup.append('path')
+            .datum(feature)
+            .attr('class', 'state country')
+            .attr('d', insetPath)
+            .attr('transform', `translate(${padding}, ${padding})`)
+            .attr('fill', colorPalette[colorAssignment.get(feature.id) || 0])
+            .attr('stroke', 'var(--map-stroke)')
+            .attr('stroke-width', 1)
+            .attr('data-state-id', stateId)
+            .on('click', function() {
+                self.handleStateClick(feature);
+            })
+            .on('mouseover', function() {
+                d3.select(this).attr('stroke-width', 2).style('filter', 'brightness(1.2)');
+            })
+            .on('mouseout', function() {
+                d3.select(this).attr('stroke-width', 1).style('filter', 'none');
+            });
+
+        // 라벨 (test 모드 제외) - 큰 박스에 맞는 크기
+        if (this.currentMode !== 'test') {
+            const fontSize = Math.max(12, Math.min(16, boxHeight * 0.08));
+            insetGroup.append('text')
+                .attr('class', 'district-label')
+                .attr('x', boxWidth / 2)
+                .attr('y', boxHeight - 8)
+                .attr('text-anchor', 'middle')
+                .style('font-size', `${fontSize}px`)
+                .text(label);
+        }
     }
 
     drawStateLabels(svg, features) {

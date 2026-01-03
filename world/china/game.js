@@ -20,6 +20,8 @@ class ChinaQuiz {
         this.path = null;
         this.targetProvince = null;
         this.shuffledProvinces = [];
+        this.zoom = null;
+        this.mapGroup = null;
 
         this.init();
     }
@@ -183,6 +185,49 @@ class ChinaQuiz {
         }
     }
 
+    // 줌 기능 설정
+    setupZoom(svg, width, height) {
+        this.zoom = d3.zoom()
+            .scaleExtent([1, 8])
+            .translateExtent([[0, 0], [width, height]])
+            .on('zoom', (event) => {
+                if (this.mapGroup) {
+                    this.mapGroup.attr('transform', event.transform);
+                }
+            });
+
+        svg.call(this.zoom)
+            .on('dblclick.zoom', null);
+
+        this.addZoomResetButton(svg, width);
+    }
+
+    addZoomResetButton(svg, width) {
+        const btnGroup = svg.append('g')
+            .attr('class', 'zoom-reset-btn')
+            .attr('transform', `translate(${width - 40}, 10)`)
+            .attr('cursor', 'pointer')
+            .on('click', () => {
+                svg.transition().duration(300).call(this.zoom.transform, d3.zoomIdentity);
+            });
+
+        btnGroup.append('rect')
+            .attr('width', 30)
+            .attr('height', 30)
+            .attr('rx', 5)
+            .attr('fill', 'var(--bg-secondary)')
+            .attr('stroke', 'var(--border-color)')
+            .attr('stroke-width', 1);
+
+        btnGroup.append('text')
+            .attr('x', 15)
+            .attr('y', 20)
+            .attr('text-anchor', 'middle')
+            .attr('fill', 'var(--text-primary)')
+            .attr('font-size', '14px')
+            .text('⟲');
+    }
+
     // 전체 중국 지도 그리기 (지역별로 색상 구분)
     drawCountryMap() {
         this.mapView = 'country';
@@ -195,6 +240,12 @@ class ChinaQuiz {
 
         svg.attr('width', width).attr('height', height);
 
+        // 줌 기능 설정
+        this.setupZoom(svg, width, height);
+
+        // 지도 그룹 생성 (줌 적용 대상)
+        this.mapGroup = svg.append('g').attr('class', 'map-group');
+
         // 중국 전체 보기 프로젝션
         this.projection = d3.geoMercator()
             .center([105, 35])
@@ -204,7 +255,7 @@ class ChinaQuiz {
         this.path = d3.geoPath().projection(this.projection);
 
         // 배경
-        svg.append('rect')
+        this.mapGroup.append('rect')
             .attr('width', width)
             .attr('height', height)
             .attr('fill', 'var(--bg-tertiary)');
@@ -222,7 +273,7 @@ class ChinaQuiz {
         }
 
         // 성 그리기 (지역별 색상)
-        svg.selectAll('.province')
+        this.mapGroup.selectAll('.province')
             .data(features)
             .enter()
             .append('path')
@@ -245,7 +296,7 @@ class ChinaQuiz {
 
         // 지역 라벨
         if (this.currentMode !== 'test') {
-            this.drawRegionLabels(svg);
+            this.drawRegionLabels(this.mapGroup);
         }
 
         this.svg = svg;
@@ -353,6 +404,12 @@ class ChinaQuiz {
 
         svg.attr('width', width).attr('height', height);
 
+        // 줌 기능 설정
+        this.setupZoom(svg, width, height);
+
+        // 지도 그룹 생성 (줌 적용 대상)
+        this.mapGroup = svg.append('g').attr('class', 'map-group');
+
         const region = CHINA_DATA.regions[regionKey];
 
         // GeoJSON 또는 TopoJSON 처리
@@ -387,13 +444,13 @@ class ChinaQuiz {
         this.path = d3.geoPath().projection(this.projection);
 
         // 배경
-        svg.append('rect')
+        this.mapGroup.append('rect')
             .attr('width', width)
             .attr('height', height)
             .attr('fill', 'var(--bg-tertiary)');
 
         // 모든 성 (연한 배경)
-        svg.selectAll('.province-bg')
+        this.mapGroup.selectAll('.province-bg')
             .data(features)
             .enter()
             .append('path')
@@ -407,7 +464,7 @@ class ChinaQuiz {
         const colorPalette = this.getColorPalette();
         const colorAssignment = this.assignColorsToFeatures(regionFeatures);
 
-        svg.selectAll('.province')
+        this.mapGroup.selectAll('.province')
             .data(regionFeatures)
             .enter()
             .append('path')
@@ -426,10 +483,10 @@ class ChinaQuiz {
 
         // 성 라벨 (test 모드 제외)
         if (this.currentMode !== 'test') {
-            this.drawProvinceLabels(svg, regionFeatures);
+            this.drawProvinceLabels(this.mapGroup, regionFeatures);
         }
 
-        // 뒤로가기 버튼
+        // 뒤로가기 버튼 (줌 그룹 밖에 배치)
         svg.append('rect')
             .attr('x', 10)
             .attr('y', 10)
@@ -468,8 +525,10 @@ class ChinaQuiz {
         ];
 
         // 선호 방향 힌트 (바다=E, 내륙=W)
+        // 화북: 베이징(NE), 톈진(E), 허베이(SE) - 오른쪽으로 45도씩 분산
         const preferredDirection = {
-            'beijing': 'SE', 'tianjin': 'E', 'shanghai': 'E', 'hongkong': 'SE', 'macau': 'SE',
+            'beijing': 'NE', 'tianjin': 'E', 'hebei': 'SE',
+            'shanghai': 'E', 'hongkong': 'SE', 'macau': 'SE',
             'taiwan': 'E', 'hainan': 'S', 'ningxia': 'W', 'chongqing': 'SW'
         };
 

@@ -188,6 +188,8 @@ class KoreaMapQuiz {
         this.svg = null;
         this.projection = null;
         this.path = null;
+        this.zoom = null;
+        this.mapGroup = null;
 
         // 모드 설정
         this.gameMode = this.parseGameMode();
@@ -763,6 +765,12 @@ class KoreaMapQuiz {
             .attr('width', width)
             .attr('height', height);
 
+        // 줌 기능 설정
+        this.setupZoom(this.svg, width, height);
+
+        // 지도 그룹 생성 (줌 적용 대상)
+        this.mapGroup = this.svg.append('g').attr('class', 'map-group');
+
         this.projection = d3.geoMercator()
             .center([127.5, 36.0])
             .scale(5500)
@@ -774,7 +782,7 @@ class KoreaMapQuiz {
             f.properties.name !== '제주특별자치도'
         );
 
-        this.svg.selectAll('.province')
+        this.mapGroup.selectAll('.province')
             .data(filteredProvinces)
             .enter()
             .append('path')
@@ -785,7 +793,7 @@ class KoreaMapQuiz {
             .attr('data-group', d => PROVINCE_TO_GROUP[d.properties.name] || null)
             .on('click', (event, d) => this.handleExploreRegionGroupClick(d.properties.name));
 
-        this.svg.selectAll('.region-label')
+        this.mapGroup.selectAll('.region-label')
             .data(filteredProvinces)
             .enter()
             .append('text')
@@ -829,13 +837,19 @@ class KoreaMapQuiz {
             .attr('width', width)
             .attr('height', height);
 
+        // 줌 기능 설정
+        this.setupZoom(this.svg, width, height);
+
+        // 지도 그룹 생성 (줌 적용 대상)
+        this.mapGroup = this.svg.append('g').attr('class', 'map-group');
+
         this.addBackButton(() => {
             this.selectedGroup = null;
             this.feedbackEl.textContent = '';
             this.renderExploreProvinceMap();
         });
 
-        this.svg.selectAll('.province')
+        this.mapGroup.selectAll('.province')
             .data(filteredProvinces)
             .enter()
             .append('path')
@@ -845,7 +859,7 @@ class KoreaMapQuiz {
             .attr('data-name', d => d.properties.name)
             .on('click', (event, d) => this.handleExploreProvinceClick(d.properties.name));
 
-        this.svg.selectAll('.region-label')
+        this.mapGroup.selectAll('.region-label')
             .data(filteredProvinces)
             .enter()
             .append('text')
@@ -895,6 +909,12 @@ class KoreaMapQuiz {
             .attr('width', width)
             .attr('height', height);
 
+        // 줌 기능 설정
+        this.setupZoom(this.svg, width, height);
+
+        // 지도 그룹 생성 (줌 적용 대상)
+        this.mapGroup = this.svg.append('g').attr('class', 'map-group');
+
         this.addBackButton(() => {
             this.selectedProvince = null;
             this.feedbackEl.textContent = '';
@@ -906,7 +926,7 @@ class KoreaMapQuiz {
             }
         });
 
-        this.svg.selectAll('.north')
+        this.mapGroup.selectAll('.north')
             .data(northFeatures)
             .enter()
             .append('path')
@@ -915,7 +935,7 @@ class KoreaMapQuiz {
             .attr('fill', getSubRegionColors().north)
             .on('click', () => this.renderExploreDistricts(provinceName, 'north'));
 
-        this.svg.selectAll('.south')
+        this.mapGroup.selectAll('.south')
             .data(southFeatures)
             .enter()
             .append('path')
@@ -927,12 +947,12 @@ class KoreaMapQuiz {
         const northCenter = d3.geoCentroid({ type: 'FeatureCollection', features: northFeatures });
         const southCenter = d3.geoCentroid({ type: 'FeatureCollection', features: southFeatures });
 
-        this.svg.append('text')
+        this.mapGroup.append('text')
             .attr('class', 'region-label')
             .attr('transform', `translate(${this.projection(northCenter)})`)
             .text(`${SHORT_NAMES[provinceName]} 북부`);
 
-        this.svg.append('text')
+        this.mapGroup.append('text')
             .attr('class', 'region-label')
             .attr('transform', `translate(${this.projection(southCenter)})`)
             .text(`${SHORT_NAMES[provinceName]} 남부`);
@@ -980,6 +1000,12 @@ class KoreaMapQuiz {
             .attr('width', width)
             .attr('height', height);
 
+        // 줌 기능 설정
+        this.setupZoom(this.svg, width, height);
+
+        // 지도 그룹 생성 (줌 적용 대상)
+        this.mapGroup = this.svg.append('g').attr('class', 'map-group');
+
         this.addBackButton(() => {
             if (LARGE_PROVINCES.includes(provinceName) && subRegion) {
                 this.renderExploreSubRegion(provinceName);
@@ -1001,7 +1027,7 @@ class KoreaMapQuiz {
         const cityColorMap = this.buildColorMap(allDistrictsForColor);
 
         // 시군구 그리기 (같은 시는 경계선 없이 한 덩어리처럼)
-        this.svg.selectAll('.district')
+        this.mapGroup.selectAll('.district')
             .data(districts)
             .enter()
             .append('path')
@@ -1053,7 +1079,7 @@ class KoreaMapQuiz {
             const cityCollection = { type: 'FeatureCollection', features: cityDistricts };
             const center = d3.geoCentroid(cityCollection);
 
-            this.svg.append('text')
+            this.mapGroup.append('text')
                 .attr('class', 'district-label')
                 .attr('transform', `translate(${this.projection(center)})`)
                 .text(cityName);
@@ -1098,7 +1124,7 @@ class KoreaMapQuiz {
                 insetY = height - insetSize - padding - 30;
             }
 
-            const insetGroup = this.svg.append('g')
+            const insetGroup = this.mapGroup.append('g')
                 .attr('class', 'island-inset')
                 .attr('transform', `translate(${insetX}, ${insetY})`);
 
@@ -1243,6 +1269,12 @@ class KoreaMapQuiz {
             .attr('width', width)
             .attr('height', height);
 
+        // 줌 기능 설정
+        this.setupZoom(this.svg, width, height);
+
+        // 지도 그룹 생성 (줌 적용 대상)
+        this.mapGroup = this.svg.append('g').attr('class', 'map-group');
+
         this.projection = d3.geoMercator()
             .center([127.5, 36.0])
             .scale(5500)
@@ -1255,7 +1287,7 @@ class KoreaMapQuiz {
             f.properties.name !== '제주특별자치도'
         );
 
-        this.svg.selectAll('.province')
+        this.mapGroup.selectAll('.province')
             .data(filteredProvinces)
             .enter()
             .append('path')
@@ -1267,7 +1299,7 @@ class KoreaMapQuiz {
             .on('click', (event, d) => this.handleRegionGroupClick(d.properties.name, event));
 
         // 시도 라벨
-        this.svg.selectAll('.region-label')
+        this.mapGroup.selectAll('.region-label')
             .data(filteredProvinces)
             .enter()
             .append('text')
@@ -1352,6 +1384,12 @@ class KoreaMapQuiz {
             .attr('width', width)
             .attr('height', height);
 
+        // 줌 기능 설정
+        this.setupZoom(this.svg, width, height);
+
+        // 지도 그룹 생성 (줌 적용 대상)
+        this.mapGroup = this.svg.append('g').attr('class', 'map-group');
+
         // 뒤로가기 버튼
         this.addBackButton(() => {
             this.selectedGroup = null;
@@ -1361,7 +1399,7 @@ class KoreaMapQuiz {
         });
 
         // 그룹 내 시도 그리기
-        this.svg.selectAll('.province')
+        this.mapGroup.selectAll('.province')
             .data(filteredProvinces)
             .enter()
             .append('path')
@@ -1372,7 +1410,7 @@ class KoreaMapQuiz {
             .on('click', (event, d) => this.handleGroupProvinceClick(d.properties.name, event));
 
         // 시도 라벨
-        this.svg.selectAll('.region-label')
+        this.mapGroup.selectAll('.region-label')
             .data(filteredProvinces)
             .enter()
             .append('text')
@@ -1427,6 +1465,12 @@ class KoreaMapQuiz {
             .attr('width', width)
             .attr('height', height);
 
+        // 줌 기능 설정
+        this.setupZoom(this.svg, width, height);
+
+        // 지도 그룹 생성 (줌 적용 대상)
+        this.mapGroup = this.svg.append('g').attr('class', 'map-group');
+
         // 대한민국 중심 투영
         this.projection = d3.geoMercator()
             .center([127.5, 36.0])
@@ -1440,7 +1484,7 @@ class KoreaMapQuiz {
             f.properties.name !== '제주특별자치도'
         );
 
-        this.svg.selectAll('.province')
+        this.mapGroup.selectAll('.province')
             .data(filteredProvinces)
             .enter()
             .append('path')
@@ -1451,7 +1495,7 @@ class KoreaMapQuiz {
             .on('click', (event, d) => this.handleProvinceClick(d.properties.name, event));
 
         // 시도 라벨 (제주도 제외)
-        this.svg.selectAll('.region-label')
+        this.mapGroup.selectAll('.region-label')
             .data(filteredProvinces)
             .enter()
             .append('text')
@@ -1532,6 +1576,12 @@ class KoreaMapQuiz {
             .attr('width', width)
             .attr('height', height);
 
+        // 줌 기능 설정
+        this.setupZoom(this.svg, width, height);
+
+        // 지도 그룹 생성 (줌 적용 대상)
+        this.mapGroup = this.svg.append('g').attr('class', 'map-group');
+
         // 뒤로가기 버튼
         this.addBackButton(() => {
             this.selectedProvince = null;
@@ -1548,7 +1598,7 @@ class KoreaMapQuiz {
         });
 
         // 북부 그리기
-        this.svg.selectAll('.north')
+        this.mapGroup.selectAll('.north')
             .data(northFeatures)
             .enter()
             .append('path')
@@ -1558,7 +1608,7 @@ class KoreaMapQuiz {
             .on('click', (event) => this.handleSubRegionClick('north', event));
 
         // 남부 그리기
-        this.svg.selectAll('.south')
+        this.mapGroup.selectAll('.south')
             .data(southFeatures)
             .enter()
             .append('path')
@@ -1572,12 +1622,12 @@ class KoreaMapQuiz {
             const northCenter = d3.geoCentroid({ type: 'FeatureCollection', features: northFeatures });
             const southCenter = d3.geoCentroid({ type: 'FeatureCollection', features: southFeatures });
 
-            this.svg.append('text')
+            this.mapGroup.append('text')
                 .attr('class', 'region-label subregion-label')
                 .attr('transform', `translate(${this.projection(northCenter)})`)
                 .text(`${SHORT_NAMES[provinceName]} 북부`);
 
-            this.svg.append('text')
+            this.mapGroup.append('text')
                 .attr('class', 'region-label subregion-label')
                 .attr('transform', `translate(${this.projection(southCenter)})`)
                 .text(`${SHORT_NAMES[provinceName]} 남부`);
@@ -1639,6 +1689,12 @@ class KoreaMapQuiz {
             .attr('width', width)
             .attr('height', height);
 
+        // 줌 기능 설정
+        this.setupZoom(this.svg, width, height);
+
+        // 지도 그룹 생성 (줌 적용 대상)
+        this.mapGroup = this.svg.append('g').attr('class', 'map-group');
+
         // 뒤로가기 버튼
         this.addBackButton(() => {
             if (LARGE_PROVINCES.includes(provinceName) && subRegion) {
@@ -1665,7 +1721,7 @@ class KoreaMapQuiz {
         const cityColorMap = this.buildColorMap(allDistrictsForColor);
 
         // 시군구 그리기 (같은 시는 경계선 없이 한 덩어리처럼)
-        this.svg.selectAll('.district')
+        this.mapGroup.selectAll('.district')
             .data(districts)
             .enter()
             .append('path')
@@ -1720,7 +1776,7 @@ class KoreaMapQuiz {
                 const cityCollection = { type: 'FeatureCollection', features: cityDistricts };
                 const center = d3.geoCentroid(cityCollection);
 
-                this.svg.append('text')
+                this.mapGroup.append('text')
                     .attr('class', 'district-label')
                     .attr('transform', `translate(${this.projection(center)})`)
                     .text(cityName);
@@ -1770,7 +1826,7 @@ class KoreaMapQuiz {
             }
 
             // 인셋 그룹 생성
-            const insetGroup = this.svg.append('g')
+            const insetGroup = this.mapGroup.append('g')
                 .attr('class', 'island-inset')
                 .attr('transform', `translate(${insetX}, ${insetY})`);
 
@@ -1837,6 +1893,52 @@ class KoreaMapQuiz {
             onClick();
         };
         this.mapContainer.insertBefore(backBtn, this.mapSvg);
+    }
+
+    // 줌 기능 설정
+    setupZoom(svg, width, height) {
+        this.zoom = d3.zoom()
+            .scaleExtent([1, 8])
+            .translateExtent([[0, 0], [width, height]])
+            .on('zoom', (event) => {
+                if (this.mapGroup) {
+                    this.mapGroup.attr('transform', event.transform);
+                }
+            });
+
+        svg.call(this.zoom)
+            .on('dblclick.zoom', null);
+
+        this.addZoomResetButton(svg, width);
+    }
+
+    // 줌 리셋 버튼 추가
+    addZoomResetButton(svg, width) {
+        const resetBtn = svg.append('g')
+            .attr('class', 'zoom-reset-btn')
+            .attr('transform', `translate(${width - 40}, 10)`)
+            .style('cursor', 'pointer')
+            .on('click', () => {
+                svg.transition()
+                    .duration(300)
+                    .call(this.zoom.transform, d3.zoomIdentity);
+            });
+
+        resetBtn.append('rect')
+            .attr('width', 30)
+            .attr('height', 30)
+            .attr('rx', 5)
+            .attr('fill', 'rgba(0, 0, 0, 0.5)')
+            .attr('stroke', '#fff')
+            .attr('stroke-width', 1);
+
+        resetBtn.append('text')
+            .attr('x', 15)
+            .attr('y', 20)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#fff')
+            .attr('font-size', '16px')
+            .text('⟲');
     }
 
     handleDistrictClick(districtName, event) {

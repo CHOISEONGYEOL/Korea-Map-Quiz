@@ -15,6 +15,8 @@ class CanadaProvincesQuiz {
         this.projection = null;
         this.path = null;
         this.shuffledProvinces = [];
+        this.zoom = null;
+        this.mapGroup = null;
 
         this.init();
     }
@@ -174,6 +176,49 @@ class CanadaProvincesQuiz {
         return nameMapping[name] || null;
     }
 
+    // 줌 기능 설정
+    setupZoom(svg, width, height) {
+        this.zoom = d3.zoom()
+            .scaleExtent([1, 8])
+            .translateExtent([[0, 0], [width, height]])
+            .on('zoom', (event) => {
+                if (this.mapGroup) {
+                    this.mapGroup.attr('transform', event.transform);
+                }
+            });
+
+        svg.call(this.zoom)
+            .on('dblclick.zoom', null);
+
+        this.addZoomResetButton(svg, width);
+    }
+
+    addZoomResetButton(svg, width) {
+        const btnGroup = svg.append('g')
+            .attr('class', 'zoom-reset-btn')
+            .attr('transform', `translate(${width - 40}, 10)`)
+            .attr('cursor', 'pointer')
+            .on('click', () => {
+                svg.transition().duration(300).call(this.zoom.transform, d3.zoomIdentity);
+            });
+
+        btnGroup.append('rect')
+            .attr('width', 30)
+            .attr('height', 30)
+            .attr('rx', 5)
+            .attr('fill', 'var(--bg-secondary)')
+            .attr('stroke', 'var(--border-color)')
+            .attr('stroke-width', 1);
+
+        btnGroup.append('text')
+            .attr('x', 15)
+            .attr('y', 20)
+            .attr('text-anchor', 'middle')
+            .attr('fill', 'var(--text-primary)')
+            .attr('font-size', '14px')
+            .text('⟲');
+    }
+
     drawMap() {
         const container = document.getElementById('map-container');
         const svg = d3.select('#map-svg');
@@ -184,6 +229,12 @@ class CanadaProvincesQuiz {
 
         svg.attr('width', width).attr('height', height);
 
+        // 줌 기능 설정
+        this.setupZoom(svg, width, height);
+
+        // 지도 그룹 생성 (줌 적용 대상)
+        this.mapGroup = svg.append('g').attr('class', 'map-group');
+
         // 캐나다 중심 투영 (줌아웃)
         this.projection = d3.geoMercator()
             .center([-96, 62])
@@ -193,7 +244,7 @@ class CanadaProvincesQuiz {
         this.path = d3.geoPath().projection(this.projection);
 
         // 배경
-        svg.append('rect')
+        this.mapGroup.append('rect')
             .attr('width', width)
             .attr('height', height)
             .attr('fill', 'var(--bg-tertiary)');
@@ -202,7 +253,7 @@ class CanadaProvincesQuiz {
         const colorPalette = this.getColorPalette();
         const colorAssignment = this.assignColorsToFeatures(this.topoData.features);
 
-        svg.selectAll('.province')
+        this.mapGroup.selectAll('.province')
             .data(this.topoData.features)
             .enter()
             .append('path')
@@ -221,7 +272,7 @@ class CanadaProvincesQuiz {
 
         // 라벨 (test 모드 제외)
         if (this.currentMode !== 'test') {
-            this.drawProvinceLabels(svg);
+            this.drawProvinceLabels(this.mapGroup);
         }
 
         this.svg = svg;
