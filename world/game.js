@@ -1,9 +1,15 @@
-// 세계 지도 퀴즈 게임
+// 세계 지도 퀴즈 게임 - 완전한 드릴다운 구조
+// 전 세계 지도 → 대륙 클릭 → 하위지역 클릭 → 국가 클릭
 
 class WorldMapQuiz {
     constructor() {
-        this.currentRegion = null; // asia, europe, africa, northAmerica, southAmerica, oceania, world
-        this.currentMode = null; // explore, practice, quiz, test
+        this.currentContinent = null;
+        this.currentSubregion = null;
+        this.currentMode = null;
+
+        // 현재 지도 뷰 상태: 'world' → 'continent' → 'subregion'
+        this.mapView = 'world';
+
         this.countries = [];
         this.currentQuestion = 0;
         this.score = 0;
@@ -16,25 +22,21 @@ class WorldMapQuiz {
         this.projection = null;
         this.path = null;
 
+        // 퀴즈 상태
+        this.targetCountry = null;
+        this.shuffledCountries = [];
+
         this.init();
     }
 
     async init() {
-        // URL 파라미터 확인
         const params = new URLSearchParams(window.location.search);
-        this.currentRegion = params.get('region');
+        this.currentContinent = params.get('continent');
         this.currentMode = params.get('mode');
 
-        // 테마 설정
         this.setupTheme();
-
-        // 지도 데이터 로드
         await this.loadMapData();
-
-        // 화면 설정
         this.setupScreen();
-
-        // 이벤트 리스너 설정
         this.setupEventListeners();
     }
 
@@ -49,9 +51,8 @@ class WorldMapQuiz {
             document.documentElement.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
 
-            // 탐색 모드에서 테마 변경시 지도 다시 그리기
-            if (this.currentMode === 'explore' && this.topoData) {
-                this.drawMap();
+            if (this.topoData) {
+                this.redrawCurrentMap();
             }
         });
     }
@@ -61,9 +62,10 @@ class WorldMapQuiz {
             const response = await fetch('data/countries-110m.json');
             this.topoData = await response.json();
 
-            // 로딩 완료
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('continent-buttons').classList.remove('hidden');
+
+            this.updateCountryCounts();
         } catch (error) {
             console.error('지도 데이터 로드 실패:', error);
             document.getElementById('loading').textContent = '지도 데이터 로드 실패';
@@ -71,23 +73,34 @@ class WorldMapQuiz {
     }
 
     setupScreen() {
-        if (this.currentRegion && this.currentMode) {
-            // 모드까지 선택된 경우 → 시작 화면 또는 게임 화면
+        if (this.currentContinent && this.currentMode) {
+            // 대륙 + 모드 선택됨 → 게임 시작 화면
             this.showScreen('start-screen');
             this.updateModeInfo();
 
             if (this.currentMode === 'explore') {
-                // explore 모드는 바로 시작
                 this.startGame();
             }
-        } else if (this.currentRegion) {
-            // 대륙만 선택된 경우 → 모드 선택 화면
+        } else if (this.currentContinent) {
+            // 대륙만 선택됨 → 모드 선택 화면
             this.showScreen('mode-screen');
-            this.updateRegionTitle();
+            this.updateModeScreen();
         } else {
-            // 아무것도 선택 안됨 → 대륙 선택 화면
+            // 아무것도 없음 → 대륙 선택
             this.showScreen('continent-screen');
         }
+    }
+
+    updateCountryCounts() {
+        for (const continentKey of Object.keys(WORLD_DATA)) {
+            const count = getContinentCountryCount(continentKey);
+            const el = document.getElementById(`${continentKey}-count`);
+            if (el) el.textContent = `${count}개국`;
+        }
+        // 전 세계 국가 수
+        const worldCount = getWorldCountryCount();
+        const worldEl = document.getElementById('world-count');
+        if (worldEl) worldEl.textContent = `${worldCount}개국`;
     }
 
     showScreen(screenId) {
@@ -96,7 +109,6 @@ class WorldMapQuiz {
         });
         document.getElementById(screenId).classList.add('active');
 
-        // 타이머 표시/숨김
         const stats = document.querySelector('.stats');
         if (screenId === 'game-screen') {
             stats.style.display = 'flex';
@@ -106,10 +118,9 @@ class WorldMapQuiz {
                 stats.classList.remove('timer-hidden');
             }
         } else {
-            stats.style.display = screenId === 'continent-screen' || screenId === 'mode-screen' ? 'none' : 'flex';
+            stats.style.display = ['continent-screen', 'mode-screen'].includes(screenId) ? 'none' : 'flex';
         }
 
-        // 테마 토글 표시 (explore 모드 또는 랜딩 화면에서만)
         const themeToggle = document.getElementById('theme-toggle');
         if (this.currentMode === 'explore' || screenId === 'continent-screen') {
             themeToggle.classList.remove('hidden');
@@ -118,108 +129,150 @@ class WorldMapQuiz {
         }
     }
 
-    updateRegionTitle() {
-        const regionNames = {
-            asia: '아시아',
-            europe: '유럽',
-            africa: '아프리카',
-            northAmerica: '북아메리카',
-            southAmerica: '남아메리카',
-            oceania: '오세아니아',
-            world: '전 세계'
-        };
+    updateModeScreen() {
+        if (this.currentContinent === 'world') {
+            document.getElementById('region-title').textContent = '전 세계 퀴즈';
+            const countryCount = getWorldCountryCount();
+            const subtitleEl = document.querySelector('#mode-screen > p');
+            if (subtitleEl) {
+                subtitleEl.textContent = `${countryCount}개국 학습하기`;
+            }
+        } else {
+            const continent = WORLD_DATA[this.currentContinent];
+            if (!continent) return;
 
-        const title = document.getElementById('region-title');
-        title.textContent = `${regionNames[this.currentRegion]} 퀴즈`;
+            document.getElementById('region-title').textContent = `${continent.name} 퀴즈`;
 
-        // 모드 버튼 링크 업데이트
+            // 국가 수 표시
+            const countryCount = getAllCountriesInContinent(this.currentContinent).length;
+            const subtitleEl = document.querySelector('#mode-screen > p');
+            if (subtitleEl) {
+                subtitleEl.textContent = `${countryCount}개국 학습하기`;
+            }
+        }
+
         document.querySelectorAll('.mode-btn').forEach(btn => {
             const mode = btn.dataset.mode;
-            btn.href = `?region=${this.currentRegion}&mode=${mode}`;
+            btn.href = `?continent=${this.currentContinent}&mode=${mode}`;
         });
     }
 
     updateModeInfo() {
-        const regionNames = {
-            asia: '아시아',
-            europe: '유럽',
-            africa: '아프리카',
-            northAmerica: '북아메리카',
-            southAmerica: '남아메리카',
-            oceania: '오세아니아',
-            world: '전 세계'
-        };
+        const continentName = this.currentContinent === 'world' ? '전 세계' : WORLD_DATA[this.currentContinent]?.name;
+        if (!continentName) return;
 
         const modeInfo = {
             explore: {
-                title: `${regionNames[this.currentRegion]} 지도 둘러보기`,
-                desc: '자유롭게 지도를 탐색해보세요. 국가를 클릭하면 이름이 표시됩니다.'
+                title: `${continentName} 지도 둘러보기`,
+                desc: this.currentContinent === 'world'
+                    ? '대륙을 클릭해서 확대하고, 국가 위치를 확인해보세요.'
+                    : '지역을 클릭해서 확대하고, 국가 위치를 확인해보세요.'
             },
             practice: {
-                title: `${regionNames[this.currentRegion]} 연습 모드`,
-                desc: '시간제한 없이 천천히 국가 위치를 맞춰보세요.'
+                title: `${continentName} 연습 모드`,
+                desc: this.currentContinent === 'world'
+                    ? '먼저 대륙을 클릭한 후, 해당 국가를 찾아 클릭하세요. 시간제한 없음!'
+                    : '먼저 지역을 클릭한 후, 해당 국가를 찾아 클릭하세요. 시간제한 없음!'
             },
             quiz: {
-                title: `${regionNames[this.currentRegion]} 퀴즈`,
-                desc: '5초 안에 해당 국가를 찾아 클릭하세요!'
+                title: `${continentName} 퀴즈`,
+                desc: this.currentContinent === 'world'
+                    ? '5초 안에 대륙 → 국가 순서로 클릭하세요!'
+                    : '5초 안에 지역 → 국가 순서로 클릭하세요!'
             },
             test: {
-                title: `${regionNames[this.currentRegion]} 실전 테스트`,
-                desc: '국가 이름 없이 지도만 보고 위치를 맞춰보세요!'
+                title: `${continentName} 실전 테스트`,
+                desc: '국가 이름 없이 지도만 보고 맞춰보세요!'
             }
         };
 
         document.getElementById('mode-title').textContent = modeInfo[this.currentMode].title;
         document.getElementById('mode-description').textContent = modeInfo[this.currentMode].desc;
-
-        // 뒤로가기 버튼 업데이트
-        document.getElementById('back-to-mode').href = `?region=${this.currentRegion}`;
-        document.getElementById('game-back-btn').href = `?region=${this.currentRegion}`;
+        document.getElementById('back-to-mode').href = `?continent=${this.currentContinent}`;
+        document.getElementById('game-back-btn').href = `?continent=${this.currentContinent}`;
     }
 
     setupEventListeners() {
-        // 시작 버튼
         document.getElementById('start-btn')?.addEventListener('click', () => {
             this.startGame();
         });
 
-        // 다시하기 버튼
         document.getElementById('restart-btn')?.addEventListener('click', () => {
             this.resetGame();
             this.startGame();
         });
-    }
 
-    getCountriesForRegion() {
-        if (this.currentRegion === 'world') {
-            // 전 세계 모든 국가
-            return Object.values(COUNTRIES_DATA).flatMap(region => region.countries);
-        }
-        return COUNTRIES_DATA[this.currentRegion]?.countries || [];
+        // 뒤로가기 버튼 (지도에서)
+        document.getElementById('map-back-btn')?.addEventListener('click', () => {
+            this.goBackToContinent();
+        });
     }
 
     startGame() {
-        this.countries = this.getCountriesForRegion();
-        this.currentQuestion = 0;
-        this.score = 0;
-        this.results = [];
+        if (this.currentContinent === 'world') {
+            // 전 세계 모드
+            this.countries = getAllWorldCountries();
+            this.currentQuestion = 0;
+            this.score = 0;
+            this.results = [];
+            this.mapView = 'world';
+            this.currentSubregion = null;
+            this.selectedContinent = null;
 
-        // 문제 수 설정
-        this.totalQuestions = Math.min(10, this.countries.length);
+            this.totalQuestions = Math.min(10, this.countries.length);
+            this.shuffledCountries = [...this.countries].sort(() => Math.random() - 0.5);
 
-        // 국가 섞기
-        this.shuffledCountries = [...this.countries].sort(() => Math.random() - 0.5);
+            this.showScreen('game-screen');
+            this.drawWorldMap();
 
-        this.showScreen('game-screen');
-        this.drawMap();
+            if (this.currentMode !== 'explore') {
+                this.updateScore();
+                this.nextQuestion();
+            } else {
+                document.getElementById('question-text').textContent = '대륙을 클릭해서 탐색하세요';
+                document.getElementById('step-indicator').textContent = '';
+            }
+        } else {
+            const continent = WORLD_DATA[this.currentContinent];
+            if (!continent) return;
 
-        if (this.currentMode !== 'explore') {
-            this.updateScore();
-            this.nextQuestion();
+            // 대륙의 모든 국가
+            this.countries = getAllCountriesInContinent(this.currentContinent);
+            this.currentQuestion = 0;
+            this.score = 0;
+            this.results = [];
+            this.mapView = 'continent';
+            this.currentSubregion = null;
+
+            this.totalQuestions = Math.min(10, this.countries.length);
+            this.shuffledCountries = [...this.countries].sort(() => Math.random() - 0.5);
+
+            this.showScreen('game-screen');
+            this.drawContinentMap();
+
+            if (this.currentMode !== 'explore') {
+                this.updateScore();
+                this.nextQuestion();
+            } else {
+                document.getElementById('question-text').textContent = '지역을 클릭해서 탐색하세요';
+                document.getElementById('step-indicator').textContent = '';
+            }
         }
     }
 
-    drawMap() {
+    redrawCurrentMap() {
+        if (this.mapView === 'world') {
+            this.drawWorldMap();
+        } else if (this.mapView === 'continent') {
+            this.drawContinentMap();
+        } else {
+            this.drawSubregionMap(this.currentSubregion);
+        }
+    }
+
+    // 전 세계 지도 그리기 (대륙별로 색상 구분)
+    drawWorldMap() {
+        this.mapView = 'world';
         const container = document.getElementById('map-container');
         const svg = d3.select('#map-svg');
         svg.selectAll('*').remove();
@@ -229,127 +282,776 @@ class WorldMapQuiz {
 
         svg.attr('width', width).attr('height', height);
 
-        // 프로젝션 설정 (대륙별로 다르게)
-        this.projection = this.getProjection(width, height);
+        const settings = CONTINENT_SETTINGS.world;
+
+        this.projection = d3.geoMercator()
+            .center(settings.center)
+            .scale(settings.scale * Math.min(width, height) / 600)
+            .translate([width / 2, height / 2]);
+
         this.path = d3.geoPath().projection(this.projection);
 
-        // 국가 데이터
         const countries = topojson.feature(this.topoData, this.topoData.objects.countries);
 
-        // 배경 (바다)
+        // 배경
         svg.append('rect')
             .attr('width', width)
             .attr('height', height)
             .attr('fill', 'var(--bg-tertiary)');
 
-        // 국가 그리기
-        const countryPaths = svg.selectAll('.country')
+        // 대륙별로 국가 그리기 (12색 조합 사용)
+        const palette = this.getColorPalette();
+        const continentKeys = Object.keys(WORLD_DATA);
+
+        for (let i = 0; i < continentKeys.length; i++) {
+            const continentKey = continentKeys[i];
+            const continent = WORLD_DATA[continentKey];
+            const countryIds = getAllCountriesInContinent(continentKey).map(c => c.id);
+            const continentColor = palette[i % palette.length];
+
+            svg.selectAll(`.continent-${continentKey}`)
+                .data(countries.features.filter(d => countryIds.includes(String(d.id))))
+                .enter()
+                .append('path')
+                .attr('class', `country continent-country`)
+                .attr('data-continent', continentKey)
+                .attr('d', this.path)
+                .attr('fill', continentColor)
+                .attr('stroke', 'var(--map-stroke)')
+                .attr('stroke-width', 0.5)
+                .on('click', (event, d) => this.handleWorldMapClick(continentKey, d))
+                .on('mouseover', function() {
+                    d3.select(this).attr('stroke-width', 1.5).style('filter', 'brightness(1.2)');
+                })
+                .on('mouseout', function() {
+                    d3.select(this).attr('stroke-width', 0.5).style('filter', 'none');
+                });
+        }
+
+        // 대륙 라벨
+        if (this.currentMode !== 'test') {
+            this.drawContinentLabels(svg);
+        }
+
+        this.svg = svg;
+
+        // 단계 표시
+        if (this.currentMode !== 'explore') {
+            document.getElementById('step-indicator').textContent = '▶ 1단계: 대륙을 선택하세요';
+        }
+    }
+
+    drawContinentLabels(svg) {
+        const labelPositions = {
+            asia: { x: 0.65, y: 0.35 },
+            europe: { x: 0.52, y: 0.25 },
+            africa: { x: 0.52, y: 0.55 },
+            northAmerica: { x: 0.2, y: 0.3 },
+            southAmerica: { x: 0.28, y: 0.7 },
+            oceania: { x: 0.82, y: 0.7 }
+        };
+
+        const width = +svg.attr('width');
+        const height = +svg.attr('height');
+
+        for (const [continentKey, continent] of Object.entries(WORLD_DATA)) {
+            const pos = labelPositions[continentKey];
+            if (pos) {
+                svg.append('text')
+                    .attr('class', 'continent-label district-label')
+                    .attr('x', width * pos.x)
+                    .attr('y', height * pos.y)
+                    .attr('text-anchor', 'middle')
+                    .text(continent.name)
+                    .style('pointer-events', 'none');
+            }
+        }
+    }
+
+    handleWorldMapClick(continentKey, feature) {
+        if (this.currentMode === 'explore') {
+            // 탐색 모드: 해당 대륙으로 확대
+            this.selectedContinent = continentKey;
+            this.currentContinent = continentKey;
+            this.mapView = 'continent';
+            this.drawContinentMap();
+            const continent = WORLD_DATA[continentKey];
+            this.showFeedback(`${continent.name}으로 이동`, 'info');
+            return;
+        }
+
+        // 퀴즈 모드: 정답 국가가 속한 대륙인지 확인
+        const targetCountry = this.shuffledCountries[this.currentQuestion];
+        const targetInfo = getCountryById(targetCountry.id);
+
+        if (targetInfo.continent === continentKey) {
+            // 정답 대륙 선택!
+            this.selectedContinent = continentKey;
+            const originalContinent = this.currentContinent;
+            this.currentContinent = continentKey;
+            this.drawContinentMap();
+            this.currentContinent = originalContinent; // 원래 값 복원
+            document.getElementById('step-indicator').textContent = '▶ 2단계: 지역을 선택하세요';
+        } else {
+            // 틀린 대륙
+            const correctContinent = WORLD_DATA[targetInfo.continent];
+            this.showFeedback(`틀렸습니다! ${correctContinent.name}을 선택하세요.`, 'incorrect');
+        }
+    }
+
+    // 대륙 전체 지도 그리기 (하위지역별로 색상 구분)
+    drawContinentMap() {
+        this.mapView = 'continent';
+        const container = document.getElementById('map-container');
+        const svg = d3.select('#map-svg');
+        svg.selectAll('*').remove();
+
+        const width = container.clientWidth;
+        const height = Math.min(600, window.innerHeight * 0.6);
+
+        svg.attr('width', width).attr('height', height);
+
+        // 전 세계 모드에서는 selectedContinent 사용, 아니면 currentContinent 사용
+        const activeContinentKey = this.selectedContinent || this.currentContinent;
+        const continent = WORLD_DATA[activeContinentKey];
+        const settings = CONTINENT_SETTINGS[activeContinentKey];
+
+        if (!continent || !settings) return;
+
+        this.projection = d3.geoMercator()
+            .center(settings.center)
+            .scale(settings.scale * Math.min(width, height) / 600)
+            .translate([width / 2, height / 2]);
+
+        this.path = d3.geoPath().projection(this.projection);
+
+        const countries = topojson.feature(this.topoData, this.topoData.objects.countries);
+
+        // 배경
+        svg.append('rect')
+            .attr('width', width)
+            .attr('height', height)
+            .attr('fill', 'var(--bg-tertiary)');
+
+        // 모든 국가 (연한 배경)
+        svg.selectAll('.country-bg')
             .data(countries.features)
+            .enter()
+            .append('path')
+            .attr('class', 'country-bg')
+            .attr('d', this.path)
+            .attr('fill', '#ddd')
+            .attr('stroke', '#aaa')
+            .attr('stroke-width', 0.3);
+
+        // 하위지역별로 국가 그리기
+        const subregionColors = this.generateSubregionColors(continent);
+
+        for (const [subregionKey, subregion] of Object.entries(continent.subregions)) {
+            const countryIds = subregion.countries.map(c => c.id);
+            const color = subregionColors[subregionKey];
+
+            svg.selectAll(`.subregion-${subregionKey}`)
+                .data(countries.features.filter(d => countryIds.includes(d.id)))
+                .enter()
+                .append('path')
+                .attr('class', `country subregion-country`)
+                .attr('data-subregion', subregionKey)
+                .attr('d', this.path)
+                .attr('fill', color)
+                .attr('stroke', 'var(--map-stroke)')
+                .attr('stroke-width', 0.8)
+                .on('click', (event, d) => this.handleContinentMapClick(subregionKey, d))
+                .on('mouseover', function() {
+                    d3.select(this).attr('stroke-width', 2).style('filter', 'brightness(1.2)');
+                })
+                .on('mouseout', function() {
+                    d3.select(this).attr('stroke-width', 0.8).style('filter', 'none');
+                });
+        }
+
+        // 하위지역 라벨 (explore 모드 또는 test가 아닌 경우)
+        if (this.currentMode !== 'test') {
+            this.drawSubregionLabels(svg, continent);
+        }
+
+        // 전 세계 모드 + 탐색 모드일 때 뒤로가기 버튼 추가
+        if (this.currentContinent === 'world' && this.currentMode === 'explore') {
+            svg.append('rect')
+                .attr('x', 10)
+                .attr('y', 10)
+                .attr('width', 80)
+                .attr('height', 30)
+                .attr('rx', 5)
+                .attr('fill', 'var(--bg-secondary)')
+                .attr('stroke', 'var(--border-color)')
+                .attr('cursor', 'pointer')
+                .on('click', () => this.goBackToContinent());
+
+            svg.append('text')
+                .attr('x', 50)
+                .attr('y', 28)
+                .attr('text-anchor', 'middle')
+                .attr('fill', 'var(--text-primary)')
+                .attr('font-size', '12px')
+                .attr('cursor', 'pointer')
+                .text('← 뒤로')
+                .on('click', () => this.goBackToContinent());
+        }
+
+        this.svg = svg;
+
+        // 단계 표시
+        if (this.currentMode !== 'explore') {
+            document.getElementById('step-indicator').textContent = '▶ 1단계: 지역을 선택하세요';
+        }
+    }
+
+    // 12색 조합 (한국 지도와 동일)
+    getColorPalette() {
+        const isLightMode = document.documentElement.getAttribute('data-theme') === 'light';
+
+        // 다크 모드용 색상 (네온/밝은 톤)
+        const darkModeColors = [
+            '#e74c3c', // 빨강
+            '#3498db', // 파랑
+            '#2ecc71', // 초록
+            '#f1c40f', // 노랑
+            '#9b59b6', // 보라
+            '#1abc9c', // 민트
+            '#e67e22', // 주황
+            '#e91e63', // 핑크
+            '#00bcd4', // 시안
+            '#8bc34a', // 라임
+            '#ff5722', // 딥오렌지
+            '#bdc3c7', // 연회색
+        ];
+
+        // 라이트 모드용 색상 (파스텔 톤)
+        const lightModeColors = [
+            '#F48FB1', // 파스텔 핑크
+            '#81C784', // 파스텔 그린
+            '#64B5F6', // 파스텔 블루
+            '#FFD54F', // 파스텔 옐로우
+            '#BA68C8', // 파스텔 퍼플
+            '#4DD0E1', // 파스텔 시안
+            '#FFB74D', // 파스텔 오렌지
+            '#F06292', // 파스텔 로즈
+            '#4DB6AC', // 파스텔 틸
+            '#AED581', // 파스텔 라임
+            '#9575CD', // 파스텔 인디고
+            '#A1887F', // 파스텔 브라운
+        ];
+
+        return isLightMode ? lightModeColors : darkModeColors;
+    }
+
+    // 인접 국가 색상 분리 알고리즘 - 12색 최대 활용
+    assignColorsToFeatures(features) {
+        const palette = this.getColorPalette();
+        const colorAssignment = new Map(); // feature id → color index
+
+        // 인접 관계 계산
+        const adjacency = new Map();
+        features.forEach(f => adjacency.set(f.id, new Set()));
+
+        for (let i = 0; i < features.length; i++) {
+            for (let j = i + 1; j < features.length; j++) {
+                if (this.areFeaturesAdjacent(features[i], features[j])) {
+                    adjacency.get(features[i].id).add(features[j].id);
+                    adjacency.get(features[j].id).add(features[i].id);
+                }
+            }
+        }
+
+        // 각 색상 사용 횟수 추적 (균등 분배용)
+        const colorUsageCount = new Array(palette.length).fill(0);
+
+        // 인접 국가 수가 많은 순서로 정렬
+        const sortedFeatures = [...features].sort((a, b) => {
+            return adjacency.get(b.id).size - adjacency.get(a.id).size;
+        });
+
+        sortedFeatures.forEach(feature => {
+            // 인접 국가들이 사용한 색상 수집
+            const usedColors = new Set();
+            adjacency.get(feature.id).forEach(neighborId => {
+                if (colorAssignment.has(neighborId)) {
+                    usedColors.add(colorAssignment.get(neighborId));
+                }
+            });
+
+            // 사용 가능한 색상들 중에서 가장 적게 사용된 색상 선택
+            let bestColorIndex = 0;
+            let minUsage = Infinity;
+
+            for (let i = 0; i < palette.length; i++) {
+                if (!usedColors.has(i) && colorUsageCount[i] < minUsage) {
+                    minUsage = colorUsageCount[i];
+                    bestColorIndex = i;
+                }
+            }
+
+            colorAssignment.set(feature.id, bestColorIndex);
+            colorUsageCount[bestColorIndex]++;
+        });
+
+        return colorAssignment;
+    }
+
+    // 두 피처가 인접한지 확인 (경계 공유) - 좌표 비교 방식
+    areFeaturesAdjacent(f1, f2) {
+        // 바운딩 박스가 겹치지 않으면 빠르게 제외
+        const bounds1 = this.path.bounds(f1);
+        const bounds2 = this.path.bounds(f2);
+
+        // 약간의 여유를 두고 바운딩 박스 체크 (5px)
+        const margin = 5;
+        if (bounds1[1][0] + margin < bounds2[0][0] || bounds2[1][0] + margin < bounds1[0][0] ||
+            bounds1[1][1] + margin < bounds2[0][1] || bounds2[1][1] + margin < bounds1[0][1]) {
+            return false;
+        }
+
+        // 실제 경계 좌표 추출하여 근접 여부 확인
+        const coords1 = this.extractCoordinates(f1);
+        const coords2 = this.extractCoordinates(f2);
+
+        // 두 폴리곤의 경계점이 가까운지 확인 (임계값: 3px)
+        const threshold = 3;
+        for (const p1 of coords1) {
+            for (const p2 of coords2) {
+                const dist = Math.sqrt(Math.pow(p1[0] - p2[0], 2) + Math.pow(p1[1] - p2[1], 2));
+                if (dist < threshold) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // GeoJSON 피처에서 투영된 좌표 추출 (샘플링)
+    extractCoordinates(feature) {
+        const coords = [];
+        const geometry = feature.geometry;
+
+        const processCoords = (coordArray) => {
+            // 모든 좌표를 사용하면 느려지므로 샘플링
+            const step = Math.max(1, Math.floor(coordArray.length / 50));
+            for (let i = 0; i < coordArray.length; i += step) {
+                const projected = this.projection(coordArray[i]);
+                if (projected && !isNaN(projected[0])) {
+                    coords.push(projected);
+                }
+            }
+        };
+
+        if (geometry.type === 'Polygon') {
+            geometry.coordinates.forEach(ring => processCoords(ring));
+        } else if (geometry.type === 'MultiPolygon') {
+            geometry.coordinates.forEach(polygon => {
+                polygon.forEach(ring => processCoords(ring));
+            });
+        }
+
+        return coords;
+    }
+
+    generateSubregionColors(continent) {
+        const palette = this.getColorPalette();
+        const subregions = Object.keys(continent.subregions);
+        const colors = {};
+
+        subregions.forEach((key, index) => {
+            colors[key] = palette[index % palette.length];
+        });
+
+        return colors;
+    }
+
+    drawSubregionLabels(svg, continent) {
+        const countries = topojson.feature(this.topoData, this.topoData.objects.countries);
+
+        for (const [subregionKey, subregion] of Object.entries(continent.subregions)) {
+            const countryIds = subregion.countries.map(c => c.id);
+            const subregionCountries = countries.features.filter(d => countryIds.includes(d.id));
+
+            if (subregionCountries.length === 0) continue;
+
+            // 하위지역의 중심점 계산
+            let totalX = 0, totalY = 0, count = 0;
+            subregionCountries.forEach(feature => {
+                const centroid = this.path.centroid(feature);
+                if (!isNaN(centroid[0]) && !isNaN(centroid[1])) {
+                    totalX += centroid[0];
+                    totalY += centroid[1];
+                    count++;
+                }
+            });
+
+            if (count > 0) {
+                svg.append('text')
+                    .attr('class', 'subregion-label district-label')
+                    .attr('x', totalX / count)
+                    .attr('y', totalY / count)
+                    .attr('text-anchor', 'middle')
+                    .attr('dy', '0.35em')
+                    .text(subregion.name)
+                    .style('pointer-events', 'none');
+            }
+        }
+    }
+
+    handleContinentMapClick(subregionKey, feature) {
+        // 전 세계 모드에서는 selectedContinent 사용
+        const activeContinentKey = this.selectedContinent || this.currentContinent;
+
+        if (this.currentMode === 'explore') {
+            // 탐색 모드: 해당 하위지역으로 확대
+            this.currentSubregion = subregionKey;
+            this.drawSubregionMap(subregionKey);
+            const subregion = WORLD_DATA[activeContinentKey].subregions[subregionKey];
+            this.showFeedback(`${subregion.name} 지역으로 이동`, 'info');
+            return;
+        }
+
+        // 퀴즈 모드: 정답 국가가 속한 지역인지 확인
+        const targetCountry = this.shuffledCountries[this.currentQuestion];
+        const targetInfo = getCountryById(targetCountry.id);
+
+        if (targetInfo.subregion === subregionKey) {
+            // 정답 지역 선택!
+            this.currentSubregion = subregionKey;
+            this.drawSubregionMap(subregionKey);
+            document.getElementById('step-indicator').textContent = '▶ 3단계: 국가를 선택하세요';
+        } else {
+            // 틀린 지역
+            const correctSubregion = WORLD_DATA[activeContinentKey].subregions[targetInfo.subregion];
+            this.showFeedback(`틀렸습니다! ${correctSubregion.name} 지역을 선택하세요.`, 'incorrect');
+        }
+    }
+
+    // 하위지역 확대 지도 그리기
+    drawSubregionMap(subregionKey) {
+        this.mapView = 'subregion';
+        this.currentSubregion = subregionKey;
+
+        const container = document.getElementById('map-container');
+        const svg = d3.select('#map-svg');
+        svg.selectAll('*').remove();
+
+        const width = container.clientWidth;
+        const height = Math.min(600, window.innerHeight * 0.6);
+
+        svg.attr('width', width).attr('height', height);
+
+        // 전 세계 모드에서는 selectedContinent 사용
+        const activeContinentKey = this.selectedContinent || this.currentContinent;
+        const continent = WORLD_DATA[activeContinentKey];
+        const subregion = continent.subregions[subregionKey];
+
+        this.projection = d3.geoMercator()
+            .center(subregion.center)
+            .scale(subregion.scale * Math.min(width, height) / 600)
+            .translate([width / 2, height / 2]);
+
+        this.path = d3.geoPath().projection(this.projection);
+
+        const countries = topojson.feature(this.topoData, this.topoData.objects.countries);
+        const subregionCountryIds = subregion.countries.map(c => c.id);
+
+        // 배경
+        svg.append('rect')
+            .attr('width', width)
+            .attr('height', height)
+            .attr('fill', 'var(--bg-tertiary)');
+
+        // 모든 국가 (연한 배경)
+        svg.selectAll('.country-bg')
+            .data(countries.features)
+            .enter()
+            .append('path')
+            .attr('class', 'country-bg')
+            .attr('d', this.path)
+            .attr('fill', '#ddd')
+            .attr('stroke', '#aaa')
+            .attr('stroke-width', 0.3);
+
+        // 해당 지역 국가들 (인접 국가 색상 분리 알고리즘 적용)
+        const countryPalette = this.getColorPalette();
+        const countryFeatures = countries.features.filter(d => subregionCountryIds.includes(d.id));
+
+        // 인접 국가 색상 분리
+        const colorAssignment = this.assignColorsToFeatures(countryFeatures);
+
+        svg.selectAll('.country')
+            .data(countryFeatures)
             .enter()
             .append('path')
             .attr('class', 'country')
             .attr('d', this.path)
-            .attr('fill', d => this.getCountryFill(d))
+            .attr('fill', d => countryPalette[colorAssignment.get(d.id) || 0])
             .attr('stroke', 'var(--map-stroke)')
-            .attr('stroke-width', 0.5)
+            .attr('stroke-width', 1)
             .on('click', (event, d) => this.handleCountryClick(d))
             .on('mouseover', function() {
-                d3.select(this).attr('stroke-width', 2);
+                d3.select(this).attr('stroke-width', 2.5).style('filter', 'brightness(1.2)');
             })
             .on('mouseout', function() {
-                d3.select(this).attr('stroke-width', 0.5);
+                d3.select(this).attr('stroke-width', 1).style('filter', 'none');
             });
 
-        // 라벨 그리기 (explore 모드 또는 quiz/practice 모드)
+        // 국가 라벨 (test 모드 제외)
         if (this.currentMode !== 'test') {
-            this.drawLabels(svg, countries);
+            this.drawCountryLabels(svg, countries.features.filter(d => subregionCountryIds.includes(d.id)));
         }
+
+        // 뒤로가기 버튼
+        svg.append('rect')
+            .attr('x', 10)
+            .attr('y', 10)
+            .attr('width', 80)
+            .attr('height', 30)
+            .attr('rx', 5)
+            .attr('fill', 'var(--bg-secondary)')
+            .attr('stroke', 'var(--border-color)')
+            .attr('cursor', 'pointer')
+            .on('click', () => this.goBackToContinent());
+
+        svg.append('text')
+            .attr('x', 50)
+            .attr('y', 28)
+            .attr('text-anchor', 'middle')
+            .attr('fill', 'var(--text-primary)')
+            .attr('font-size', '12px')
+            .attr('cursor', 'pointer')
+            .text('← 뒤로')
+            .on('click', () => this.goBackToContinent());
 
         this.svg = svg;
     }
 
-    getProjection(width, height) {
-        const projectionSettings = {
-            asia: { center: [90, 35], scale: 250 },
-            europe: { center: [15, 54], scale: 500 },
-            africa: { center: [20, 0], scale: 280 },
-            northAmerica: { center: [-100, 45], scale: 280 },
-            southAmerica: { center: [-60, -20], scale: 300 },
-            oceania: { center: [140, -25], scale: 350 },
-            world: { center: [0, 20], scale: 130 }
+    drawCountryLabels(svg, features) {
+        // 스마트 리더 라인 시스템: 필요한 경우에만 자동 생성
+        const DIRECTIONS = [
+            { name: 'E',  dx: 70,  dy: 0 },
+            { name: 'W',  dx: -70, dy: 0 },
+            { name: 'SE', dx: 50,  dy: 50 },
+            { name: 'SW', dx: -50, dy: 50 },
+            { name: 'NE', dx: 50,  dy: -50 },
+            { name: 'NW', dx: -50, dy: -50 },
+            { name: 'S',  dx: 0,   dy: 70 },
+            { name: 'N',  dx: 0,   dy: -70 },
+        ];
+
+        // 선호 방향 힌트 (바다/빈 공간 방향)
+        const preferredDirection = {
+            // 서아시아 - 지중해/홍해 방향
+            '376': 'W', '275': 'W', '400': 'W', '422': 'W', '196': 'W',
+            '414': 'E', '48': 'E', '634': 'E', '784': 'E',
+            // 동남아시아
+            '702': 'W', '096': 'E', '626': 'E',
+            // 유럽
+            '442': 'W', '020': 'W', '492': 'W', '674': 'E', '336': 'E', '470': 'E',
+            '705': 'W', '807': 'W', '499': 'W', '8': 'W',
+            // 카리브해
+            '44': 'E', '388': 'W', '332': 'W', '214': 'E', '630': 'E',
+            '780': 'E', '52': 'E', '662': 'E', '670': 'E', '308': 'E',
+            '28': 'E', '659': 'E', '212': 'E',
+            // 아프리카
+            '728': 'E', '226': 'W', '266': 'W', '624': 'W', '270': 'W', '132': 'W',
+            '690': 'E', '174': 'E', '480': 'E', '678': 'W', '748': 'E', '426': 'E',
+            '262': 'E', '232': 'E', '646': 'W', '108': 'W', '768': 'W', '204': 'W',
+            // 오세아니아
+            '242': 'E', '90': 'E', '548': 'E', '882': 'E', '776': 'E', '296': 'E',
+            '583': 'W', '584': 'E', '585': 'W', '520': 'E', '798': 'E',
         };
 
-        const settings = projectionSettings[this.currentRegion] || projectionSettings.world;
+        const placedLabels = [];
+        const placedLines = [];
 
-        return d3.geoMercator()
-            .center(settings.center)
-            .scale(settings.scale * Math.min(width, height) / 600)
-            .translate([width / 2, height / 2]);
-    }
-
-    getCountryFill(feature) {
-        const countryId = feature.id;
-        const countryInfo = getCountryById(countryId);
-
-        if (!countryInfo) {
-            return '#95a5a6'; // 미분류 국가
-        }
-
-        // 현재 대륙에 속한 국가만 색상 표시
-        if (this.currentRegion === 'world' || countryInfo.continent === this.currentRegion) {
-            return getCountryColor(countryId);
-        }
-
-        return '#ddd'; // 다른 대륙 국가
-    }
-
-    drawLabels(svg, countries) {
-        const regionCountryIds = this.getCountriesForRegion().map(c => c.id);
-
-        svg.selectAll('.country-label')
-            .data(countries.features.filter(d => regionCountryIds.includes(d.id)))
-            .enter()
-            .append('text')
-            .attr('class', 'country-label region-label')
-            .attr('transform', d => {
-                const centroid = this.path.centroid(d);
-                return `translate(${centroid[0]}, ${centroid[1]})`;
-            })
-            .attr('text-anchor', 'middle')
-            .attr('dy', '0.35em')
-            .text(d => {
-                const country = getCountryById(d.id);
-                return country ? country.name : '';
-            })
-            .style('font-size', this.getLabelFontSize());
-    }
-
-    getLabelFontSize() {
-        const sizes = {
-            asia: '8px',
-            europe: '7px',
-            africa: '7px',
-            northAmerica: '8px',
-            southAmerica: '9px',
-            oceania: '9px',
-            world: '6px'
+        // 지역 크기 계산 (바운딩 박스 면적)
+        const getFeatureSize = (feature) => {
+            const bounds = this.path.bounds(feature);
+            if (!bounds || isNaN(bounds[0][0])) return 0;
+            return (bounds[1][0] - bounds[0][0]) * (bounds[1][1] - bounds[0][1]);
         };
-        return sizes[this.currentRegion] || '8px';
+
+        // 라벨이 지역 내부에 들어가는지 확인
+        const labelFitsInFeature = (feature, labelWidth, labelHeight) => {
+            const bounds = this.path.bounds(feature);
+            if (!bounds || isNaN(bounds[0][0])) return false;
+            const featureWidth = bounds[1][0] - bounds[0][0];
+            const featureHeight = bounds[1][1] - bounds[0][1];
+            return featureWidth > labelWidth * 1.2 && featureHeight > labelHeight * 1.2;
+        };
+
+        // 선분 교차 확인
+        const linesIntersect = (line1, line2) => {
+            const { x1: a1, y1: b1, x2: a2, y2: b2 } = line1;
+            const { x1: c1, y1: d1, x2: c2, y2: d2 } = line2;
+            const denom = (a2 - a1) * (d2 - d1) - (b2 - b1) * (c2 - c1);
+            if (Math.abs(denom) < 0.001) return false;
+            const t = ((c1 - a1) * (d2 - d1) - (d1 - b1) * (c2 - c1)) / denom;
+            const u = -((a2 - a1) * (d1 - b1) - (b2 - b1) * (c1 - a1)) / denom;
+            return t > 0.05 && t < 0.95 && u > 0.05 && u < 0.95;
+        };
+
+        // 라벨 겹침 확인
+        const labelsOverlap = (rect1, rect2) => {
+            return !(rect1.x + rect1.width < rect2.x || rect2.x + rect2.width < rect1.x ||
+                     rect1.y + rect1.height < rect2.y || rect2.y + rect2.height < rect1.y);
+        };
+
+        // 중심 라벨이 다른 라벨과 겹치는지 확인
+        const centerLabelOverlapsOthers = (centroid, labelWidth, labelHeight) => {
+            const labelRect = {
+                x: centroid[0] - labelWidth/2,
+                y: centroid[1] - labelHeight/2,
+                width: labelWidth,
+                height: labelHeight
+            };
+            for (const placed of placedLabels) {
+                if (labelsOverlap(labelRect, placed)) return true;
+            }
+            return false;
+        };
+
+        // 최적 방향 찾기
+        const findBestDirection = (centroid, preferredDir, labelWidth, labelHeight) => {
+            const sortedDirs = [...DIRECTIONS].sort((a, b) => {
+                if (a.name === preferredDir) return -1;
+                if (b.name === preferredDir) return 1;
+                return 0;
+            });
+
+            for (const dir of sortedDirs) {
+                const labelX = centroid[0] + dir.dx;
+                const labelY = centroid[1] + dir.dy;
+                const labelRect = { x: labelX - labelWidth/2, y: labelY - labelHeight/2, width: labelWidth, height: labelHeight };
+                const newLine = { x1: centroid[0], y1: centroid[1], x2: labelX, y2: labelY };
+
+                let hasConflict = false;
+                for (const placed of placedLabels) {
+                    if (labelsOverlap(labelRect, placed)) { hasConflict = true; break; }
+                }
+                if (!hasConflict) {
+                    for (const placed of placedLines) {
+                        if (linesIntersect(newLine, placed)) { hasConflict = true; break; }
+                    }
+                }
+                if (!hasConflict) return dir;
+            }
+            return sortedDirs[0];
+        };
+
+        // 크기순 정렬 (큰 지역부터 처리하여 라벨 우선 배치)
+        const sortedFeatures = [...features].sort((a, b) => getFeatureSize(b) - getFeatureSize(a));
+
+        sortedFeatures.forEach(d => {
+            const centroid = this.path.centroid(d);
+            if (isNaN(centroid[0]) || isNaN(centroid[1])) return;
+
+            const country = getCountryById(d.id);
+            if (!country) return;
+
+            const labelWidth = country.name.length * 7 + 10;
+            const labelHeight = 14;
+
+            // 스마트 판단: 리더 라인이 필요한가?
+            const fitsInside = labelFitsInFeature(d, labelWidth, labelHeight);
+            const wouldOverlap = centerLabelOverlapsOthers(centroid, labelWidth, labelHeight);
+            const needsLeaderLine = !fitsInside || wouldOverlap;
+
+            if (needsLeaderLine) {
+                // 리더 라인 필요
+                const preferredDir = preferredDirection[String(d.id)] || 'E';
+                const bestDir = findBestDirection(centroid, preferredDir, labelWidth, labelHeight);
+
+                const labelX = centroid[0] + bestDir.dx;
+                const labelY = centroid[1] + bestDir.dy;
+
+                placedLines.push({ x1: centroid[0], y1: centroid[1], x2: labelX, y2: labelY });
+                placedLabels.push({ x: labelX - labelWidth/2, y: labelY - labelHeight/2, width: labelWidth, height: labelHeight });
+
+                svg.append('line')
+                    .attr('class', 'leader-line')
+                    .attr('x1', centroid[0])
+                    .attr('y1', centroid[1])
+                    .attr('x2', labelX)
+                    .attr('y2', labelY)
+                    .attr('stroke', 'var(--map-label-color)')
+                    .attr('stroke-width', 1)
+                    .attr('opacity', 0.7)
+                    .style('pointer-events', 'none');
+
+                svg.append('text')
+                    .attr('class', 'country-label district-label')
+                    .attr('x', labelX)
+                    .attr('y', labelY)
+                    .attr('text-anchor', 'middle')
+                    .attr('dy', '0.35em')
+                    .text(country.name)
+                    .style('pointer-events', 'none');
+            } else {
+                // 리더 라인 불필요 - 중심에 배치
+                placedLabels.push({ x: centroid[0] - labelWidth/2, y: centroid[1] - labelHeight/2, width: labelWidth, height: labelHeight });
+
+                svg.append('text')
+                    .attr('class', 'country-label district-label')
+                    .attr('x', centroid[0])
+                    .attr('y', centroid[1])
+                    .attr('text-anchor', 'middle')
+                    .attr('dy', '0.35em')
+                    .text(country.name)
+                    .style('pointer-events', 'none');
+            }
+        });
+    }
+
+    goBackToContinent() {
+        if (this.currentMode === 'explore') {
+            if (this.currentContinent === 'world') {
+                // 전 세계 모드
+                if (this.mapView === 'subregion') {
+                    // 하위지역 → 대륙 (selectedContinent 유지)
+                    this.currentSubregion = null;
+                    this.drawContinentMap();
+                    this.showFeedback('대륙 지도로 돌아왔습니다', 'info');
+                } else if (this.selectedContinent) {
+                    // 대륙 → 전체 지도
+                    this.selectedContinent = null;
+                    this.drawWorldMap();
+                    this.showFeedback('전 세계 지도로 돌아왔습니다', 'info');
+                }
+            } else {
+                this.drawContinentMap();
+                this.showFeedback('대륙 지도로 돌아왔습니다', 'info');
+            }
+        }
+        // 퀴즈 모드에서는 뒤로가기 불가
     }
 
     handleCountryClick(feature) {
         const countryId = feature.id;
         const countryInfo = getCountryById(countryId);
 
+        // 미국 클릭시 미국 주 퀴즈로 이동
+        if (countryId === '840') {
+            if (this.currentMode === 'explore') {
+                if (confirm('미국 50개 주 퀴즈로 이동하시겠습니까?')) {
+                    window.location.href = 'usa/';
+                }
+            }
+            return;
+        }
+
         if (this.currentMode === 'explore') {
-            // 탐색 모드: 클릭한 국가 이름 표시
             if (countryInfo) {
                 this.showFeedback(`${countryInfo.name} (${countryInfo.nameEn})`, 'info');
             }
             return;
         }
 
-        // 퀴즈 모드
         if (this.currentQuestion >= this.totalQuestions) return;
 
         const currentCountry = this.shuffledCountries[this.currentQuestion];
@@ -363,7 +1065,11 @@ class WorldMapQuiz {
             this.highlightCountry(countryId, 'correct');
             this.showFeedback('정답입니다!', 'correct');
         } else {
-            this.results.push({ country: currentCountry.name, correct: false, answer: countryInfo?.name || '알 수 없음' });
+            this.results.push({
+                country: currentCountry.name,
+                correct: false,
+                answer: countryInfo?.name || '알 수 없음'
+            });
             this.highlightCountry(countryId, 'incorrect');
             this.highlightCountry(currentCountry.id, 'highlight');
             this.showFeedback(`오답! 정답은 ${currentCountry.name}입니다.`, 'incorrect');
@@ -388,7 +1094,18 @@ class WorldMapQuiz {
     }
 
     nextQuestion() {
-        // 이전 하이라이트 제거
+        // 지도 초기화
+        this.currentSubregion = null;
+        this.selectedContinent = null;
+
+        if (this.currentContinent === 'world') {
+            // 전 세계 모드: 전체 세계 지도로 돌아가기
+            this.drawWorldMap();
+        } else {
+            // 특정 대륙 모드: 대륙 지도로 돌아가기
+            this.drawContinentMap();
+        }
+
         this.svg.selectAll('.country')
             .classed('correct', false)
             .classed('incorrect', false)
@@ -444,8 +1161,25 @@ class WorldMapQuiz {
         this.stopTimer();
 
         const currentCountry = this.shuffledCountries[this.currentQuestion];
+        const countryInfo = getCountryById(currentCountry.id);
+
         this.results.push({ country: currentCountry.name, correct: false, timeout: true });
+
+        // 정답 위치 보여주기
+        if (this.mapView === 'world') {
+            // 전 세계 지도에서 타임아웃 → 해당 대륙의 하위지역 지도로 이동
+            this.selectedContinent = countryInfo.continent;
+            const originalContinent = this.currentContinent;
+            this.currentContinent = countryInfo.continent;
+            this.currentSubregion = countryInfo.subregion;
+            this.drawSubregionMap(countryInfo.subregion);
+            this.currentContinent = originalContinent;
+        } else if (this.mapView === 'continent') {
+            this.currentSubregion = countryInfo.subregion;
+            this.drawSubregionMap(countryInfo.subregion);
+        }
         this.highlightCountry(currentCountry.id, 'highlight');
+
         this.showFeedback(`시간 초과! 정답은 ${currentCountry.name}입니다.`, 'timeout');
 
         setTimeout(() => {
@@ -497,6 +1231,8 @@ class WorldMapQuiz {
         this.currentQuestion = 0;
         this.score = 0;
         this.results = [];
+        this.currentSubregion = null;
+        this.mapView = 'continent';
         this.stopTimer();
     }
 }

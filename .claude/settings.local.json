@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx http-server -p 8080 -o)",
+      "Bash(npx http-server -p 3000)",
+      "Bash(node:*)",
+      "Bash(python3:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFeat: 다크/라이트 모드 테마 시스템 구현\n\n- 테마 토글 버튼 추가 \\(랜딩 페이지, explore 모드에서만 표시\\)\n- 라이트 모드용 파스텔 톤 색상 팔레트 추가\n- 테마별 시도/시군구/북부남부 색상 분리\n- 테마 변경 시 지도 자동 재렌더링\n- 지도 라벨 흰색 + 그림자로 가독성 향상\n- 전국 지도와 상세 지도 글씨 크기 차별화\n- 고성군 중복 지역명 처리 추가\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix: 실제 중복 지역만 시도 접두어 추가\n\n- 기존: 짧은 구 이름\\(1-3글자+구\\)에 모두 시도 접두어 붙임\n- 변경: 실제 전국에서 중복되는 7개 이름만 접두어 추가\n  - 고성군 \\(강원도, 경상남도\\)\n  - 동구, 서구, 남구, 북구, 중구 \\(여러 광역시\\)\n  - 강서구 \\(서울, 부산\\)\n- 성동구, 종로구 등 서울에만 있는 구는 접두어 제거\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(curl:*)",
+      "Bash(npx http-server -p 3000 -o)",
+      "Bash(cat:*)",
+      "Bash(npx http-server:*)"
+    ]
+  }
+}

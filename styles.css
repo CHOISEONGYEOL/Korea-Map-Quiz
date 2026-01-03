@@ -583,6 +583,37 @@ header h1 {
     text-shadow: 1px 1px 2px var(--label-shadow), -1px -1px 2px var(--label-shadow);
 }
 
+/* 전 세계 지도 랜딩 화면 */
+#world-screen {
+    text-align: center;
+    padding: 20px;
+}
+
+#world-screen h2 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+#world-screen > p {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+}
+
+.world-map {
+    min-height: 400px;
+    margin-bottom: 20px;
+}
+
+.continent-label {
+    font-size: 14px;
+    fill: var(--map-label-color);
+    pointer-events: none;
+    text-anchor: middle;
+    font-weight: 800;
+    text-shadow: 2px 2px 4px var(--label-shadow), -2px -2px 4px var(--label-shadow);
+}
+
 /* 모드 선택 화면 */
 #mode-screen {
     text-align: center;
@@ -994,6 +1025,36 @@ header {
 }
 .oceania-btn:hover { border-color: #1abc9c; }
 
+.usa-btn {
+    background:
+        linear-gradient(135deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1)),
+        url('https://flagcdn.com/w320/us.png') center/cover;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+}
+.usa-btn:hover { border-color: #fff; }
+
+.china-btn {
+    background:
+        linear-gradient(135deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1)),
+        url('https://flagcdn.com/w320/cn.png') center/cover;
+    border: 2px solid rgba(255, 215, 0, 0.5);
+}
+.china-btn:hover { border-color: #FFD700; }
+
+.canada-btn {
+    background:
+        linear-gradient(135deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1)),
+        url('https://flagcdn.com/w320/ca.png') center/cover;
+    border: 2px solid rgba(255, 0, 0, 0.5);
+}
+.canada-btn:hover { border-color: #ff0000; }
+
+.continent-desc {
+    font-size: 0.7rem;
+    opacity: 0.8;
+    margin-top: -5px;
+}
+
 .world-all-btn {
     background: linear-gradient(135deg, #34495e, #2c3e50);
     grid-column: span 3;
@@ -1029,6 +1090,80 @@ header {
 
     .world-all-btn {
         grid-column: span 1;
+    }
+}
+
+/* 하위지역 선택 화면 스타일 */
+#subregion-screen {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+#subregion-screen h2 {
+    font-size: 2.5rem;
+    margin-bottom: 15px;
+}
+
+#subregion-screen > p {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    margin-bottom: 30px;
+}
+
+.subregion-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    max-width: 800px;
+    margin: 0 auto 30px;
+}
+
+.subregion-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 25px 20px;
+    border-radius: 15px;
+    text-decoration: none;
+    color: white;
+    transition: transform 0.3s, box-shadow 0.3s;
+    border: 2px solid transparent;
+}
+
+.subregion-btn:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.subregion-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.subregion-count {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+@media (max-width: 768px) {
+    .subregion-buttons {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .subregion-title {
+        font-size: 1rem;
+    }
+
+    #subregion-screen h2 {
+        font-size: 1.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .subregion-buttons {
+        grid-template-columns: 1fr;
     }
 }
 

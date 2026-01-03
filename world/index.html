@@ -6,8 +6,8 @@
     <title>세계 지도 퀴즈</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/topojson-client@3"></script>
-    <link rel="stylesheet" href="../styles.css?v=3">
-    <script src="data/countries.js"></script>
+    <link rel="stylesheet" href="../styles.css?v=8">
+    <script src="data/countries.js?v=6"></script>
 </head>
 <body>
     <div class="container">
@@ -43,40 +43,56 @@
                 <p>학습할 대륙을 선택하세요</p>
                 <div id="loading" class="loading">지도 데이터 로딩 중...</div>
                 <div id="continent-buttons" class="continent-buttons hidden">
-                    <a href="?region=asia" class="continent-btn asia-btn">
-                        <span class="continent-icon">🌏</span>
+                    <a href="?continent=asia" class="continent-btn asia-btn">
+                        <span class="continent-icon">🐉</span>
                         <span class="continent-title">아시아</span>
-                        <span class="continent-count">48개국</span>
+                        <span class="continent-count" id="asia-count">--개국</span>
                     </a>
-                    <a href="?region=europe" class="continent-btn europe-btn">
+                    <a href="?continent=europe" class="continent-btn europe-btn">
                         <span class="continent-icon">🏰</span>
                         <span class="continent-title">유럽</span>
-                        <span class="continent-count">44개국</span>
+                        <span class="continent-count" id="europe-count">--개국</span>
                     </a>
-                    <a href="?region=africa" class="continent-btn africa-btn">
+                    <a href="?continent=africa" class="continent-btn africa-btn">
                         <span class="continent-icon">🦁</span>
                         <span class="continent-title">아프리카</span>
-                        <span class="continent-count">54개국</span>
+                        <span class="continent-count" id="africa-count">--개국</span>
                     </a>
-                    <a href="?region=northAmerica" class="continent-btn north-america-btn">
+                    <a href="?continent=northAmerica" class="continent-btn north-america-btn">
                         <span class="continent-icon">🗽</span>
                         <span class="continent-title">북아메리카</span>
-                        <span class="continent-count">23개국</span>
+                        <span class="continent-desc">(미국, 캐나다 제외)</span>
+                        <span class="continent-count" id="northAmerica-count">--개국</span>
                     </a>
-                    <a href="?region=southAmerica" class="continent-btn south-america-btn">
+                    <a href="?continent=southAmerica" class="continent-btn south-america-btn">
                         <span class="continent-icon">🌴</span>
                         <span class="continent-title">남아메리카</span>
-                        <span class="continent-count">12개국</span>
+                        <span class="continent-count" id="southAmerica-count">--개국</span>
                     </a>
-                    <a href="?region=oceania" class="continent-btn oceania-btn">
-                        <span class="continent-icon">🏝️</span>
+                    <a href="?continent=oceania" class="continent-btn oceania-btn">
+                        <span class="continent-icon">🦘</span>
                         <span class="continent-title">오세아니아</span>
-                        <span class="continent-count">14개국</span>
+                        <span class="continent-count" id="oceania-count">--개국</span>
                     </a>
-                    <a href="?region=world" class="continent-btn world-all-btn">
+                    <a href="usa/" class="continent-btn usa-btn">
+                        <span class="continent-icon">🇺🇸</span>
+                        <span class="continent-title">미국 50개 주</span>
+                        <span class="continent-count">50개 주</span>
+                    </a>
+                    <a href="china/" class="continent-btn china-btn">
+                        <span class="continent-icon">🇨🇳</span>
+                        <span class="continent-title">중국 34개 행정구역</span>
+                        <span class="continent-count">34개 지역</span>
+                    </a>
+                    <a href="canada/" class="continent-btn canada-btn">
+                        <span class="continent-icon">🇨🇦</span>
+                        <span class="continent-title">캐나다 13개 주/준주</span>
+                        <span class="continent-count">13개 지역</span>
+                    </a>
+                    <a href="?continent=world" class="continent-btn world-btn">
                         <span class="continent-icon">🌍</span>
                         <span class="continent-title">전 세계</span>
-                        <span class="continent-count">195개국</span>
+                        <span class="continent-count" id="world-count">--개국</span>
                     </a>
                 </div>
                 <a href="../" class="btn-secondary">메인으로 돌아가기</a>
@@ -84,7 +100,7 @@
 
             <!-- 모드 선택 화면 -->
             <div id="mode-screen" class="screen">
-                <h2 id="region-title">아시아 퀴즈</h2>
+                <h2 id="region-title">동아시아 퀴즈</h2>
                 <p>학습 단계를 선택하세요</p>
                 <div class="mode-buttons">
                     <a href="#" class="mode-btn mode-explore" data-mode="explore">
@@ -108,7 +124,7 @@
                         <span class="mode-desc">국가 이름 없이 지도 모양만 보고 맞춰보세요</span>
                     </a>
                 </div>
-                <a href="./" class="btn-secondary">대륙 선택으로 돌아가기</a>
+                <a href="./" class="btn-secondary">세계 지도로 돌아가기</a>
                 <a href="../" class="btn-secondary">메인으로 돌아가기</a>
             </div>
 
@@ -132,6 +148,7 @@
             <div id="game-screen" class="screen">
                 <div class="question-area">
                     <h2>문제: <span id="question-text" class="highlight"></span></h2>
+                    <p id="step-indicator" class="step-indicator"></p>
                 </div>
                 <div id="map-container" class="map-container">
                     <svg id="map-svg"></svg>
@@ -157,6 +174,6 @@
         </main>
     </div>
 
-    <script src="game.js?v=1"></script>
+    <script src="game.js?v=6"></script>
 </body>
 </html>
