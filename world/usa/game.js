@@ -23,6 +23,9 @@ class USStatesQuiz {
         this.zoom = null;
         this.mapGroup = null;
 
+        // 지역 필터
+        this.selectedRegionFilter = 'all';
+
         this.init();
     }
 
@@ -134,10 +137,73 @@ class USStatesQuiz {
             this.resetGame();
             this.startGame();
         });
+
+        // 지역 필터 설정
+        this.setupRegionFilter();
+    }
+
+    // 지역 필터 UI 생성
+    setupRegionFilter() {
+        const filterContainer = document.getElementById('region-filter');
+        const filterOptions = document.getElementById('filter-options');
+        if (!filterContainer || !filterOptions) return;
+
+        // explore 모드가 아닐 때만 표시
+        if (this.currentMode && this.currentMode !== 'explore') {
+            filterContainer.classList.remove('hidden');
+            this.generateFilterOptions(filterOptions);
+        }
+    }
+
+    generateFilterOptions(container) {
+        container.innerHTML = '';
+
+        // 전체 옵션
+        const allLabel = document.createElement('label');
+        allLabel.className = 'filter-option selected';
+        allLabel.innerHTML = `
+            <input type="radio" name="region" value="all" checked>
+            <span class="filter-label">전체</span>
+            <span class="filter-sub">50개 주</span>
+        `;
+        container.appendChild(allLabel);
+
+        // 4개 지역 옵션
+        for (const [regionKey, region] of Object.entries(US_STATES_DATA.regions)) {
+            const stateCount = getRegionStateCount(regionKey);
+            const label = document.createElement('label');
+            label.className = 'filter-option';
+            label.innerHTML = `
+                <input type="radio" name="region" value="${regionKey}">
+                <span class="filter-label">${region.name}</span>
+                <span class="filter-sub">${stateCount}개 주</span>
+            `;
+            container.appendChild(label);
+        }
+
+        // 이벤트 리스너 추가
+        container.querySelectorAll('input[name="region"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                this.selectedRegionFilter = e.target.value;
+                container.querySelectorAll('.filter-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                e.target.closest('.filter-option').classList.add('selected');
+            });
+        });
+    }
+
+    // 필터가 적용된 주 목록 반환
+    getFilteredStates() {
+        if (this.selectedRegionFilter === 'all') {
+            return getAllStates();
+        }
+        return getStatesInRegion(this.selectedRegionFilter);
     }
 
     startGame() {
-        this.states = getAllStates();
+        // 필터가 적용된 주 목록 사용
+        this.states = this.getFilteredStates();
         this.currentQuestion = 0;
         this.score = 0;
         this.results = [];
@@ -287,9 +353,9 @@ class USStatesQuiz {
             this.drawStateInset(this.mapGroup, hawaii, '15', 120, height - 110, 80, 70, '하와이');
         }
 
-        // 지역 라벨
+        // 지역 라벨 (mapGroup이 아닌 svg에 추가해야 width/height 가져올 수 있음)
         if (this.currentMode !== 'test') {
-            this.drawRegionLabels(this.mapGroup);
+            this.drawRegionLabels(svg);
         }
 
         this.svg = svg;

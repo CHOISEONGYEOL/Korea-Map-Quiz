@@ -137,6 +137,16 @@ const REGION_GROUPS = {
     '경남권': ['경상남도', '부산광역시', '울산광역시']
 };
 
+// 퀴즈 필터용 권역 (사용자가 선택 가능한 범위)
+const QUIZ_FILTER_REGIONS = {
+    'all': null,  // 전국
+    '수도권': ['서울특별시', '경기도', '인천광역시'],
+    '충청권': ['충청북도', '충청남도', '대전광역시', '세종특별자치시'],
+    '전라권': ['전라북도', '전라남도', '광주광역시'],
+    '경상권': ['경상북도', '경상남도', '대구광역시', '부산광역시', '울산광역시'],
+    '강원권': ['강원도']
+};
+
 // 그룹에 속한 지역 → 그룹명 역매핑
 const PROVINCE_TO_GROUP = {};
 Object.entries(REGION_GROUPS).forEach(([groupName, provinces]) => {
@@ -190,6 +200,9 @@ class KoreaMapQuiz {
         this.path = null;
         this.zoom = null;
         this.mapGroup = null;
+
+        // 지역 필터 설정
+        this.selectedRegionFilter = 'all';
 
         // 모드 설정
         this.gameMode = this.parseGameMode();
@@ -335,6 +348,19 @@ class KoreaMapQuiz {
         this.startBtn.addEventListener('click', () => this.startGame());
         this.restartBtn.addEventListener('click', () => this.startGame());
         this.themeToggleBtn?.addEventListener('click', () => this.toggleTheme());
+
+        // 지역 필터 이벤트
+        const filterOptions = document.querySelectorAll('#region-filter input[name="region"]');
+        filterOptions.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                this.selectedRegionFilter = e.target.value;
+                // 선택 상태 UI 업데이트
+                document.querySelectorAll('#region-filter .filter-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                e.target.closest('.filter-option').classList.add('selected');
+            });
+        });
     }
 
     async loadData() {
@@ -445,6 +471,16 @@ class KoreaMapQuiz {
             this.modeDescriptionEl.textContent = config.description;
             this.instructionsEl.innerHTML = config.instructions;
             this.startBtn.textContent = config.buttonText;
+        }
+
+        // 지역 필터 표시 (explore 모드 제외)
+        const regionFilter = document.getElementById('region-filter');
+        if (regionFilter) {
+            if (this.gameMode === 'explore') {
+                regionFilter.classList.add('hidden');
+            } else {
+                regionFilter.classList.remove('hidden');
+            }
         }
     }
 
@@ -691,13 +727,28 @@ class KoreaMapQuiz {
     }
 
     generateQuestions() {
+        // 지역 필터 적용
+        let filteredDistricts = [...this.allDistricts];
+
+        if (this.selectedRegionFilter !== 'all') {
+            const allowedProvinces = QUIZ_FILTER_REGIONS[this.selectedRegionFilter];
+            if (allowedProvinces) {
+                filteredDistricts = this.allDistricts.filter(d =>
+                    allowedProvinces.includes(d.provinceName)
+                );
+            }
+        }
+
         // 매 게임마다 완전히 새로 셔플
-        const shuffled = [...this.allDistricts];
-        this.shuffleArray(shuffled);
-        this.questions = shuffled.slice(0, this.totalQuestions);
+        this.shuffleArray(filteredDistricts);
+
+        // 필터된 지역이 10개 미만이면 그만큼만 출제
+        const questionCount = Math.min(this.totalQuestions, filteredDistricts.length);
+        this.questions = filteredDistricts.slice(0, questionCount);
+        this.totalQuestions = questionCount;
 
         // 디버깅: 생성된 문제 순서 확인
-        console.log('생성된 문제 순서:', this.questions.map(q => `${q.provinceName} ${q.name}`));
+        console.log(`[${this.selectedRegionFilter}] 생성된 문제 순서:`, this.questions.map(q => `${q.provinceName} ${q.name}`));
     }
 
     showScreen(screen) {

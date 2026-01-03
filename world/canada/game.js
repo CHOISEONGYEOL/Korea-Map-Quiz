@@ -3,6 +3,7 @@
 class CanadaProvincesQuiz {
     constructor() {
         this.currentMode = null;
+        this.selectedRegionFilter = 'all';
         this.provinces = [];
         this.currentQuestion = 0;
         this.score = 0;
@@ -130,10 +131,70 @@ class CanadaProvincesQuiz {
             this.resetGame();
             this.startGame();
         });
+
+        this.setupRegionFilter();
+    }
+
+    setupRegionFilter() {
+        const filterContainer = document.getElementById('region-filter');
+        const filterOptions = document.getElementById('filter-options');
+
+        if (!filterContainer || !filterOptions) return;
+
+        // 모드에 따라 필터 표시 여부 결정
+        if (this.currentMode && this.currentMode !== 'explore') {
+            filterContainer.classList.remove('hidden');
+            this.generateFilterOptions(filterOptions);
+        }
+    }
+
+    generateFilterOptions(container) {
+        container.innerHTML = '';
+
+        // 전체 옵션
+        const allOption = document.createElement('label');
+        allOption.className = 'filter-option selected';
+        allOption.innerHTML = `
+            <input type="radio" name="region" value="all" checked>
+            <span class="filter-label">전체</span>
+            <span class="filter-sub">13개 지역</span>
+        `;
+        container.appendChild(allOption);
+
+        // 지역별 옵션 생성
+        for (const [regionKey, region] of Object.entries(CANADA_DATA.regions)) {
+            const option = document.createElement('label');
+            option.className = 'filter-option';
+            option.innerHTML = `
+                <input type="radio" name="region" value="${regionKey}">
+                <span class="filter-label">${region.name}</span>
+                <span class="filter-sub">${region.provinces.length}개 지역</span>
+            `;
+            container.appendChild(option);
+        }
+
+        // 이벤트 리스너 추가
+        container.querySelectorAll('.filter-option').forEach(option => {
+            option.addEventListener('click', () => {
+                container.querySelectorAll('.filter-option').forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+                const radio = option.querySelector('input[type="radio"]');
+                radio.checked = true;
+                this.selectedRegionFilter = radio.value;
+            });
+        });
+    }
+
+    getFilteredProvinces() {
+        if (this.selectedRegionFilter === 'all') {
+            return getAllProvinces();
+        }
+        return getProvincesInRegion(this.selectedRegionFilter);
     }
 
     startGame() {
-        this.provinces = getAllProvinces();
+        // 필터링된 주/준주 가져오기
+        this.provinces = this.getFilteredProvinces();
         this.currentQuestion = 0;
         this.score = 0;
         this.results = [];

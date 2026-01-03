@@ -28,6 +28,9 @@ class WorldMapQuiz {
         this.targetCountry = null;
         this.shuffledCountries = [];
 
+        // 지역 필터
+        this.selectedSubregionFilter = 'all';
+
         this.init();
     }
 
@@ -208,12 +211,92 @@ class WorldMapQuiz {
         document.getElementById('map-back-btn')?.addEventListener('click', () => {
             this.goBackToContinent();
         });
+
+        // 지역 필터 설정
+        this.setupRegionFilter();
+    }
+
+    // 지역 필터 UI 생성
+    setupRegionFilter() {
+        const filterContainer = document.getElementById('region-filter');
+        const filterOptions = document.getElementById('filter-options');
+        if (!filterContainer || !filterOptions) return;
+
+        // explore 모드가 아닐 때만 표시
+        if (this.currentMode && this.currentMode !== 'explore') {
+            filterContainer.classList.remove('hidden');
+            this.generateFilterOptions(filterOptions);
+        }
+    }
+
+    generateFilterOptions(container) {
+        container.innerHTML = '';
+
+        // 대륙별로 다른 필터 옵션 생성
+        const continentData = WORLD_DATA[this.currentContinent];
+        if (!continentData) return;
+
+        // 전체 옵션
+        const allLabel = document.createElement('label');
+        allLabel.className = 'filter-option selected';
+        const totalCount = this.currentContinent === 'world'
+            ? getAllWorldCountries().length
+            : Object.values(continentData.subregions).reduce((sum, sr) => sum + sr.countries.length, 0);
+        allLabel.innerHTML = `
+            <input type="radio" name="subregion" value="all" checked>
+            <span class="filter-label">전체</span>
+            <span class="filter-sub">${totalCount}개국</span>
+        `;
+        container.appendChild(allLabel);
+
+        // 하위 지역별 옵션
+        if (continentData.subregions) {
+            for (const [subregionKey, subregion] of Object.entries(continentData.subregions)) {
+                const label = document.createElement('label');
+                label.className = 'filter-option';
+                label.innerHTML = `
+                    <input type="radio" name="subregion" value="${subregionKey}">
+                    <span class="filter-label">${subregion.name}</span>
+                    <span class="filter-sub">${subregion.countries.length}개국</span>
+                `;
+                container.appendChild(label);
+            }
+        }
+
+        // 이벤트 리스너 추가
+        container.querySelectorAll('input[name="subregion"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                this.selectedSubregionFilter = e.target.value;
+                container.querySelectorAll('.filter-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                e.target.closest('.filter-option').classList.add('selected');
+            });
+        });
+    }
+
+    // 필터가 적용된 국가 목록 반환
+    getFilteredCountries() {
+        const continentData = WORLD_DATA[this.currentContinent];
+        if (!continentData) return [];
+
+        if (this.selectedSubregionFilter === 'all') {
+            if (this.currentContinent === 'world') {
+                return getAllWorldCountries();
+            }
+            return Object.values(continentData.subregions).flatMap(sr => sr.countries);
+        }
+
+        const subregion = continentData.subregions[this.selectedSubregionFilter];
+        return subregion ? subregion.countries : [];
     }
 
     startGame() {
         if (this.currentContinent === 'world') {
-            // 전 세계 모드
-            this.countries = getAllWorldCountries();
+            // 전 세계 모드 - 필터 적용
+            this.countries = this.getFilteredCountries().length > 0
+                ? this.getFilteredCountries()
+                : getAllWorldCountries();
             this.currentQuestion = 0;
             this.score = 0;
             this.results = [];
@@ -238,8 +321,10 @@ class WorldMapQuiz {
             const continent = WORLD_DATA[this.currentContinent];
             if (!continent) return;
 
-            // 대륙의 모든 국가
-            this.countries = getAllCountriesInContinent(this.currentContinent);
+            // 대륙 모드 - 필터 적용
+            this.countries = this.getFilteredCountries().length > 0
+                ? this.getFilteredCountries()
+                : getAllCountriesInContinent(this.currentContinent);
             this.currentQuestion = 0;
             this.score = 0;
             this.results = [];

@@ -79,6 +79,44 @@
                         <li>각 문제당 <strong>5초</strong> 제한시간!</li>
                     </ol>
                 </div>
+
+                <!-- 지역 필터 선택 -->
+                <div id="region-filter" class="region-filter hidden">
+                    <h3>퀴즈 범위 선택</h3>
+                    <p class="filter-desc">특정 지역만 선택하여 집중 학습할 수 있습니다</p>
+                    <div class="filter-options">
+                        <label class="filter-option selected">
+                            <input type="radio" name="region" value="all" checked>
+                            <span class="filter-label">전국</span>
+                        </label>
+                        <label class="filter-option">
+                            <input type="radio" name="region" value="수도권">
+                            <span class="filter-label">수도권</span>
+                            <span class="filter-sub">서울, 경기, 인천</span>
+                        </label>
+                        <label class="filter-option">
+                            <input type="radio" name="region" value="충청권">
+                            <span class="filter-label">충청권</span>
+                            <span class="filter-sub">충북, 충남, 대전, 세종</span>
+                        </label>
+                        <label class="filter-option">
+                            <input type="radio" name="region" value="전라권">
+                            <span class="filter-label">전라권</span>
+                            <span class="filter-sub">전북, 전남, 광주</span>
+                        </label>
+                        <label class="filter-option">
+                            <input type="radio" name="region" value="경상권">
+                            <span class="filter-label">경상권</span>
+                            <span class="filter-sub">경북, 경남, 대구, 부산, 울산</span>
+                        </label>
+                        <label class="filter-option">
+                            <input type="radio" name="region" value="강원권">
+                            <span class="filter-label">강원권</span>
+                            <span class="filter-sub">강원도</span>
+                        </label>
+                    </div>
+                </div>
+
                 <button id="start-btn" class="btn-primary">시작하기</button>
                 <a href="./" class="btn-secondary">모드 선택으로 돌아가기</a>
                 <a href="../" class="btn-secondary">메인으로 돌아가기</a>
