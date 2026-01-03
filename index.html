@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>대한민국 지도 퀴즈</title>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://unpkg.com/topojson-client@3"></script>
-    <link rel="stylesheet" href="styles.css?v=2">
+    <title>지도 퀴즈</title>
+    <link rel="stylesheet" href="styles.css?v=3">
 </head>
 <body>
     <div class="container">
@@ -15,100 +13,44 @@
                 <span class="theme-icon-light">☀️</span>
                 <span class="theme-icon-dark">🌙</span>
             </button>
-            <h1>대한민국 지도 퀴즈</h1>
-            <div class="stats">
-                <div class="stat-item">
-                    <span class="label">점수</span>
-                    <span id="score" class="value">0</span>
-                </div>
-                <div class="stat-item">
-                    <span class="label">문제</span>
-                    <span id="question-num" class="value">0/10</span>
-                </div>
-                <div class="stat-item timer-container">
-                    <span class="label">남은 시간</span>
-                    <div class="timer-bar">
-                        <div id="timer-fill" class="timer-fill"></div>
-                    </div>
-                    <span id="timer" class="value">5.0</span>
-                </div>
-            </div>
+            <h1>지도 퀴즈</h1>
         </header>
 
         <main>
-            <!-- 모드 선택 화면 (랜딩) -->
-            <div id="mode-screen" class="screen active">
-                <h2>대한민국 지도 퀴즈</h2>
-                <p>학습 단계를 선택하세요</p>
-                <div id="loading" class="loading">지도 데이터 로딩 중...</div>
-                <div id="mode-buttons" class="mode-buttons hidden">
-                    <a href="?mode=explore" class="mode-btn mode-explore">
-                        <span class="mode-step">1단계</span>
-                        <span class="mode-title">지도 둘러보기</span>
-                        <span class="mode-desc">퀴즈 없이 자유롭게 전국 지도를 탐색해보세요</span>
-                    </a>
-                    <a href="?mode=practice" class="mode-btn mode-practice">
-                        <span class="mode-step">2단계</span>
-                        <span class="mode-title">연습 모드</span>
-                        <span class="mode-desc">시간제한 없이 천천히 문제를 풀어보세요</span>
-                    </a>
-                    <a href="?mode=quiz" class="mode-btn mode-quiz">
-                        <span class="mode-step">3단계</span>
-                        <span class="mode-title">익숙해지기</span>
-                        <span class="mode-desc">5초 제한시간 내에 지역을 찾아보세요</span>
-                    </a>
-                    <a href="?mode=test" class="mode-btn mode-test">
-                        <span class="mode-step">4단계</span>
-                        <span class="mode-title">실전 테스트</span>
-                        <span class="mode-desc">지역 이름 없이 지도 모양만 보고 맞춰보세요</span>
-                    </a>
-                </div>
-            </div>
+            <div id="main-landing" class="screen active">
+                <h2>어떤 지도를 학습할까요?</h2>
+                <p>학습하고 싶은 지역을 선택하세요</p>
 
-            <!-- 게임 시작 화면 (모드 선택 후) -->
-            <div id="start-screen" class="screen">
-                <h2 id="mode-title">전국 백지도 퀴즈</h2>
-                <p id="mode-description">문제로 나오는 시/군/구의 위치를 클릭하세요!</p>
-                <div class="instructions" id="instructions">
-                    <h3>게임 방법</h3>
-                    <ol>
-                        <li>문제가 출제되면 해당 지역이 속한 <strong>도/광역시</strong>를 먼저 클릭</li>
-                        <li>도 지역의 경우 <strong>북부/남부</strong> 선택</li>
-                        <li>마지막으로 정확한 <strong>시/군/구</strong>를 클릭</li>
-                        <li>각 문제당 <strong>5초</strong> 제한시간!</li>
-                    </ol>
+                <div class="main-menu-buttons">
+                    <a href="korea/" class="main-menu-btn korea-btn">
+                        <span class="menu-icon">🇰🇷</span>
+                        <span class="menu-title">대한민국 지도</span>
+                        <span class="menu-desc">17개 시도, 250개 시군구의 위치를 학습하세요</span>
+                    </a>
+                    <a href="world/" class="main-menu-btn world-btn">
+                        <span class="menu-icon">🌍</span>
+                        <span class="menu-title">세계 지도</span>
+                        <span class="menu-desc">대륙별 국가의 위치를 학습하세요</span>
+                    </a>
                 </div>
-                <button id="start-btn" class="btn-primary">시작하기</button>
-                <a href="./" class="btn-secondary">모드 선택으로 돌아가기</a>
-            </div>
-
-            <div id="game-screen" class="screen">
-                <div class="question-area">
-                    <h2>문제: <span id="question-text" class="highlight"></span></h2>
-                    <p id="step-indicator" class="step-indicator"></p>
-                </div>
-                <div id="map-container" class="map-container">
-                    <svg id="map-svg"></svg>
-                </div>
-                <div id="feedback" class="feedback"></div>
-                <a href="./" class="btn-secondary game-back-btn">모드 선택으로 돌아가기</a>
-            </div>
-
-            <div id="result-screen" class="screen">
-                <h2>게임 종료!</h2>
-                <div class="result-content">
-                    <div class="final-score">
-                        <span class="label">최종 점수</span>
-                        <span id="final-score" class="score-value">0</span>
-                        <span class="max-score">/ 100</span>
-                    </div>
-                    <div id="result-details" class="result-details"></div>
-                </div>
-                <button id="restart-btn" class="btn-primary">다시 하기</button>
             </div>
         </main>
     </div>
 
-    <script src="game.js?v=2"></script>
+    <script>
+        // 테마 토글 기능
+        const themeToggle = document.getElementById('theme-toggle');
+
+        // 저장된 테마 불러오기
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+    </script>
 </body>
 </html>
