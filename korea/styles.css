@@ -1037,4 +1037,10 @@ header {
     .filter-option .filter-sub {
         font-size: 0.7rem;
     }
+
+    /* 모바일에서 지도 크기 제한 - 버튼이 보이도록 */
+    .map-container {
+        max-height: 55vh;
+        flex: none;
+    }
 }

@@ -237,20 +237,33 @@ class USStatesQuiz {
         this.currentQuestion = 0;
         this.score = 0;
         this.results = [];
-        this.mapView = 'country';
         this.currentRegion = null;
 
         this.totalQuestions = Math.min(10, this.states.length);
         this.shuffledStates = [...this.states].sort(() => Math.random() - 0.5);
 
         this.showScreen('game-screen');
-        this.drawCountryMap();
+
+        // 지역 필터가 선택되어 있으면 바로 해당 지역으로 드릴다운
+        if (this.selectedRegionFilter !== 'all') {
+            this.mapView = 'region';
+            this.currentRegion = this.selectedRegionFilter;
+            this.drawRegionMap(this.selectedRegionFilter);
+        } else {
+            // 전체 모드: 전국 지도부터 시작
+            this.mapView = 'country';
+            this.drawCountryMap();
+        }
 
         if (this.currentMode !== 'explore') {
             this.updateScore();
             this.nextQuestion();
         } else {
-            document.getElementById('question-text').textContent = '지역을 클릭해서 탐색하세요';
+            if (this.selectedRegionFilter !== 'all') {
+                document.getElementById('question-text').textContent = '주를 클릭해서 탐색하세요';
+            } else {
+                document.getElementById('question-text').textContent = '지역을 클릭해서 탐색하세요';
+            }
             document.getElementById('state-info').textContent = '';
         }
     }

@@ -102,7 +102,7 @@ body.main-landing header h1 {
     display: block;
     font-size: 5rem;
     margin-bottom: 10px;
-    margin-top: 5vh;
+    margin-top: 25vh;
     color: var(--text-primary);
     font-weight: 700;
     letter-spacing: -0.5px;
@@ -1324,6 +1324,12 @@ header {
     .district-label {
         font-size: 10px !important;
         text-shadow: 1px 1px 2px var(--label-shadow), -1px -1px 2px var(--label-shadow);
+    }
+
+    /* 모바일에서 지도 크기 제한 - 버튼이 보이도록 */
+    .map-container {
+        max-height: 55vh;
+        flex: none;
     }
 }
 
