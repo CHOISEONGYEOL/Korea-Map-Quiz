@@ -366,18 +366,10 @@ class USStatesQuiz {
             .attr('stroke', 'var(--map-stroke)')
             .attr('stroke-width', 0.8)
             .on('click', (event, d) => {
-                // 클릭 = 선택 + 동작
+                // 클릭 = 선택 + 드릴다운
                 d3.selectAll('.state').classed('selected', false);
                 d3.select(event.target).classed('selected', true);
-                const stateId = String(d.id).padStart(2, '0');
-                const stateInfo = getStateById(stateId);
-                const region = stateInfo ? US_STATES_DATA.regions[stateInfo.region] : null;
-                const regionName = region ? region.name : '';
-                if (this.currentMode === 'explore') {
-                    this.showFeedback(`${regionName} 선택됨`, 'info');
-                } else {
-                    this.handleCountryMapClick(d);
-                }
+                this.handleCountryMapClick(d);
             })
             .on('mouseover', function() {
                 d3.select(this).attr('stroke-width', 2).style('filter', 'brightness(1.2)');
@@ -441,17 +433,10 @@ class USStatesQuiz {
             .attr('stroke-width', 0.5)
             .attr('data-state-id', stateId)
             .on('click', function(event) {
-                // 클릭 = 선택 + 동작
+                // 클릭 = 선택 + 드릴다운
                 d3.selectAll('.state').classed('selected', false);
                 d3.select(this).classed('selected', true);
-                const stateInfo = getStateById(stateId);
-                const region = stateInfo ? US_STATES_DATA.regions[stateInfo.region] : null;
-                const regionName = region ? region.name : '';
-                if (self.currentMode === 'explore') {
-                    self.showFeedback(`${regionName} 선택됨`, 'info');
-                } else {
-                    self.handleCountryMapClick(feature);
-                }
+                self.handleCountryMapClick(feature);
             })
             .on('mouseover', function() {
                 d3.select(this).attr('stroke-width', 1.5).style('filter', 'brightness(1.2)');

@@ -487,15 +487,10 @@ class WorldMapQuiz {
                 .attr('stroke', 'var(--map-stroke)')
                 .attr('stroke-width', 0.5)
                 .on('click', (event, d) => {
-                    // 클릭 = 선택 + 동작
+                    // 클릭 = 선택 + 드릴다운
                     d3.selectAll('.country').classed('selected', false);
                     d3.select(event.target).classed('selected', true);
-                    const continent = WORLD_DATA[continentKey];
-                    if (this.currentMode === 'explore') {
-                        this.showFeedback(`${continent.name} 선택됨`, 'info');
-                    } else {
-                        this.handleWorldMapClick(continentKey, d);
-                    }
+                    this.handleWorldMapClick(continentKey, d);
                 })
                 .on('mouseover', function() {
                     d3.select(this).attr('stroke-width', 1.5).style('filter', 'brightness(1.2)');
@@ -645,16 +640,10 @@ class WorldMapQuiz {
                 .attr('stroke', 'var(--map-stroke)')
                 .attr('stroke-width', 0.8)
                 .on('click', (event, d) => {
-                    // 클릭 = 선택 + 동작
+                    // 클릭 = 선택 + 드릴다운
                     d3.selectAll('.country').classed('selected', false);
                     d3.select(event.target).classed('selected', true);
-                    const countryInfo = getCountryById(d.id);
-                    const name = countryInfo ? countryInfo.name : `국가 ${d.id}`;
-                    if (this.currentMode === 'explore') {
-                        this.showFeedback(`${name} 선택됨`, 'info');
-                    } else {
-                        this.handleContinentMapClick(subregionKey, d);
-                    }
+                    this.handleContinentMapClick(subregionKey, d);
                 })
                 .on('mouseover', function() {
                     d3.select(this).attr('stroke-width', 2).style('filter', 'brightness(1.2)');
