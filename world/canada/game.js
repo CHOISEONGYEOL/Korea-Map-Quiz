@@ -19,12 +19,18 @@ class CanadaProvincesQuiz {
         this.zoom = null;
         this.mapGroup = null;
 
+        // 헤더 제목 요소
+        this.headerTitleEl = null;
+
         this.init();
     }
 
     async init() {
         const params = new URLSearchParams(window.location.search);
         this.currentMode = params.get('mode');
+
+        // 헤더 제목 요소 참조
+        this.headerTitleEl = document.getElementById('header-title');
 
         this.setupTheme();
         await this.loadMapData();
@@ -102,6 +108,13 @@ class CanadaProvincesQuiz {
         } else {
             themeToggle.classList.add('hidden');
         }
+
+        // 모드 선택 화면(랜딩)에서는 헤더 제목 숨김
+        if (screenId === 'mode-screen') {
+            container.classList.add('hide-header');
+        } else {
+            container.classList.remove('hide-header');
+        }
     }
 
     updateModeInfo() {
@@ -126,6 +139,17 @@ class CanadaProvincesQuiz {
 
         document.getElementById('mode-title').textContent = modeInfo[this.currentMode].title;
         document.getElementById('mode-description').textContent = modeInfo[this.currentMode].desc;
+
+        // 헤더 제목을 모드명으로 변경
+        const modeNames = {
+            explore: '지도 둘러보기',
+            practice: '연습 모드',
+            quiz: '익숙해지기',
+            test: '실전 테스트'
+        };
+        if (this.headerTitleEl && modeNames[this.currentMode]) {
+            this.headerTitleEl.textContent = modeNames[this.currentMode];
+        }
     }
 
     setupEventListeners() {
@@ -329,7 +353,14 @@ class CanadaProvincesQuiz {
             .attr('fill', d => colorPalette[colorAssignment.get(d.properties.name) || 0])
             .attr('stroke', 'var(--map-stroke)')
             .attr('stroke-width', 0.8)
-            .on('click', (event, d) => this.handleProvinceClick(d))
+            .on('click', (event, d) => {
+                if (this.currentMode === 'explore') {
+                    // 탐색 모드: 클릭은 선택만
+                    d3.selectAll('.province').classed('selected', false);
+                    d3.select(event.target).classed('selected', true);
+                }
+                this.handleProvinceClick(d);
+            })
             .on('mouseover', function() {
                 d3.select(this).attr('stroke-width', 2).style('filter', 'brightness(1.2)');
             })
@@ -346,112 +377,44 @@ class CanadaProvincesQuiz {
     }
 
     drawProvinceLabels(svg) {
-        // 스마트 리더 라인 시스템: 필요한 경우에만 자동 생성
-        const DIRECTIONS = [
-            { name: 'E',  dx: 70,  dy: 0 },
-            { name: 'W',  dx: -70, dy: 0 },
-            { name: 'SE', dx: 50,  dy: 50 },
-            { name: 'SW', dx: -50, dy: 50 },
-            { name: 'NE', dx: 50,  dy: -50 },
-            { name: 'NW', dx: -50, dy: -50 },
-            { name: 'S',  dx: 0,   dy: 70 },
-            { name: 'N',  dx: 0,   dy: -70 },
-        ];
+        // 모든 라벨에 리더 라인 적용 (겹침 방지를 위해 적극적으로 사용)
+        // 각 지역별 고정 리더 라인 위치 지정
+        const leaderLineConfig = {
+            // 북부 준주 - 넓어서 내부 배치 가능
+            'NU': { useLeader: false, offset: { dx: -60, dy: 180 } },  // 중앙으로 더 내림
+            'NT': { useLeader: false, offset: { dx: 0, dy: 40 } },
+            'YT': { useLeader: false, offset: { dx: 0, dy: 30 } },
 
-        // 선호 방향 힌트 (대서양 방향)
-        const preferredDirection = {
-            'PE': 'SE', 'NS': 'SE', 'NB': 'E', 'NL': 'E'
+            // 서부 주
+            'BC': { useLeader: true, direction: 'SW', distance: 80 },
+            'AB': { useLeader: true, direction: 'S', distance: 90 },
+            'SK': { useLeader: true, direction: 'S', distance: 100 },
+            'MB': { useLeader: true, direction: 'NE', distance: 70 },  // 오른쪽 상단 45도
+
+            // 중부/동부 주
+            'ON': { useLeader: true, direction: 'S', distance: 80 },
+            'QC': { useLeader: false, offset: { dx: 0, dy: 0 } },  // 퀘벡은 넓어서 내부 배치
+
+            // 대서양 주
+            'NB': { useLeader: true, direction: 'SW', distance: 60 },  // 왼쪽 아래 45도
+            'NS': { useLeader: true, direction: 'S', distance: 70 },
+            'PE': { useLeader: true, direction: 'NE', distance: 60 },  // 우측 상단 45도
+            'NL': { useLeader: true, direction: 'NE', distance: 60 },  // 오른쪽 상단
         };
 
-        // 큰 지역 오프셋 (형태상 중심이 어색한 경우)
-        const labelOffsets = {
-            'NT': { dx: 0, dy: 40 },
-            'NU': { dx: -60, dy: 60 },
-            'YT': { dx: 0, dy: 30 },
+        // 방향별 오프셋
+        const directionOffsets = {
+            'N':  { dx: 0,   dy: -1 },
+            'NE': { dx: 0.7, dy: -0.7 },
+            'E':  { dx: 1,   dy: 0 },
+            'SE': { dx: 0.7, dy: 0.7 },
+            'S':  { dx: 0,   dy: 1 },
+            'SW': { dx: -0.7, dy: 0.7 },
+            'W':  { dx: -1,  dy: 0 },
+            'NW': { dx: -0.7, dy: -0.7 },
         };
 
-        const placedLabels = [];
-        const placedLines = [];
-
-        // 지역 크기 계산
-        const getFeatureSize = (feature) => {
-            const bounds = this.path.bounds(feature);
-            if (!bounds || isNaN(bounds[0][0])) return 0;
-            return (bounds[1][0] - bounds[0][0]) * (bounds[1][1] - bounds[0][1]);
-        };
-
-        // 라벨이 지역 내부에 들어가는지 확인
-        const labelFitsInFeature = (feature, labelWidth, labelHeight) => {
-            const bounds = this.path.bounds(feature);
-            if (!bounds || isNaN(bounds[0][0])) return false;
-            const featureWidth = bounds[1][0] - bounds[0][0];
-            const featureHeight = bounds[1][1] - bounds[0][1];
-            return featureWidth > labelWidth * 1.2 && featureHeight > labelHeight * 1.2;
-        };
-
-        // 선분 교차 확인
-        const linesIntersect = (line1, line2) => {
-            const { x1: a1, y1: b1, x2: a2, y2: b2 } = line1;
-            const { x1: c1, y1: d1, x2: c2, y2: d2 } = line2;
-            const denom = (a2 - a1) * (d2 - d1) - (b2 - b1) * (c2 - c1);
-            if (Math.abs(denom) < 0.001) return false;
-            const t = ((c1 - a1) * (d2 - d1) - (d1 - b1) * (c2 - c1)) / denom;
-            const u = -((a2 - a1) * (d1 - b1) - (b2 - b1) * (c1 - a1)) / denom;
-            return t > 0.05 && t < 0.95 && u > 0.05 && u < 0.95;
-        };
-
-        // 라벨 겹침 확인
-        const labelsOverlap = (rect1, rect2) => {
-            return !(rect1.x + rect1.width < rect2.x || rect2.x + rect2.width < rect1.x ||
-                     rect1.y + rect1.height < rect2.y || rect2.y + rect2.height < rect1.y);
-        };
-
-        // 중심 라벨이 다른 라벨과 겹치는지 확인
-        const centerLabelOverlapsOthers = (centroid, labelWidth, labelHeight) => {
-            const labelRect = {
-                x: centroid[0] - labelWidth/2,
-                y: centroid[1] - labelHeight/2,
-                width: labelWidth,
-                height: labelHeight
-            };
-            for (const placed of placedLabels) {
-                if (labelsOverlap(labelRect, placed)) return true;
-            }
-            return false;
-        };
-
-        // 최적 방향 찾기
-        const findBestDirection = (centroid, preferredDir, labelWidth, labelHeight) => {
-            const sortedDirs = [...DIRECTIONS].sort((a, b) => {
-                if (a.name === preferredDir) return -1;
-                if (b.name === preferredDir) return 1;
-                return 0;
-            });
-
-            for (const dir of sortedDirs) {
-                const labelX = centroid[0] + dir.dx;
-                const labelY = centroid[1] + dir.dy;
-                const labelRect = { x: labelX - labelWidth/2, y: labelY - labelHeight/2, width: labelWidth, height: labelHeight };
-                const newLine = { x1: centroid[0], y1: centroid[1], x2: labelX, y2: labelY };
-
-                let hasConflict = false;
-                for (const placed of placedLabels) {
-                    if (labelsOverlap(labelRect, placed)) { hasConflict = true; break; }
-                }
-                if (!hasConflict) {
-                    for (const placed of placedLines) {
-                        if (linesIntersect(newLine, placed)) { hasConflict = true; break; }
-                    }
-                }
-                if (!hasConflict) return dir;
-            }
-            return sortedDirs[0];
-        };
-
-        // 크기순 정렬 (큰 지역부터 처리)
-        const sortedFeatures = [...this.topoData.features].sort((a, b) => getFeatureSize(b) - getFeatureSize(a));
-
-        sortedFeatures.forEach(d => {
+        this.topoData.features.forEach(d => {
             const centroid = this.path.centroid(d);
             if (isNaN(centroid[0]) || isNaN(centroid[1])) return;
 
@@ -459,24 +422,14 @@ class CanadaProvincesQuiz {
             const province = getProvinceById(provinceId);
             if (!province) return;
 
-            const labelWidth = province.name.length * 6 + 10;
-            const labelHeight = 14;
-            const offset = labelOffsets[provinceId];
+            const config = leaderLineConfig[provinceId];
+            if (!config) return;
 
-            // 스마트 판단: 리더 라인이 필요한가?
-            const fitsInside = labelFitsInFeature(d, labelWidth, labelHeight);
-            const wouldOverlap = centerLabelOverlapsOthers(centroid, labelWidth, labelHeight);
-            const needsLeaderLine = !fitsInside || wouldOverlap;
-
-            if (needsLeaderLine) {
-                const preferredDir = preferredDirection[provinceId] || 'E';
-                const bestDir = findBestDirection(centroid, preferredDir, labelWidth, labelHeight);
-
-                const labelX = centroid[0] + bestDir.dx;
-                const labelY = centroid[1] + bestDir.dy;
-
-                placedLines.push({ x1: centroid[0], y1: centroid[1], x2: labelX, y2: labelY });
-                placedLabels.push({ x: labelX - labelWidth/2, y: labelY - labelHeight/2, width: labelWidth, height: labelHeight });
+            if (config.useLeader) {
+                // 리더 라인 사용
+                const dir = directionOffsets[config.direction] || directionOffsets['E'];
+                const labelX = centroid[0] + dir.dx * config.distance;
+                const labelY = centroid[1] + dir.dy * config.distance;
 
                 svg.append('line')
                     .attr('class', 'leader-line')
@@ -498,11 +451,10 @@ class CanadaProvincesQuiz {
                     .text(province.name)
                     .style('pointer-events', 'none');
             } else {
-                // 리더 라인 불필요 - 오프셋 적용 가능
-                const finalX = centroid[0] + (offset ? offset.dx : 0);
-                const finalY = centroid[1] + (offset ? offset.dy : 0);
-
-                placedLabels.push({ x: finalX - labelWidth/2, y: finalY - labelHeight/2, width: labelWidth, height: labelHeight });
+                // 오프셋만 적용 (큰 북부 지역)
+                const offset = config.offset || { dx: 0, dy: 0 };
+                const finalX = centroid[0] + offset.dx;
+                const finalY = centroid[1] + offset.dy;
 
                 svg.append('text')
                     .attr('class', 'province-label district-label')

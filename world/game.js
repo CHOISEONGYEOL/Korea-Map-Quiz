@@ -31,6 +31,9 @@ class WorldMapQuiz {
         // 지역 필터
         this.selectedSubregionFilter = 'all';
 
+        // 헤더 제목 요소
+        this.headerTitleEl = null;
+
         this.init();
     }
 
@@ -38,6 +41,9 @@ class WorldMapQuiz {
         const params = new URLSearchParams(window.location.search);
         this.currentContinent = params.get('continent');
         this.currentMode = params.get('mode');
+
+        // 헤더 제목 요소 참조
+        this.headerTitleEl = document.getElementById('header-title');
 
         this.setupTheme();
         await this.loadMapData();
@@ -139,6 +145,13 @@ class WorldMapQuiz {
         } else {
             themeToggle.classList.add('hidden');
         }
+
+        // 대륙 선택 화면(랜딩)에서는 헤더 제목 숨김
+        if (screenId === 'continent-screen') {
+            container.classList.add('hide-header');
+        } else {
+            container.classList.remove('hide-header');
+        }
     }
 
     updateModeScreen() {
@@ -202,6 +215,17 @@ class WorldMapQuiz {
         document.getElementById('mode-description').textContent = modeInfo[this.currentMode].desc;
         document.getElementById('back-to-mode').href = `?continent=${this.currentContinent}`;
         document.getElementById('game-back-btn').href = `?continent=${this.currentContinent}`;
+
+        // 헤더 제목을 모드명으로 변경
+        const modeNames = {
+            explore: '지도 둘러보기',
+            practice: '연습 모드',
+            quiz: '익숙해지기',
+            test: '실전 테스트'
+        };
+        if (this.headerTitleEl && modeNames[this.currentMode]) {
+            this.headerTitleEl.textContent = modeNames[this.currentMode];
+        }
     }
 
     setupEventListeners() {
@@ -462,7 +486,17 @@ class WorldMapQuiz {
                 .attr('fill', continentColor)
                 .attr('stroke', 'var(--map-stroke)')
                 .attr('stroke-width', 0.5)
-                .on('click', (event, d) => this.handleWorldMapClick(continentKey, d))
+                .on('click', (event, d) => {
+                    // 클릭 = 선택 + 동작
+                    d3.selectAll('.country').classed('selected', false);
+                    d3.select(event.target).classed('selected', true);
+                    const continent = WORLD_DATA[continentKey];
+                    if (this.currentMode === 'explore') {
+                        this.showFeedback(`${continent.name} 선택됨`, 'info');
+                    } else {
+                        this.handleWorldMapClick(continentKey, d);
+                    }
+                })
                 .on('mouseover', function() {
                     d3.select(this).attr('stroke-width', 1.5).style('filter', 'brightness(1.2)');
                 })
@@ -610,7 +644,18 @@ class WorldMapQuiz {
                 .attr('fill', color)
                 .attr('stroke', 'var(--map-stroke)')
                 .attr('stroke-width', 0.8)
-                .on('click', (event, d) => this.handleContinentMapClick(subregionKey, d))
+                .on('click', (event, d) => {
+                    // 클릭 = 선택 + 동작
+                    d3.selectAll('.country').classed('selected', false);
+                    d3.select(event.target).classed('selected', true);
+                    const countryInfo = getCountryById(d.id);
+                    const name = countryInfo ? countryInfo.name : `국가 ${d.id}`;
+                    if (this.currentMode === 'explore') {
+                        this.showFeedback(`${name} 선택됨`, 'info');
+                    } else {
+                        this.handleContinentMapClick(subregionKey, d);
+                    }
+                })
                 .on('mouseover', function() {
                     d3.select(this).attr('stroke-width', 2).style('filter', 'brightness(1.2)');
                 })
@@ -947,7 +992,18 @@ class WorldMapQuiz {
             .attr('fill', d => countryPalette[colorAssignment.get(d.id) || 0])
             .attr('stroke', 'var(--map-stroke)')
             .attr('stroke-width', 1)
-            .on('click', (event, d) => this.handleCountryClick(d))
+            .on('click', (event, d) => {
+                // 클릭 = 선택 + 동작
+                d3.selectAll('.country').classed('selected', false);
+                d3.select(event.target).classed('selected', true);
+                const countryInfo = getCountryById(d.id);
+                const name = countryInfo ? countryInfo.name : `국가 ${d.id}`;
+                if (this.currentMode === 'explore') {
+                    this.showFeedback(`${name} 선택됨`, 'info');
+                } else {
+                    this.handleCountryClick(d);
+                }
+            })
             .on('mouseover', function() {
                 d3.select(this).attr('stroke-width', 2.5).style('filter', 'brightness(1.2)');
             })

@@ -24,12 +24,18 @@ class ChinaQuiz {
         this.zoom = null;
         this.mapGroup = null;
 
+        // 헤더 제목 요소
+        this.headerTitleEl = null;
+
         this.init();
     }
 
     async init() {
         const params = new URLSearchParams(window.location.search);
         this.currentMode = params.get('mode');
+
+        // 헤더 제목 요소 참조
+        this.headerTitleEl = document.getElementById('header-title');
 
         this.setupTheme();
         await this.loadMapData();
@@ -114,6 +120,13 @@ class ChinaQuiz {
         } else {
             themeToggle.classList.add('hidden');
         }
+
+        // 모드 선택 화면(랜딩)에서는 헤더 제목 숨김
+        if (screenId === 'mode-screen') {
+            container.classList.add('hide-header');
+        } else {
+            container.classList.remove('hide-header');
+        }
     }
 
     updateModeInfo() {
@@ -138,6 +151,17 @@ class ChinaQuiz {
 
         document.getElementById('mode-title').textContent = modeInfo[this.currentMode].title;
         document.getElementById('mode-description').textContent = modeInfo[this.currentMode].desc;
+
+        // 헤더 제목을 모드명으로 변경
+        const modeNames = {
+            explore: '지도 둘러보기',
+            practice: '연습 모드',
+            quiz: '익숙해지기',
+            test: '실전 테스트'
+        };
+        if (this.headerTitleEl && modeNames[this.currentMode]) {
+            this.headerTitleEl.textContent = modeNames[this.currentMode];
+        }
     }
 
     setupEventListeners() {
@@ -350,7 +374,20 @@ class ChinaQuiz {
             })
             .attr('stroke', 'var(--map-stroke)')
             .attr('stroke-width', 0.8)
-            .on('click', (event, d) => this.handleCountryMapClick(d))
+            .on('click', (event, d) => {
+                // 클릭 = 선택 + 동작
+                d3.selectAll('.province').classed('selected', false);
+                d3.select(event.target).classed('selected', true);
+                const provinceName = d.properties.name;
+                const regionKey = this.getRegionByProvinceName(provinceName);
+                const region = regionKey ? CHINA_DATA.regions[regionKey] : null;
+                const regionName = region ? region.name : '';
+                if (this.currentMode === 'explore') {
+                    this.showFeedback(`${regionName} 선택됨`, 'info');
+                } else {
+                    this.handleCountryMapClick(d);
+                }
+            })
             .on('mouseover', function() {
                 d3.select(this).attr('stroke-width', 2).style('filter', 'brightness(1.2)');
             })
@@ -537,7 +574,18 @@ class ChinaQuiz {
             .attr('fill', d => colorPalette[colorAssignment.get(d.properties.name) || 0])
             .attr('stroke', 'var(--map-stroke)')
             .attr('stroke-width', 1)
-            .on('click', (event, d) => this.handleProvinceClick(d))
+            .on('click', (event, d) => {
+                // 클릭 = 선택 + 동작
+                d3.selectAll('.province').classed('selected', false);
+                d3.select(event.target).classed('selected', true);
+                const provinceInfo = this.findProvinceByName(d.properties.name);
+                const name = provinceInfo ? provinceInfo.name : d.properties.name;
+                if (this.currentMode === 'explore') {
+                    this.showFeedback(`${name} 선택됨`, 'info');
+                } else {
+                    this.handleProvinceClick(d);
+                }
+            })
             .on('mouseover', function() {
                 d3.select(this).attr('stroke-width', 2.5).style('filter', 'brightness(1.2)');
             })
@@ -588,12 +636,32 @@ class ChinaQuiz {
             { name: 'N',  dx: 0,   dy: -70 },
         ];
 
-        // 선호 방향 힌트 (바다=E, 내륙=W)
-        // 화북: 베이징(NE), 톈진(E), 허베이(SE) - 오른쪽으로 45도씩 분산
+        // 선호 방향 힌트 (겹침 방지 최적화)
         const preferredDirection = {
-            'beijing': 'NE', 'tianjin': 'E', 'hebei': 'SE',
-            'shanghai': 'E', 'hongkong': 'SE', 'macau': 'SE',
-            'taiwan': 'E', 'hainan': 'S', 'ningxia': 'W', 'chongqing': 'SW'
+            // 화북 - 밀집 지역
+            'beijing': 'NE',
+            'tianjin': 'E',
+            'hebei': 'S',
+            // 동부 해안
+            'shanghai': 'E',
+            'jiangsu': 'SE',
+            'zhejiang': 'SE',
+            'fujian': 'SE',
+            'shandong': 'NE',
+            // 특별행정구/대만
+            'hongkong': 'SE',
+            'macau': 'SW',
+            'taiwan': 'E',
+            // 남부
+            'hainan': 'S',
+            'guangdong': 'S',
+            // 서부/내륙
+            'ningxia': 'W',
+            'chongqing': 'SW',
+            'guizhou': 'SW',
+            // 동북
+            'liaoning': 'SE',
+            'jilin': 'NE',
         };
 
         const placedLabels = [];

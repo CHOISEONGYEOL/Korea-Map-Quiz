@@ -26,12 +26,18 @@ class USStatesQuiz {
         // 지역 필터
         this.selectedRegionFilter = 'all';
 
+        // 헤더 제목 요소
+        this.headerTitleEl = null;
+
         this.init();
     }
 
     async init() {
         const params = new URLSearchParams(window.location.search);
         this.currentMode = params.get('mode');
+
+        // 헤더 제목 요소 참조
+        this.headerTitleEl = document.getElementById('header-title');
 
         this.setupTheme();
         await this.loadMapData();
@@ -108,6 +114,13 @@ class USStatesQuiz {
         } else {
             themeToggle.classList.add('hidden');
         }
+
+        // 모드 선택 화면(랜딩)에서는 헤더 제목 숨김
+        if (screenId === 'mode-screen') {
+            container.classList.add('hide-header');
+        } else {
+            container.classList.remove('hide-header');
+        }
     }
 
     updateModeInfo() {
@@ -132,6 +145,17 @@ class USStatesQuiz {
 
         document.getElementById('mode-title').textContent = modeInfo[this.currentMode].title;
         document.getElementById('mode-description').textContent = modeInfo[this.currentMode].desc;
+
+        // 헤더 제목을 모드명으로 변경
+        const modeNames = {
+            explore: '지도 둘러보기',
+            practice: '연습 모드',
+            quiz: '익숙해지기',
+            test: '실전 테스트'
+        };
+        if (this.headerTitleEl && modeNames[this.currentMode]) {
+            this.headerTitleEl.textContent = modeNames[this.currentMode];
+        }
     }
 
     setupEventListeners() {
@@ -341,7 +365,20 @@ class USStatesQuiz {
             })
             .attr('stroke', 'var(--map-stroke)')
             .attr('stroke-width', 0.8)
-            .on('click', (event, d) => this.handleCountryMapClick(d))
+            .on('click', (event, d) => {
+                // 클릭 = 선택 + 동작
+                d3.selectAll('.state').classed('selected', false);
+                d3.select(event.target).classed('selected', true);
+                const stateId = String(d.id).padStart(2, '0');
+                const stateInfo = getStateById(stateId);
+                const region = stateInfo ? US_STATES_DATA.regions[stateInfo.region] : null;
+                const regionName = region ? region.name : '';
+                if (this.currentMode === 'explore') {
+                    this.showFeedback(`${regionName} 선택됨`, 'info');
+                } else {
+                    this.handleCountryMapClick(d);
+                }
+            })
             .on('mouseover', function() {
                 d3.select(this).attr('stroke-width', 2).style('filter', 'brightness(1.2)');
             })
@@ -403,8 +440,18 @@ class USStatesQuiz {
             .attr('stroke', 'var(--map-stroke)')
             .attr('stroke-width', 0.5)
             .attr('data-state-id', stateId)
-            .on('click', function() {
-                self.handleCountryMapClick(feature);
+            .on('click', function(event) {
+                // 클릭 = 선택 + 동작
+                d3.selectAll('.state').classed('selected', false);
+                d3.select(this).classed('selected', true);
+                const stateInfo = getStateById(stateId);
+                const region = stateInfo ? US_STATES_DATA.regions[stateInfo.region] : null;
+                const regionName = region ? region.name : '';
+                if (self.currentMode === 'explore') {
+                    self.showFeedback(`${regionName} 선택됨`, 'info');
+                } else {
+                    self.handleCountryMapClick(feature);
+                }
             })
             .on('mouseover', function() {
                 d3.select(this).attr('stroke-width', 1.5).style('filter', 'brightness(1.2)');
@@ -570,7 +617,19 @@ class USStatesQuiz {
             .attr('fill', d => colorPalette[colorAssignment.get(d.id) || 0])
             .attr('stroke', 'var(--map-stroke)')
             .attr('stroke-width', 1)
-            .on('click', (event, d) => this.handleStateClick(d))
+            .on('click', (event, d) => {
+                // 클릭 = 선택 + 동작
+                d3.selectAll('.state').classed('selected', false);
+                d3.select(event.target).classed('selected', true);
+                const stateId = String(d.id).padStart(2, '0');
+                const stateInfo = getStateById(stateId);
+                const name = stateInfo ? stateInfo.name : `주 ${stateId}`;
+                if (this.currentMode === 'explore') {
+                    this.showFeedback(`${name} 선택됨`, 'info');
+                } else {
+                    this.handleStateClick(d);
+                }
+            })
             .on('mouseover', function() {
                 d3.select(this).attr('stroke-width', 2.5).style('filter', 'brightness(1.2)');
             })
@@ -661,7 +720,16 @@ class USStatesQuiz {
             .attr('stroke-width', 1)
             .attr('data-state-id', stateId)
             .on('click', function() {
-                self.handleStateClick(feature);
+                // 클릭 = 선택 + 동작
+                d3.selectAll('.state').classed('selected', false);
+                d3.select(this).classed('selected', true);
+                const stateInfo = getStateById(stateId);
+                const name = stateInfo ? stateInfo.name : label;
+                if (self.currentMode === 'explore') {
+                    self.showFeedback(`${name} 선택됨`, 'info');
+                } else {
+                    self.handleStateClick(feature);
+                }
             })
             .on('mouseover', function() {
                 d3.select(this).attr('stroke-width', 2).style('filter', 'brightness(1.2)');
@@ -696,10 +764,27 @@ class USStatesQuiz {
             { name: 'N',  dx: 0,   dy: -70 },
         ];
 
-        // 선호 방향 힌트 (바다 방향)
+        // 선호 방향 힌트 (겹침 방지 최적화)
         const preferredDirection = {
-            '09': 'SE', '44': 'SE', '10': 'E', '24': 'E', '11': 'E',
-            '34': 'E', '25': 'E'
+            // 북동부 소형 주들 - 동쪽/남동쪽 바다 방향
+            '09': 'SE',  // 코네티컷
+            '44': 'SE',  // 로드아일랜드
+            '10': 'E',   // 델라웨어
+            '24': 'E',   // 메릴랜드
+            '11': 'SE',  // 워싱턴 DC
+            '34': 'E',   // 뉴저지
+            '25': 'NE',  // 매사추세츠
+            '33': 'NE',  // 뉴햄프셔
+            '50': 'NW',  // 버몬트
+            // 중서부
+            '17': 'SW',  // 일리노이
+            '18': 'SE',  // 인디애나
+            '39': 'NE',  // 오하이오
+            '26': 'NW',  // 미시간
+            '55': 'NW',  // 위스콘신
+            // 남부 소형 주들
+            '45': 'SE',  // 사우스캐롤라이나
+            '13': 'SE',  // 조지아
         };
 
         const placedLabels = [];
