@@ -97,12 +97,21 @@ header h1 {
     display: none;
 }
 
+/* 메인 랜딩 페이지: 전체를 하나의 그룹으로 중앙 정렬 */
+body.main-landing .container {
+    justify-content: center;
+}
+
+body.main-landing header {
+    margin-bottom: 0;
+}
+
 /* 메인 랜딩 페이지에서만 큰 제목 표시 */
 body.main-landing header h1 {
     display: block;
     font-size: 5rem;
-    margin-bottom: 20px;
-    margin-top: 5vh;
+    margin-bottom: 16px;
+    margin-top: 0;
     color: var(--text-primary);
     font-weight: 700;
     letter-spacing: -0.5px;
@@ -1009,9 +1018,8 @@ header {
 /* 메인 랜딩 페이지 스타일 */
 #main-landing {
     text-align: center;
-    padding: 24px;
-    justify-content: center;
-    align-items: center;
+    padding: 16px 24px;
+    flex: none;
 }
 
 #main-landing h2 {
