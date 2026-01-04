@@ -324,7 +324,7 @@ class ChinaQuiz {
         svg.selectAll('*').remove();
 
         const width = container.clientWidth;
-        const height = Math.min(500, window.innerHeight * 0.55);
+        const height = Math.min(380, window.innerHeight * 0.42);
 
         svg.attr('width', width).attr('height', height);
 
@@ -493,7 +493,7 @@ class ChinaQuiz {
         svg.selectAll('*').remove();
 
         const width = container.clientWidth;
-        const height = Math.min(500, window.innerHeight * 0.55);
+        const height = Math.min(380, window.innerHeight * 0.42);
 
         svg.attr('width', width).attr('height', height);
 

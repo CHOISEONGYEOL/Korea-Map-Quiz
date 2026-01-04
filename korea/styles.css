@@ -702,7 +702,8 @@ header h1 {
 .mode-btn {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
+    text-align: center;
     padding: 20px;
     border-radius: 16px;
     text-decoration: none;

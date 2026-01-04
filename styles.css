@@ -92,10 +92,17 @@ header {
     flex-shrink: 0;
 }
 
+/* 기본: 헤더 h1 숨김 */
 header h1 {
+    display: none;
+}
+
+/* 메인 랜딩 페이지에서만 큰 제목 표시 */
+body.main-landing header h1 {
+    display: block;
     font-size: 5rem;
-    margin-bottom: 20px;
-    margin-top: 10vh;
+    margin-bottom: 10px;
+    margin-top: 5vh;
     color: var(--text-primary);
     font-weight: 700;
     letter-spacing: -0.5px;
@@ -188,10 +195,10 @@ header h1 {
 }
 
 #mode-screen h2, #continent-screen h2 {
-    font-size: 1.5rem;
+    font-size: 5rem;
     font-weight: 700;
     color: var(--text-primary);
-    margin-bottom: 8px;
+    margin-bottom: 16px;
 }
 
 #mode-screen > p, #continent-screen > p {
@@ -209,9 +216,9 @@ header h1 {
 }
 
 #start-screen h2 {
-    font-size: 1.5rem;
+    font-size: 5rem;
     font-weight: 700;
-    margin-bottom: 8px;
+    margin-bottom: 16px;
     text-align: center;
     color: var(--text-primary);
 }
@@ -287,7 +294,11 @@ header h1 {
     }
 
     #start-screen h2 {
-        font-size: 1.5rem;
+        font-size: 3rem;
+    }
+
+    #mode-screen h2, #continent-screen h2 {
+        font-size: 3rem;
     }
 }
 
@@ -768,7 +779,8 @@ header h1 {
 .mode-btn {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
+    text-align: center;
     padding: 20px;
     border-radius: 16px;
     text-decoration: none;
@@ -1012,7 +1024,7 @@ header {
 #main-landing > p {
     font-size: 0.95rem;
     color: var(--text-muted);
-    margin-bottom: 32px;
+    margin-bottom: 16px;
 }
 
 .main-menu-buttons {
@@ -1127,6 +1139,7 @@ header {
     display: flex;
     flex-direction: column;
     align-items: center;
+    text-align: center;
     padding: 16px 8px;
     border-radius: 16px;
     text-decoration: none;

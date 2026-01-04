@@ -439,7 +439,7 @@ class WorldMapQuiz {
         svg.selectAll('*').remove();
 
         const width = container.clientWidth;
-        const height = container.clientHeight - 20;
+        const height = Math.min(380, window.innerHeight * 0.42);
 
         svg.attr('width', width).attr('height', height);
 
@@ -579,7 +579,7 @@ class WorldMapQuiz {
         svg.selectAll('*').remove();
 
         const width = container.clientWidth;
-        const height = container.clientHeight - 20;
+        const height = Math.min(380, window.innerHeight * 0.42);
 
         svg.attr('width', width).attr('height', height);
 
@@ -923,7 +923,7 @@ class WorldMapQuiz {
         svg.selectAll('*').remove();
 
         const width = container.clientWidth;
-        const height = container.clientHeight - 20;
+        const height = Math.min(380, window.innerHeight * 0.42);
 
         svg.attr('width', width).attr('height', height);
 
