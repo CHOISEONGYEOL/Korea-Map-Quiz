@@ -307,7 +307,12 @@ class KoreaMapQuiz {
     rerenderCurrentMap() {
         if (this.state === GameState.SELECT_PROVINCE || this.state === GameState.IDLE) {
             if (this.selectedGroup) {
-                this.renderExploreGroupProvinceSelection(this.selectedGroup);
+                // 지역 필터로 선택된 권역인지 확인
+                if (QUIZ_FILTER_REGIONS[this.selectedGroup]) {
+                    this.renderExploreFilteredRegionMap(this.selectedGroup);
+                } else {
+                    this.renderExploreGroupProvinceSelection(this.selectedGroup);
+                }
             } else {
                 this.renderExploreProvinceMap();
             }
@@ -473,14 +478,10 @@ class KoreaMapQuiz {
             this.startBtn.textContent = config.buttonText;
         }
 
-        // 지역 필터 표시 (explore 모드 제외)
+        // 지역 필터 표시 (모든 모드에서 표시)
         const regionFilter = document.getElementById('region-filter');
         if (regionFilter) {
-            if (this.gameMode === 'explore') {
-                regionFilter.classList.add('hidden');
-            } else {
-                regionFilter.classList.remove('hidden');
-            }
+            regionFilter.classList.remove('hidden');
         }
     }
 
@@ -716,7 +717,14 @@ class KoreaMapQuiz {
             this.questionTextEl.textContent = '지역을 클릭해서 탐색하세요';
             this.stepIndicatorEl.textContent = '자유 탐색 모드';
             this.state = GameState.SELECT_PROVINCE;
-            this.renderExploreProvinceMap();
+
+            // 지역 필터가 선택되어 있으면 해당 권역으로 드릴다운
+            if (this.selectedRegionFilter !== 'all') {
+                this.selectedGroup = this.selectedRegionFilter;
+                this.renderExploreFilteredRegionMap(this.selectedRegionFilter);
+            } else {
+                this.renderExploreProvinceMap();
+            }
         } else {
             // 퀴즈 모드
             this.generateQuestions();
@@ -932,6 +940,64 @@ class KoreaMapQuiz {
             .attr('class', 'region-label')
             .attr('transform', d => `translate(${this.path.centroid(d)})`)
             .text(d => SHORT_NAMES[d.properties.name] || d.properties.name);
+    }
+
+    // Explore 모드: 지역 필터 선택 시 해당 권역 지도 표시
+    renderExploreFilteredRegionMap(regionFilter) {
+        d3.select(this.mapSvg).selectAll('*').remove();
+
+        const width = this.mapContainer.clientWidth - 40;
+        const height = this.mapContainer.clientHeight - 20;
+
+        const allowedProvinces = QUIZ_FILTER_REGIONS[regionFilter];
+        if (!allowedProvinces) {
+            this.renderExploreProvinceMap();
+            return;
+        }
+
+        const filteredProvinces = this.provincesGeo.features.filter(f =>
+            allowedProvinces.includes(f.properties.name)
+        );
+
+        const featureCollection = { type: 'FeatureCollection', features: filteredProvinces };
+        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - 20, height - 20]], featureCollection);
+        this.path = d3.geoPath().projection(this.projection);
+
+        this.svg = d3.select(this.mapSvg)
+            .attr('width', width)
+            .attr('height', height);
+
+        // 줌 기능 설정
+        this.setupZoom(this.svg, width, height);
+
+        // 지도 그룹 생성 (줌 적용 대상)
+        this.mapGroup = this.svg.append('g').attr('class', 'map-group');
+
+        this.addBackButton(() => {
+            this.selectedGroup = null;
+            this.feedbackEl.textContent = '';
+            this.renderExploreProvinceMap();
+        });
+
+        this.mapGroup.selectAll('.province')
+            .data(filteredProvinces)
+            .enter()
+            .append('path')
+            .attr('class', 'province')
+            .attr('d', this.path)
+            .attr('fill', d => getProvinceColors()[d.properties.name] || '#666')
+            .attr('data-name', d => d.properties.name)
+            .on('click', (event, d) => this.handleExploreProvinceClick(d.properties.name));
+
+        this.mapGroup.selectAll('.region-label')
+            .data(filteredProvinces)
+            .enter()
+            .append('text')
+            .attr('class', 'region-label')
+            .attr('transform', d => `translate(${this.path.centroid(d)})`)
+            .text(d => SHORT_NAMES[d.properties.name] || d.properties.name);
+
+        this.feedbackEl.textContent = `${regionFilter} 지역을 탐색하세요`;
     }
 
     handleExploreProvinceClick(provinceName) {
