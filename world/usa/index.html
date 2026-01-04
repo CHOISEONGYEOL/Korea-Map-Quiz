@@ -6,7 +6,7 @@
     <title>미국 50개 주 퀴즈</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/topojson-client@3"></script>
-    <link rel="stylesheet" href="../../styles.css?v=5">
+    <link rel="stylesheet" href="../../styles.css?v=12">
     <script src="../data/us-states.js?v=2"></script>
 </head>
 <body>
@@ -16,7 +16,7 @@
                 <span class="theme-icon-light">☀️</span>
                 <span class="theme-icon-dark">🌙</span>
             </button>
-            <h1>미국 50개 주 퀴즈</h1>
+            <h1 id="header-title">미국 50개 주 퀴즈</h1>
             <div class="stats">
                 <div class="stat-item">
                     <span class="label">점수</span>
@@ -70,26 +70,35 @@
             <div id="start-screen" class="screen">
                 <h2 id="mode-title">미국 50개 주 퀴즈</h2>
                 <p id="mode-description">문제로 나오는 주의 위치를 클릭하세요!</p>
-                <div class="instructions" id="instructions">
-                    <h3>게임 방법</h3>
-                    <ol>
-                        <li>문제가 출제되면 해당 <strong>주</strong>를 클릭하세요</li>
-                        <li>정확한 위치를 클릭하면 점수를 얻습니다</li>
-                        <li>각 문제당 <strong>5초</strong> 제한시간!</li>
-                    </ol>
-                </div>
 
-                <!-- 지역 필터 선택 -->
-                <div id="region-filter" class="region-filter hidden">
-                    <h3>퀴즈 범위 선택</h3>
-                    <p class="filter-desc">특정 지역만 선택하여 집중 학습할 수 있습니다</p>
-                    <div id="filter-options" class="filter-options">
-                        <!-- JS에서 동적 생성 -->
+                <div class="start-content">
+                    <div class="start-left">
+                        <div class="instructions" id="instructions">
+                            <h3>게임 방법</h3>
+                            <ol>
+                                <li>문제가 출제되면 해당 <strong>주</strong>를 클릭하세요</li>
+                                <li>정확한 위치를 클릭하면 점수를 얻습니다</li>
+                                <li>각 문제당 <strong>5초</strong> 제한시간!</li>
+                            </ol>
+                        </div>
+                    </div>
+                    <div class="start-right">
+                        <!-- 지역 필터 선택 -->
+                        <div id="region-filter" class="region-filter hidden">
+                            <h3>퀴즈 범위 선택</h3>
+                            <p class="filter-desc">특정 지역만 선택하여 집중 학습할 수 있습니다</p>
+                            <div id="filter-options" class="filter-options">
+                                <!-- JS에서 동적 생성 -->
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <button id="start-btn" class="btn-primary">시작하기</button>
-                <a href="./" class="btn-secondary">모드 선택으로 돌아가기</a>
+                <div class="btn-row">
+                    <a href="./" class="btn-secondary">모드 선택</a>
+                    <a href="../" class="btn-secondary">세계 지도</a>
+                </div>
             </div>
 
             <!-- 게임 화면 -->
@@ -102,7 +111,10 @@
                     <svg id="map-svg"></svg>
                 </div>
                 <div id="feedback" class="feedback"></div>
-                <a href="./" class="btn-secondary game-back-btn">모드 선택으로 돌아가기</a>
+                <div class="game-back-btns">
+                    <a href="./" class="btn-secondary game-back-btn">모드 선택</a>
+                    <a href="../" class="btn-secondary game-back-btn">세계 지도</a>
+                </div>
             </div>
 
             <!-- 결과 화면 -->
@@ -117,11 +129,14 @@
                     <div id="result-details" class="result-details"></div>
                 </div>
                 <button id="restart-btn" class="btn-primary">다시 하기</button>
-                <a href="./" class="btn-secondary">모드 선택으로 돌아가기</a>
+                <div class="btn-row">
+                    <a href="./" class="btn-secondary">모드 선택</a>
+                    <a href="../" class="btn-secondary">세계 지도</a>
+                </div>
             </div>
         </main>
     </div>
 
-    <script src="game.js?v=7"></script>
+    <script src="game.js?v=8"></script>
 </body>
 </html>
