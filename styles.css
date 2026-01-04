@@ -1145,12 +1145,20 @@ header {
 }
 
 .menu-flag,
-.menu-globe {
+.menu-globe,
+.menu-subway-icon {
     width: 80px;
     height: auto;
     margin-bottom: 16px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.menu-subway-icon {
+    font-size: 60px;
+    width: auto;
+    box-shadow: none;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
 }
 
 .menu-title {
@@ -1178,8 +1186,14 @@ header {
     }
 
     .menu-flag,
-    .menu-globe {
+    .menu-globe,
+    .menu-subway-icon {
         width: 100px;
+    }
+
+    .menu-subway-icon {
+        font-size: 80px;
+        width: auto;
     }
 
     .menu-title {
@@ -1505,4 +1519,74 @@ header {
     .filter-option .filter-sub {
         font-size: 0.6rem;
     }
+}
+
+/* 지하철 퀴즈 스타일 */
+.subway-map {
+    background: var(--bg-tertiary);
+}
+
+.station-dot {
+    transition: r 0.15s ease, stroke-width 0.15s ease;
+}
+
+.result-list {
+    margin-top: 16px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.result-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.result-item.correct {
+    border-left: 3px solid var(--success-color);
+}
+
+.result-item.incorrect {
+    border-left: 3px solid var(--error-color);
+}
+
+.result-num {
+    font-weight: 700;
+    color: var(--text-muted);
+    min-width: 24px;
+}
+
+.result-station {
+    flex: 1;
+    font-weight: 500;
+}
+
+.result-line {
+    font-size: 0.85rem;
+}
+
+.result-mark {
+    font-size: 1.2rem;
+}
+
+.result-stat {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.result-stat span {
+    color: var(--text-secondary);
+}
+
+.result-stat strong {
+    color: var(--accent-primary);
+    font-size: 1.1rem;
 }
