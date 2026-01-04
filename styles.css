@@ -739,12 +739,12 @@ body.main-landing header h1 {
 }
 
 .country-label {
-    font-size: 8px;
+    font-size: 16px;
     fill: var(--map-label-color);
     pointer-events: none;
     text-anchor: middle;
-    font-weight: 600;
-    text-shadow: 1px 1px 2px var(--label-shadow), -1px -1px 2px var(--label-shadow);
+    font-weight: 800;
+    text-shadow: 2px 2px 4px var(--label-shadow), -2px -2px 4px var(--label-shadow);
 }
 
 /* 전 세계 지도 랜딩 화면 */
