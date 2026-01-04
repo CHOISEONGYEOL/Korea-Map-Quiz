@@ -328,27 +328,70 @@ class SubwayQuiz {
 
         Object.entries(this.lines).forEach(([lineName, lineData]) => {
             // 필터링: 선택된 노선만 또는 전체
-            if (!this.selectedLines.includes('all') && !this.selectedLines.includes(lineName)) {
+            // 지선도 함께 렌더링 (예: '2호선' 선택 시 '2호선-신도림지선', '2호선-성수지선'도 포함)
+            const isSelected = this.selectedLines.includes('all') ||
+                this.selectedLines.includes(lineName) ||
+                this.selectedLines.some(selected => lineName.startsWith(selected + '-'));
+            if (!isSelected) {
                 return;
             }
 
-            // 노선의 역들을 순서대로 연결
-            const points = [];
+            // 노선의 역들을 순서대로 연결 (null 좌표 또는 너무 먼 거리면 선을 끊음)
+            const segments = []; // 연속된 좌표 세그먼트들
+            let currentSegment = [];
+            let prevCoords = null;
+
+            // 거리 임계값 (픽셀 단위) - 이 이상 떨어지면 연결하지 않음
+            const MAX_DISTANCE = 120;
+
             lineData.stations.forEach(stationId => {
                 const station = stationById[stationId];
-                if (station) {
+                if (station && station.lat != null && station.lng != null) {
                     const coords = this.projection([station.lng, station.lat]);
                     if (coords && !isNaN(coords[0]) && !isNaN(coords[1])) {
-                        points.push(coords);
+                        // 이전 좌표와의 거리 체크
+                        if (prevCoords) {
+                            const dist = Math.sqrt(
+                                Math.pow(coords[0] - prevCoords[0], 2) +
+                                Math.pow(coords[1] - prevCoords[1], 2)
+                            );
+                            if (dist > MAX_DISTANCE) {
+                                // 너무 멀면 세그먼트 끊기
+                                if (currentSegment.length > 1) {
+                                    segments.push(currentSegment);
+                                }
+                                currentSegment = [];
+                            }
+                        }
+                        currentSegment.push(coords);
+                        prevCoords = coords;
+                    } else {
+                        // 투영 실패 시 세그먼트 끊기
+                        if (currentSegment.length > 1) {
+                            segments.push(currentSegment);
+                        }
+                        currentSegment = [];
+                        prevCoords = null;
                     }
+                } else {
+                    // null 좌표인 역 - 세그먼트 끊기
+                    if (currentSegment.length > 1) {
+                        segments.push(currentSegment);
+                    }
+                    currentSegment = [];
+                    prevCoords = null;
                 }
             });
 
-            // 노선 선 그리기
-            if (points.length > 1) {
-                const lineGenerator = d3.line()
-                    .curve(d3.curveLinear);
+            // 마지막 세그먼트 추가
+            if (currentSegment.length > 1) {
+                segments.push(currentSegment);
+            }
 
+            // 각 세그먼트별로 선 그리기
+            const lineGenerator = d3.line().curve(d3.curveLinear);
+
+            segments.forEach(points => {
                 linesGroup.append('path')
                     .attr('d', lineGenerator(points))
                     .attr('fill', 'none')
@@ -357,7 +400,7 @@ class SubwayQuiz {
                     .attr('stroke-linecap', 'round')
                     .attr('stroke-linejoin', 'round')
                     .attr('opacity', 0.8);
-            }
+            });
         });
 
         // 역 점 그리기
