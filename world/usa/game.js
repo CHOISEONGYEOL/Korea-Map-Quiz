@@ -421,9 +421,9 @@ class USStatesQuiz {
             this.drawStateInset(this.mapGroup, hawaii, '15', 120, height - 110, 80, 70, '하와이');
         }
 
-        // 지역 라벨 (mapGroup이 아닌 svg에 추가해야 width/height 가져올 수 있음)
+        // 지역 라벨 (mapGroup에 추가해야 줌과 함께 움직임)
         if (this.currentMode !== 'test') {
-            this.drawRegionLabels(svg);
+            this.drawRegionLabels(this.mapGroup);
         }
 
         this.svg = svg;
@@ -490,7 +490,7 @@ class USStatesQuiz {
         }
     }
 
-    drawRegionLabels(svg) {
+    drawRegionLabels(mapGroup) {
         const regionLabels = [
             { name: '북동부', x: 0.85, y: 0.25 },
             { name: '남부', x: 0.7, y: 0.7 },
@@ -498,11 +498,12 @@ class USStatesQuiz {
             { name: '서부', x: 0.2, y: 0.4 }
         ];
 
+        const svg = d3.select('#map-svg');
         const width = +svg.attr('width');
         const height = +svg.attr('height');
 
         regionLabels.forEach(label => {
-            svg.append('text')
+            mapGroup.append('text')
                 .attr('class', 'district-label')
                 .attr('x', width * label.x)
                 .attr('y', height * label.y)
@@ -769,7 +770,7 @@ class USStatesQuiz {
         }
     }
 
-    drawStateLabels(svg, features) {
+    drawStateLabels(mapGroup, features) {
         // 스마트 리더 라인 시스템: 필요한 경우에만 자동 생성
         const DIRECTIONS = [
             { name: 'E',  dx: 70,  dy: 0 },
@@ -914,7 +915,7 @@ class USStatesQuiz {
                 placedLines.push({ x1: centroid[0], y1: centroid[1], x2: labelX, y2: labelY });
                 placedLabels.push({ x: labelX - labelWidth/2, y: labelY - labelHeight/2, width: labelWidth, height: labelHeight });
 
-                svg.append('line')
+                mapGroup.append('line')
                     .attr('class', 'leader-line')
                     .attr('x1', centroid[0])
                     .attr('y1', centroid[1])
@@ -925,7 +926,7 @@ class USStatesQuiz {
                     .attr('opacity', 0.7)
                     .style('pointer-events', 'none');
 
-                svg.append('text')
+                mapGroup.append('text')
                     .attr('class', 'state-label district-label')
                     .attr('x', labelX)
                     .attr('y', labelY)
@@ -937,7 +938,7 @@ class USStatesQuiz {
                 // 리더 라인 불필요 - 중심에 배치
                 placedLabels.push({ x: centroid[0] - labelWidth/2, y: centroid[1] - labelHeight/2, width: labelWidth, height: labelHeight });
 
-                svg.append('text')
+                mapGroup.append('text')
                     .attr('class', 'state-label district-label')
                     .attr('x', centroid[0])
                     .attr('y', centroid[1])

@@ -548,7 +548,7 @@ class WorldMapQuiz {
         }
     }
 
-    drawContinentLabels(svg) {
+    drawContinentLabels(mapGroup) {
         const labelPositions = {
             asia: { x: 0.65, y: 0.35 },
             europe: { x: 0.52, y: 0.25 },
@@ -558,13 +558,14 @@ class WorldMapQuiz {
             oceania: { x: 0.82, y: 0.7 }
         };
 
+        const svg = d3.select('#map-svg');
         const width = +svg.attr('width');
         const height = +svg.attr('height');
 
         for (const [continentKey, continent] of Object.entries(WORLD_DATA)) {
             const pos = labelPositions[continentKey];
             if (pos) {
-                svg.append('text')
+                mapGroup.append('text')
                     .attr('class', 'continent-label district-label')
                     .attr('x', width * pos.x)
                     .attr('y', height * pos.y)
@@ -886,7 +887,7 @@ class WorldMapQuiz {
         return colors;
     }
 
-    drawSubregionLabels(svg, continent) {
+    drawSubregionLabels(mapGroup, continent) {
         const countries = topojson.feature(this.topoData, this.topoData.objects.countries);
 
         for (const [subregionKey, subregion] of Object.entries(continent.subregions)) {
@@ -907,7 +908,7 @@ class WorldMapQuiz {
             });
 
             if (count > 0) {
-                svg.append('text')
+                mapGroup.append('text')
                     .attr('class', 'subregion-label district-label')
                     .attr('x', totalX / count)
                     .attr('y', totalY / count)
@@ -1065,7 +1066,7 @@ class WorldMapQuiz {
         this.svg = svg;
     }
 
-    drawCountryLabels(svg, features) {
+    drawCountryLabels(mapGroup, features) {
         // 스마트 리더 라인 시스템: 필요한 경우에만 자동 생성
         const DIRECTIONS = [
             { name: 'E',  dx: 70,  dy: 0 },
@@ -1208,7 +1209,7 @@ class WorldMapQuiz {
                 placedLines.push({ x1: centroid[0], y1: centroid[1], x2: labelX, y2: labelY });
                 placedLabels.push({ x: labelX - labelWidth/2, y: labelY - labelHeight/2, width: labelWidth, height: labelHeight });
 
-                svg.append('line')
+                mapGroup.append('line')
                     .attr('class', 'leader-line')
                     .attr('x1', centroid[0])
                     .attr('y1', centroid[1])
@@ -1219,7 +1220,7 @@ class WorldMapQuiz {
                     .attr('opacity', 0.7)
                     .style('pointer-events', 'none');
 
-                svg.append('text')
+                mapGroup.append('text')
                     .attr('class', 'country-label district-label')
                     .attr('x', labelX)
                     .attr('y', labelY)
@@ -1231,7 +1232,7 @@ class WorldMapQuiz {
                 // 리더 라인 불필요 - 중심에 배치
                 placedLabels.push({ x: centroid[0] - labelWidth/2, y: centroid[1] - labelHeight/2, width: labelWidth, height: labelHeight });
 
-                svg.append('text')
+                mapGroup.append('text')
                     .attr('class', 'country-label district-label')
                     .attr('x', centroid[0])
                     .attr('y', centroid[1])

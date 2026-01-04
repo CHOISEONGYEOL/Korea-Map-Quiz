@@ -420,9 +420,9 @@ class ChinaQuiz {
                 d3.select(this).attr('stroke-width', 0.8).style('filter', 'none');
             });
 
-        // 지역 라벨 (mapGroup이 아닌 svg에 추가해야 width/height 가져올 수 있음)
+        // 지역 라벨 (mapGroup에 추가해야 줌과 함께 움직임)
         if (this.currentMode !== 'test') {
-            this.drawRegionLabels(svg);
+            this.drawRegionLabels(this.mapGroup);
         }
 
         this.svg = svg;
@@ -461,7 +461,7 @@ class ChinaQuiz {
         return provinceInfo ? provinceInfo.region : null;
     }
 
-    drawRegionLabels(svg) {
+    drawRegionLabels(mapGroup) {
         const regionLabels = [
             { name: '동북', x: 0.72, y: 0.18 },
             { name: '화북', x: 0.58, y: 0.32 },
@@ -471,11 +471,12 @@ class ChinaQuiz {
             { name: '서북', x: 0.35, y: 0.35 }
         ];
 
+        const svg = d3.select('#map-svg');
         const width = +svg.attr('width');
         const height = +svg.attr('height');
 
         regionLabels.forEach(label => {
-            svg.append('text')
+            mapGroup.append('text')
                 .attr('class', 'district-label')
                 .attr('x', width * label.x)
                 .attr('y', height * label.y)
@@ -648,7 +649,7 @@ class ChinaQuiz {
         this.svg = svg;
     }
 
-    drawProvinceLabels(svg, features) {
+    drawProvinceLabels(mapGroup, features) {
         // 스마트 리더 라인 시스템: 필요한 경우에만 자동 생성
         const DIRECTIONS = [
             { name: 'E',  dx: 70,  dy: 0 },
@@ -796,7 +797,7 @@ class ChinaQuiz {
                 placedLines.push({ x1: centroid[0], y1: centroid[1], x2: labelX, y2: labelY });
                 placedLabels.push({ x: labelX - labelWidth/2, y: labelY - labelHeight/2, width: labelWidth, height: labelHeight });
 
-                svg.append('line')
+                mapGroup.append('line')
                     .attr('class', 'leader-line')
                     .attr('x1', centroid[0])
                     .attr('y1', centroid[1])
@@ -807,7 +808,7 @@ class ChinaQuiz {
                     .attr('opacity', 0.7)
                     .style('pointer-events', 'none');
 
-                svg.append('text')
+                mapGroup.append('text')
                     .attr('class', 'province-label district-label')
                     .attr('x', labelX)
                     .attr('y', labelY)
@@ -818,7 +819,7 @@ class ChinaQuiz {
             } else {
                 placedLabels.push({ x: centroid[0] - labelWidth/2, y: centroid[1] - labelHeight/2, width: labelWidth, height: labelHeight });
 
-                svg.append('text')
+                mapGroup.append('text')
                     .attr('class', 'province-label district-label')
                     .attr('x', centroid[0])
                     .attr('y', centroid[1])

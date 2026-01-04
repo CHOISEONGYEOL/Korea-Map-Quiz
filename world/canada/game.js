@@ -400,7 +400,7 @@ class CanadaProvincesQuiz {
         this.svg = svg;
     }
 
-    drawProvinceLabels(svg) {
+    drawProvinceLabels(mapGroup) {
         // 모든 라벨에 리더 라인 적용 (겹침 방지를 위해 적극적으로 사용)
         // 각 지역별 고정 리더 라인 위치 지정
         const leaderLineConfig = {
@@ -455,7 +455,7 @@ class CanadaProvincesQuiz {
                 const labelX = centroid[0] + dir.dx * config.distance;
                 const labelY = centroid[1] + dir.dy * config.distance;
 
-                svg.append('line')
+                mapGroup.append('line')
                     .attr('class', 'leader-line')
                     .attr('x1', centroid[0])
                     .attr('y1', centroid[1])
@@ -466,7 +466,7 @@ class CanadaProvincesQuiz {
                     .attr('opacity', 0.7)
                     .style('pointer-events', 'none');
 
-                svg.append('text')
+                mapGroup.append('text')
                     .attr('class', 'province-label district-label')
                     .attr('x', labelX)
                     .attr('y', labelY)
@@ -480,7 +480,7 @@ class CanadaProvincesQuiz {
                 const finalX = centroid[0] + offset.dx;
                 const finalY = centroid[1] + offset.dy;
 
-                svg.append('text')
+                mapGroup.append('text')
                     .attr('class', 'province-label district-label')
                     .attr('x', finalX)
                     .attr('y', finalY)
