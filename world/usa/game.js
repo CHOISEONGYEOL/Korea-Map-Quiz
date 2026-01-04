@@ -281,7 +281,7 @@ class USStatesQuiz {
         const self = this;
 
         this.zoom = d3.zoom()
-            .scaleExtent([1, 8])  // 1배 ~ 8배 확대
+            .scaleExtent([0.5, 8])  // 0.5배 ~ 8배 확대
             .translateExtent([[0, 0], [width, height]])
             .on('zoom', (event) => {
                 if (this.mapGroup) {

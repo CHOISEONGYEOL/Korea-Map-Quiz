@@ -289,7 +289,7 @@ class ChinaQuiz {
     // 줌 기능 설정
     setupZoom(svg, width, height) {
         this.zoom = d3.zoom()
-            .scaleExtent([1, 8])
+            .scaleExtent([0.5, 8])
             .translateExtent([[0, 0], [width, height]])
             .on('zoom', (event) => {
                 if (this.mapGroup) {
