@@ -211,8 +211,8 @@ function main() {
     console.log(`  - 매칭 실패: ${unmatched.length}`);
 
     if (unmatched.length > 0) {
-        console.log(`\n매칭 실패 역 (처음 20개):`);
-        unmatched.slice(0, 20).forEach(name => {
+        console.log(`\n매칭 실패 역 (전체 ${unmatched.length}개):`);
+        unmatched.forEach(name => {
             console.log(`  - ${name}`);
         });
     }

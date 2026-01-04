@@ -13,6 +13,26 @@ const GameMode = {
     TEST: 'test'
 };
 
+// 주요 환승역 (여러 노선이 만나는 역)
+const TRANSFER_STATIONS = [
+    '서울역', '시청', '종로3가', '을지로3가', '동대문역사문화공원', '충무로',
+    '신도림', '영등포구청', '여의도', '당산', '합정', '홍대입구',
+    '왕십리', '성수', '건대입구', '잠실', '삼성', '선릉', '강남', '교대',
+    '고속터미널', '사당', '이수', '총신대입구', '노원', '창동', '도봉산',
+    '회기', '청량리', '군자', '천호', '잠실새내', '종합운동장', '석촌',
+    '가산디지털단지', '대림', '구로디지털단지', '신촌', '공덕', '효창공원앞',
+    '이촌', '용산', '연신내', '불광', '디지털미디어시티', '수색',
+    '김포공항', '까치산', '오목교', '목동', '발산', '마곡나루',
+    '광화문', '경복궁', '안국', '혜화', '동묘앞', '신당',
+    '약수', '금호', '옥수', '압구정', '신사', '논현', '신논현',
+    '양재', '판교', '정자', '수원', '인천', '부천', '안양',
+    '수서', '복정', '모란', '야탑', '오리', '죽전', '기흥', '수지구청',
+    '광명', '금정', '산본', '범계', '평촌', '인덕원', '정부과천청사',
+    '계양', '검암', '부평구청', '부평', '주안',
+    '대곡', '일산', '백석', '마두', '행신', '능곡',
+    '망우', '상봉', '중랑', '가평', '춘천'
+];
+
 class SubwayQuiz {
     constructor() {
         this.stations = SUBWAY_STATIONS || [];
@@ -43,6 +63,7 @@ class SubwayQuiz {
 
         this.zoom = null;
         this.mapGroup = null;
+        this.currentZoomScale = 1; // 현재 줌 스케일 추적
 
         this.init();
     }
@@ -234,7 +255,9 @@ class SubwayQuiz {
         this.zoom = d3.zoom()
             .scaleExtent([0.5, 20])
             .on('zoom', (event) => {
+                this.currentZoomScale = event.transform.k;
                 this.mapGroup.attr('transform', event.transform);
+                this.updateVisibilityByZoom();
             });
 
         this.svg.call(this.zoom);
@@ -382,28 +405,82 @@ class SubwayQuiz {
                 }
             });
 
-        // 역 이름 표시 (explore 모드에서만)
-        if (this.mode === GameMode.EXPLORE) {
-            const labelsGroup = this.mapGroup.append('g').attr('class', 'labels-group');
+        // 역 이름 표시 (explore 모드 또는 quiz 모드에서 - 줌에 따라 가시성 조절)
+        const labelsGroup = this.mapGroup.append('g').attr('class', 'labels-group');
 
-            labelsGroup.selectAll('text')
-                .data(filteredStations)
-                .enter()
-                .append('text')
-                .attr('x', d => {
-                    const coords = this.projection([d.lng, d.lat]);
-                    return coords ? coords[0] : 0;
-                })
-                .attr('y', d => {
-                    const coords = this.projection([d.lng, d.lat]);
-                    return coords ? coords[1] - 8 : 0;
-                })
-                .attr('text-anchor', 'middle')
-                .attr('font-size', '7px')
-                .attr('fill', isDarkMode ? '#aaa' : '#555')
-                .attr('pointer-events', 'none')
-                .text(d => d.name);
+        labelsGroup.selectAll('text')
+            .data(filteredStations)
+            .enter()
+            .append('text')
+            .attr('x', d => {
+                const coords = this.projection([d.lng, d.lat]);
+                return coords ? coords[0] : 0;
+            })
+            .attr('y', d => {
+                const coords = this.projection([d.lng, d.lat]);
+                return coords ? coords[1] - 8 : 0;
+            })
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '9px')
+            .attr('font-weight', d => this.isTransferStation(d.name) ? 'bold' : 'normal')
+            .attr('fill', isDarkMode ? '#fff' : '#333')
+            .attr('stroke', isDarkMode ? '#000' : '#fff')
+            .attr('stroke-width', 2)
+            .attr('paint-order', 'stroke')
+            .attr('pointer-events', 'none')
+            .attr('class', d => `station-label ${this.isTransferStation(d.name) ? 'transfer' : 'normal'}`)
+            .attr('opacity', 0) // 초기에는 모두 숨김
+            .text(d => d.name);
+
+        // 초기 가시성 설정
+        this.updateVisibilityByZoom();
+    }
+
+    // 환승역인지 확인
+    isTransferStation(stationName) {
+        // 괄호 제거하고 비교
+        const cleanName = stationName.replace(/\([^)]*\)/g, '').trim();
+        return TRANSFER_STATIONS.some(ts => cleanName.includes(ts) || ts.includes(cleanName));
+    }
+
+    // 줌 레벨에 따른 가시성 업데이트
+    // 스케일 기준 (카카오맵 참고):
+    // - scale < 1.5: 아무것도 안보임 (4km 척도)
+    // - 1.5 <= scale < 3: 환승역만 (2km 척도)
+    // - 3 <= scale < 6: 모든 역 이름 (1km 척도)
+    // - scale >= 6: 명확한 구분 (500m 척도)
+    updateVisibilityByZoom() {
+        const scale = this.currentZoomScale;
+
+        // TEST 모드에서는 라벨 숨김
+        if (this.mode === GameMode.TEST) {
+            this.mapGroup.selectAll('.station-label').attr('opacity', 0);
+            return;
         }
+
+        // 줌 레벨별 라벨 표시
+        if (scale < 1.5) {
+            // 4km 척도: 라벨 모두 숨김
+            this.mapGroup.selectAll('.station-label').attr('opacity', 0);
+        } else if (scale < 3) {
+            // 2km 척도: 환승역만 표시
+            this.mapGroup.selectAll('.station-label.transfer').attr('opacity', 1);
+            this.mapGroup.selectAll('.station-label.normal').attr('opacity', 0);
+        } else if (scale < 6) {
+            // 1km 척도: 모든 역 표시 (살짝 투명)
+            this.mapGroup.selectAll('.station-label.transfer').attr('opacity', 1);
+            this.mapGroup.selectAll('.station-label.normal').attr('opacity', 0.7);
+        } else {
+            // 500m 이하: 모든 역 선명하게
+            this.mapGroup.selectAll('.station-label').attr('opacity', 1);
+        }
+
+        // 역 점 크기도 줌에 따라 조절
+        const baseRadius = scale < 2 ? 3 : (scale < 4 ? 4 : 5);
+        const strokeWidth = scale < 3 ? 0.5 : 1;
+        this.mapGroup.selectAll('.station-dot')
+            .attr('r', baseRadius)
+            .attr('stroke-width', strokeWidth);
     }
 
     zoomToFit(stations) {
