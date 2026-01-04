@@ -1628,10 +1628,17 @@ class KoreaMapQuiz {
                 return;
             }
 
-            // 도 단위는 시군구 선택으로
-            this.state = GameState.SELECT_DISTRICT;
-            this.updateStepIndicator();
-            setTimeout(() => this.renderDistrictMap(provinceName), 300);
+            // 큰 도 지역은 북부/남부 선택으로
+            if (LARGE_PROVINCES.includes(provinceName)) {
+                this.state = GameState.SELECT_SUBREGION;
+                this.updateStepIndicator();
+                setTimeout(() => this.renderSubRegionSelection(provinceName), 300);
+            } else {
+                // 광역시 등은 바로 시군구 선택으로
+                this.state = GameState.SELECT_DISTRICT;
+                this.updateStepIndicator();
+                setTimeout(() => this.renderDistrictMap(provinceName), 300);
+            }
         } else {
             this.handleWrongAnswer(event.target, `틀렸습니다! ${SHORT_NAMES[correctProvince]}을(를) 선택하세요.`);
         }
