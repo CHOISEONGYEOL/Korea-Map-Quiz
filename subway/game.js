@@ -282,6 +282,9 @@ class SubwayQuiz {
         this.projection = d3.geoMercator()
             .fitExtent([[padding, padding], [this.width - padding, this.height - padding]], stationFeatures);
 
+        // 현재 프로젝션 스케일 저장 (다른 노선 크기 조정용 - 2호선 제외)
+        this.currentProjectionScale = this.projection.scale();
+
         this.path = d3.geoPath().projection(this.projection);
     }
 
@@ -518,12 +521,44 @@ class SubwayQuiz {
             this.mapGroup.selectAll('.station-label').attr('opacity', 1);
         }
 
-        // 역 점 크기도 줌에 따라 조절
-        const baseRadius = scale < 2 ? 3 : (scale < 4 ? 4 : 5);
-        const strokeWidth = scale < 3 ? 0.5 : 1;
-        this.mapGroup.selectAll('.station-dot')
-            .attr('r', baseRadius)
-            .attr('stroke-width', strokeWidth);
+        // ============================================================
+        // ⚠️⚠️⚠️ 2호선 보호 코드 - 절대 수정 금지! ⚠️⚠️⚠️
+        // 2호선은 아래 하드코딩된 값만 사용. 어떤 수정도 금지!
+        // ============================================================
+        const is2HoSeon = this.selectedLines.includes('2호선');
+
+        if (is2HoSeon) {
+            // ★★★ 2호선 전용 - 이 값들은 절대 변경하지 마세요! ★★★
+            const radius2 = scale < 2 ? 3 : (scale < 4 ? 4 : 5);
+            const strokeWidth2 = scale < 3 ? 0.5 : 1;
+            this.mapGroup.selectAll('.station-dot')
+                .attr('r', radius2)
+                .attr('stroke-width', strokeWidth2);
+            // 2호선 글씨 크기: 9px 고정 (원본 그대로)
+            this.mapGroup.selectAll('.station-label')
+                .attr('font-size', '9px');
+        } else {
+            // 다른 노선들: 프로젝션 스케일 비율로 크기 조정
+            // 2호선 프로젝션 스케일: 240230 (기준값)
+            const BASE_PROJECTION_SCALE = 240230;
+            const projectionRatio = (this.currentProjectionScale || BASE_PROJECTION_SCALE) / BASE_PROJECTION_SCALE;
+            // projectionRatio: 2호선=1, 전체/1호선=~0.09
+
+            // 동그라미 크기 (2호선 기준 4px * 비율)
+            const baseRadius = 4 * projectionRatio;
+            const clampedRadius = Math.max(1, Math.min(8, baseRadius / scale));
+            this.mapGroup.selectAll('.station-dot')
+                .attr('r', clampedRadius)
+                .attr('stroke-width', Math.max(0.2, projectionRatio / scale));
+
+            // 글씨 크기 (2호선 기준 9px * 비율)
+            const baseFontSize = 9 * projectionRatio;
+            const adjustedFontSize = baseFontSize / scale;
+            const clampedFontSize = Math.max(2, Math.min(14, adjustedFontSize));
+            this.mapGroup.selectAll('.station-label')
+                .attr('font-size', `${clampedFontSize}px`);
+        }
+        // ============================================================
     }
 
     zoomToFit(stations) {
