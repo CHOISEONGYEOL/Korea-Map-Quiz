@@ -39,13 +39,21 @@ class ChinaQuiz {
 
     setupTheme() {
         const themeToggle = document.getElementById('theme-toggle');
-        const savedTheme = localStorage.getItem('theme') || 'dark';
-        document.documentElement.setAttribute('data-theme', savedTheme);
+        const savedTheme = localStorage.getItem('theme');
+
+        if (savedTheme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
 
         themeToggle.addEventListener('click', () => {
             const currentTheme = document.documentElement.getAttribute('data-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', newTheme);
+
+            if (newTheme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+            }
             localStorage.setItem('theme', newTheme);
 
             if (this.topoData) {
@@ -90,17 +98,14 @@ class ChinaQuiz {
         });
         document.getElementById(screenId).classList.add('active');
 
+        // quiz, test 모드에서만 stats 표시
+        const container = document.querySelector('.container');
         const stats = document.querySelector('.stats');
-        if (screenId === 'game-screen') {
-            stats.style.display = 'flex';
-            if (this.currentMode === 'explore' || this.currentMode === 'practice') {
-                stats.classList.add('timer-hidden');
-            } else {
-                stats.classList.remove('timer-hidden');
-            }
+        if (screenId === 'game-screen' && (this.currentMode === 'quiz' || this.currentMode === 'test')) {
+            container.classList.add('show-stats');
+            stats.classList.remove('timer-hidden');
         } else {
-            // mode-screen에서는 stats 숨김
-            stats.style.display = screenId === 'mode-screen' ? 'none' : 'flex';
+            container.classList.remove('show-stats');
         }
 
         const themeToggle = document.getElementById('theme-toggle');

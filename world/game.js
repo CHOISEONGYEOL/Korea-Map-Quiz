@@ -47,13 +47,22 @@ class WorldMapQuiz {
 
     setupTheme() {
         const themeToggle = document.getElementById('theme-toggle');
-        const savedTheme = localStorage.getItem('theme') || 'dark';
-        document.documentElement.setAttribute('data-theme', savedTheme);
+        const savedTheme = localStorage.getItem('theme');
+
+        // 저장된 테마가 dark인 경우만 다크 모드 적용 (기본: 라이트)
+        if (savedTheme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
 
         themeToggle.addEventListener('click', () => {
             const currentTheme = document.documentElement.getAttribute('data-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', newTheme);
+
+            if (newTheme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+            }
             localStorage.setItem('theme', newTheme);
 
             if (this.topoData) {
@@ -114,16 +123,14 @@ class WorldMapQuiz {
         });
         document.getElementById(screenId).classList.add('active');
 
+        // quiz, test 모드에서만 stats 표시
+        const container = document.querySelector('.container');
         const stats = document.querySelector('.stats');
-        if (screenId === 'game-screen') {
-            stats.style.display = 'flex';
-            if (this.currentMode === 'explore' || this.currentMode === 'practice') {
-                stats.classList.add('timer-hidden');
-            } else {
-                stats.classList.remove('timer-hidden');
-            }
+        if (screenId === 'game-screen' && (this.currentMode === 'quiz' || this.currentMode === 'test')) {
+            container.classList.add('show-stats');
+            stats.classList.remove('timer-hidden');
         } else {
-            stats.style.display = ['continent-screen', 'mode-screen'].includes(screenId) ? 'none' : 'flex';
+            container.classList.remove('show-stats');
         }
 
         const themeToggle = document.getElementById('theme-toggle');
@@ -408,7 +415,7 @@ class WorldMapQuiz {
         svg.selectAll('*').remove();
 
         const width = container.clientWidth;
-        const height = Math.min(600, window.innerHeight * 0.6);
+        const height = container.clientHeight - 20;
 
         svg.attr('width', width).attr('height', height);
 
@@ -543,7 +550,7 @@ class WorldMapQuiz {
         svg.selectAll('*').remove();
 
         const width = container.clientWidth;
-        const height = Math.min(600, window.innerHeight * 0.6);
+        const height = container.clientHeight - 20;
 
         svg.attr('width', width).attr('height', height);
 
@@ -651,7 +658,7 @@ class WorldMapQuiz {
 
     // 12색 조합 (한국 지도와 동일)
     getColorPalette() {
-        const isLightMode = document.documentElement.getAttribute('data-theme') === 'light';
+        const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
 
         // 다크 모드용 색상 (네온/밝은 톤)
         const darkModeColors = [
@@ -685,7 +692,7 @@ class WorldMapQuiz {
             '#A1887F', // 파스텔 브라운
         ];
 
-        return isLightMode ? lightModeColors : darkModeColors;
+        return isDarkMode ? darkModeColors : lightModeColors;
     }
 
     // 인접 국가 색상 분리 알고리즘 - 12색 최대 활용
@@ -882,7 +889,7 @@ class WorldMapQuiz {
         svg.selectAll('*').remove();
 
         const width = container.clientWidth;
-        const height = Math.min(600, window.innerHeight * 0.6);
+        const height = container.clientHeight - 20;
 
         svg.attr('width', width).attr('height', height);
 
@@ -1157,7 +1164,7 @@ class WorldMapQuiz {
     }
 
     goBackToContinent() {
-        if (this.currentMode === 'explore') {
+        if (this.currentMode === 'explore' || this.currentMode === 'practice') {
             if (this.currentContinent === 'world') {
                 // 전 세계 모드
                 if (this.mapView === 'subregion') {
@@ -1176,7 +1183,7 @@ class WorldMapQuiz {
                 this.showFeedback('대륙 지도로 돌아왔습니다', 'info');
             }
         }
-        // 퀴즈 모드에서는 뒤로가기 불가
+        // quiz/test 모드에서는 뒤로가기 불가
     }
 
     handleCountryClick(feature) {

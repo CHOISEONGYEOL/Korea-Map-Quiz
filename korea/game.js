@@ -60,18 +60,18 @@ const PROVINCE_COLORS_LIGHT = {
     '경상남도': '#AF601A'
 };
 
-// 테마에 따른 시도 색상 반환
+// 테마에 따른 시도 색상 반환 (라이트 모드가 기본)
 function getProvinceColors() {
-    const isLightMode = document.documentElement.getAttribute('data-theme') === 'light';
-    return isLightMode ? PROVINCE_COLORS_LIGHT : PROVINCE_COLORS_DARK;
+    const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+    return isDarkMode ? PROVINCE_COLORS_DARK : PROVINCE_COLORS_LIGHT;
 }
 
-// 테마에 따른 북부/남부 색상 반환
+// 테마에 따른 북부/남부 색상 반환 (라이트 모드가 기본)
 function getSubRegionColors() {
-    const isLightMode = document.documentElement.getAttribute('data-theme') === 'light';
-    return isLightMode
-        ? { north: '#64B5F6', south: '#F48FB1' }  // 라이트 모드: 파스텔 블루/핑크
-        : { north: '#3498db', south: '#e74c3c' }; // 다크 모드: 진한 파랑/빨강
+    const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+    return isDarkMode
+        ? { north: '#3498db', south: '#e74c3c' }  // 다크 모드: 진한 파랑/빨강
+        : { north: '#64B5F6', south: '#F48FB1' }; // 라이트 모드: 파스텔 블루/핑크
 }
 
 // 시도 약칭 (제주도 제외)
@@ -283,8 +283,8 @@ class KoreaMapQuiz {
     }
 
     setTheme(theme) {
-        if (theme === 'light') {
-            document.documentElement.setAttribute('data-theme', 'light');
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
         } else {
             document.documentElement.removeAttribute('data-theme');
         }
@@ -292,7 +292,7 @@ class KoreaMapQuiz {
 
     toggleTheme() {
         const currentTheme = document.documentElement.getAttribute('data-theme');
-        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
 
         this.setTheme(newTheme);
         localStorage.setItem('korea-quiz-theme', newTheme);
@@ -522,8 +522,8 @@ class KoreaMapQuiz {
 
     // 색상 매핑: 인접해도 구분 잘 되는 색상 배열 사용
     buildColorMap(districts) {
-        // 현재 테마 확인
-        const isLightMode = document.documentElement.getAttribute('data-theme') === 'light';
+        // 현재 테마 확인 (라이트 모드가 기본)
+        const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
 
         // 다크 모드용 색상 (네온/밝은 톤 - 어두운 배경에 적합)
         const darkModeColors = [
@@ -557,7 +557,7 @@ class KoreaMapQuiz {
             '#A1887F', // 파스텔 브라운
         ];
 
-        const colors = isLightMode ? lightModeColors : darkModeColors;
+        const colors = isDarkMode ? darkModeColors : lightModeColors;
 
         // 시 단위로 그룹화
         const cityFeatures = new Map();
@@ -757,6 +757,14 @@ class KoreaMapQuiz {
         this.gameScreen.classList.remove('active');
         this.resultScreen.classList.remove('active');
 
+        // quiz, test 모드에서만 stats 표시
+        const container = document.querySelector('.container');
+        if (screen === 'game' && (this.gameMode === 'quiz' || this.gameMode === 'test')) {
+            container.classList.add('show-stats');
+        } else {
+            container.classList.remove('show-stats');
+        }
+
         switch (screen) {
             case 'mode': this.modeScreen.classList.add('active'); break;
             case 'start': this.startScreen.classList.add('active'); break;
@@ -793,10 +801,18 @@ class KoreaMapQuiz {
         this.feedbackEl.textContent = '';
         this.feedbackEl.className = 'feedback';
 
-        // 지역 그룹 선택부터 시작
-        this.state = GameState.SELECT_REGION_GROUP;
-        this.updateStepIndicator();
-        this.renderRegionGroupMap();
+        // 지역 필터가 선택되어 있으면 바로 해당 권역으로 드릴다운
+        if (this.selectedRegionFilter !== 'all') {
+            this.selectedGroup = this.selectedRegionFilter;
+            this.state = GameState.SELECT_PROVINCE;
+            this.updateStepIndicator();
+            this.renderFilteredRegionMap(this.selectedRegionFilter);
+        } else {
+            // 전국 모드: 지역 그룹 선택부터 시작
+            this.state = GameState.SELECT_REGION_GROUP;
+            this.updateStepIndicator();
+            this.renderRegionGroupMap();
+        }
 
         // 타이머가 활성화된 모드에서만 타이머 시작
         if (this.timerEnabled) {
@@ -810,7 +826,7 @@ class KoreaMapQuiz {
         d3.select(this.mapSvg).selectAll('*').remove();
 
         const width = this.mapContainer.clientWidth - 40;
-        const height = 600;
+        const height = this.mapContainer.clientHeight - 20;
 
         this.svg = d3.select(this.mapSvg)
             .attr('width', width)
@@ -822,16 +838,15 @@ class KoreaMapQuiz {
         // 지도 그룹 생성 (줌 적용 대상)
         this.mapGroup = this.svg.append('g').attr('class', 'map-group');
 
-        this.projection = d3.geoMercator()
-            .center([127.5, 36.0])
-            .scale(5500)
-            .translate([width / 2, height / 2]);
-
-        this.path = d3.geoPath().projection(this.projection);
-
         const filteredProvinces = this.provincesGeo.features.filter(f =>
             f.properties.name !== '제주특별자치도'
         );
+
+        // fitExtent로 여백을 주고 가운데 정렬
+        const featureCollection = { type: 'FeatureCollection', features: filteredProvinces };
+        const padding = 20;
+        this.projection = d3.geoMercator().fitExtent([[padding, padding], [width - padding, height - padding]], featureCollection);
+        this.path = d3.geoPath().projection(this.projection);
 
         this.mapGroup.selectAll('.province')
             .data(filteredProvinces)
@@ -873,7 +888,7 @@ class KoreaMapQuiz {
         d3.select(this.mapSvg).selectAll('*').remove();
 
         const width = this.mapContainer.clientWidth - 40;
-        const height = 600;
+        const height = this.mapContainer.clientHeight - 20;
 
         const groupProvinces = REGION_GROUPS[groupName];
         const filteredProvinces = this.provincesGeo.features.filter(f =>
@@ -881,7 +896,7 @@ class KoreaMapQuiz {
         );
 
         const featureCollection = { type: 'FeatureCollection', features: filteredProvinces };
-        this.projection = d3.geoMercator().fitSize([width - 40, height - 40], featureCollection);
+        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - 20, height - 20]], featureCollection);
         this.path = d3.geoPath().projection(this.projection);
 
         this.svg = d3.select(this.mapSvg)
@@ -935,7 +950,7 @@ class KoreaMapQuiz {
         d3.select(this.mapSvg).selectAll('*').remove();
 
         const width = this.mapContainer.clientWidth - 40;
-        const height = 600;
+        const height = this.mapContainer.clientHeight - 20;
 
         const provinceCode = Object.keys(CODE_TO_PROVINCE).find(k => CODE_TO_PROVINCE[k] === provinceName);
         const districts = this.municipalitiesGeo.features.filter(f =>
@@ -953,7 +968,7 @@ class KoreaMapQuiz {
         const southFeatures = centroids.filter(d => d.lat < avgLat).map(d => d.feature);
 
         const allFeatures = { type: 'FeatureCollection', features: districts };
-        this.projection = d3.geoMercator().fitSize([width - 40, height - 40], allFeatures);
+        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - 20, height - 20]], allFeatures);
         this.path = d3.geoPath().projection(this.projection);
 
         this.svg = d3.select(this.mapSvg)
@@ -1016,7 +1031,7 @@ class KoreaMapQuiz {
         d3.select(this.mapSvg).selectAll('*').remove();
 
         const width = this.mapContainer.clientWidth - 40;
-        const height = 600;
+        const height = this.mapContainer.clientHeight - 20;
 
         const provinceCode = Object.keys(CODE_TO_PROVINCE).find(k => CODE_TO_PROVINCE[k] === provinceName);
         let allDistricts = this.municipalitiesGeo.features.filter(f =>
@@ -1044,7 +1059,7 @@ class KoreaMapQuiz {
         }
 
         const featureCollection = { type: 'FeatureCollection', features: districts };
-        this.projection = d3.geoMercator().fitSize([width - 40, height - 40], featureCollection);
+        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - 20, height - 20]], featureCollection);
         this.path = d3.geoPath().projection(this.projection);
 
         this.svg = d3.select(this.mapSvg)
@@ -1314,7 +1329,7 @@ class KoreaMapQuiz {
         d3.select(this.mapSvg).selectAll('*').remove();
 
         const width = this.mapContainer.clientWidth - 40;
-        const height = 600;
+        const height = this.mapContainer.clientHeight - 20;
 
         this.svg = d3.select(this.mapSvg)
             .attr('width', width)
@@ -1326,17 +1341,15 @@ class KoreaMapQuiz {
         // 지도 그룹 생성 (줌 적용 대상)
         this.mapGroup = this.svg.append('g').attr('class', 'map-group');
 
-        this.projection = d3.geoMercator()
-            .center([127.5, 36.0])
-            .scale(5500)
-            .translate([width / 2, height / 2]);
-
-        this.path = d3.geoPath().projection(this.projection);
-
         // 시도 경계 그리기 (제주도 제외)
         const filteredProvinces = this.provincesGeo.features.filter(f =>
             f.properties.name !== '제주특별자치도'
         );
+
+        // fitExtent로 여백을 주고 가운데 정렬
+        const featureCollection = { type: 'FeatureCollection', features: filteredProvinces };
+        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - 20, height - 20]], featureCollection);
+        this.path = d3.geoPath().projection(this.projection);
 
         this.mapGroup.selectAll('.province')
             .data(filteredProvinces)
@@ -1419,7 +1432,7 @@ class KoreaMapQuiz {
         d3.select(this.mapSvg).selectAll('*').remove();
 
         const width = this.mapContainer.clientWidth - 40;
-        const height = 600;
+        const height = this.mapContainer.clientHeight - 20;
 
         // 해당 그룹의 시도들만 필터링
         const groupProvinces = REGION_GROUPS[groupName];
@@ -1428,7 +1441,7 @@ class KoreaMapQuiz {
         );
 
         const featureCollection = { type: 'FeatureCollection', features: filteredProvinces };
-        this.projection = d3.geoMercator().fitSize([width - 40, height - 40], featureCollection);
+        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - 20, height - 20]], featureCollection);
         this.path = d3.geoPath().projection(this.projection);
 
         this.svg = d3.select(this.mapSvg)
@@ -1468,6 +1481,94 @@ class KoreaMapQuiz {
             .attr('class', 'region-label')
             .attr('transform', d => `translate(${this.path.centroid(d)})`)
             .text(d => SHORT_NAMES[d.properties.name] || d.properties.name);
+    }
+
+    // 필터 선택된 권역 지도 렌더링 (QUIZ_FILTER_REGIONS 사용)
+    renderFilteredRegionMap(filterName) {
+        d3.select(this.mapSvg).selectAll('*').remove();
+
+        const width = this.mapContainer.clientWidth - 40;
+        const height = this.mapContainer.clientHeight - 20;
+
+        // QUIZ_FILTER_REGIONS에서 해당 권역의 시도들 가져오기
+        const filterProvinces = QUIZ_FILTER_REGIONS[filterName];
+        if (!filterProvinces) {
+            console.error('Invalid filter:', filterName);
+            return;
+        }
+
+        const filteredProvinces = this.provincesGeo.features.filter(f =>
+            filterProvinces.includes(f.properties.name)
+        );
+
+        const featureCollection = { type: 'FeatureCollection', features: filteredProvinces };
+        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - 20, height - 20]], featureCollection);
+        this.path = d3.geoPath().projection(this.projection);
+
+        this.svg = d3.select(this.mapSvg)
+            .attr('width', width)
+            .attr('height', height);
+
+        // 줌 기능 설정
+        this.setupZoom(this.svg, width, height);
+
+        // 지도 그룹 생성 (줌 적용 대상)
+        this.mapGroup = this.svg.append('g').attr('class', 'map-group');
+
+        // 권역 내 시도 그리기
+        this.mapGroup.selectAll('.province')
+            .data(filteredProvinces)
+            .enter()
+            .append('path')
+            .attr('class', 'province')
+            .attr('d', this.path)
+            .attr('fill', d => getProvinceColors()[d.properties.name] || '#666')
+            .attr('data-name', d => d.properties.name)
+            .on('click', (event, d) => this.handleFilteredProvinceClick(d.properties.name, event));
+
+        // 시도 라벨
+        this.mapGroup.selectAll('.region-label')
+            .data(filteredProvinces)
+            .enter()
+            .append('text')
+            .attr('class', 'region-label')
+            .attr('transform', d => `translate(${this.path.centroid(d)})`)
+            .text(d => SHORT_NAMES[d.properties.name] || d.properties.name);
+    }
+
+    // 필터된 권역에서 시도 클릭 처리
+    handleFilteredProvinceClick(provinceName, event) {
+        if (this.state !== GameState.SELECT_PROVINCE) return;
+
+        const correctProvince = this.currentAnswer.provinceName;
+
+        if (provinceName === correctProvince) {
+            this.selectedProvince = provinceName;
+            d3.selectAll('.province').classed('selected', false);
+            d3.select(event.target).classed('selected', true);
+
+            // 세종시는 하위 시군구가 없으므로 바로 정답 처리
+            if (provinceName === '세종특별자치시') {
+                this.stopTimer();
+                d3.select(event.target).classed('correct', true);
+                this.score += 10;
+                this.updateScore();
+                this.results.push({
+                    question: this.currentAnswer.name,
+                    correct: true
+                });
+                this.showFeedback(`정답입니다! ${this.getDisplayName(this.currentAnswer.name, provinceName)}`, 'correct');
+                setTimeout(() => this.nextQuestion(), 1500);
+                return;
+            }
+
+            // 도 단위는 시군구 선택으로
+            this.state = GameState.SELECT_DISTRICT;
+            this.updateStepIndicator();
+            setTimeout(() => this.renderDistrictMap(provinceName), 300);
+        } else {
+            this.handleWrongAnswer(event.target, `틀렸습니다! ${SHORT_NAMES[correctProvince]}을(를) 선택하세요.`);
+        }
     }
 
     handleGroupProvinceClick(provinceName, event) {
@@ -1510,7 +1611,7 @@ class KoreaMapQuiz {
         d3.select(this.mapSvg).selectAll('*').remove();
 
         const width = this.mapContainer.clientWidth - 40;
-        const height = 600;
+        const height = this.mapContainer.clientHeight - 20;
 
         this.svg = d3.select(this.mapSvg)
             .attr('width', width)
@@ -1522,18 +1623,15 @@ class KoreaMapQuiz {
         // 지도 그룹 생성 (줌 적용 대상)
         this.mapGroup = this.svg.append('g').attr('class', 'map-group');
 
-        // 대한민국 중심 투영
-        this.projection = d3.geoMercator()
-            .center([127.5, 36.0])
-            .scale(5500)
-            .translate([width / 2, height / 2]);
-
-        this.path = d3.geoPath().projection(this.projection);
-
         // 시도 경계 그리기 (제주도 제외)
         const filteredProvinces = this.provincesGeo.features.filter(f =>
             f.properties.name !== '제주특별자치도'
         );
+
+        // fitExtent로 여백을 주고 가운데 정렬
+        const featureCollection = { type: 'FeatureCollection', features: filteredProvinces };
+        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - 20, height - 20]], featureCollection);
+        this.path = d3.geoPath().projection(this.projection);
 
         this.mapGroup.selectAll('.province')
             .data(filteredProvinces)
@@ -1595,7 +1693,7 @@ class KoreaMapQuiz {
         d3.select(this.mapSvg).selectAll('*').remove();
 
         const width = this.mapContainer.clientWidth - 40;
-        const height = 600;
+        const height = this.mapContainer.clientHeight - 20;
 
         // 해당 시도의 시군구만 필터링 (섬 지역은 별도 인셋으로 표시하므로 본토만)
         const provinceCode = Object.keys(CODE_TO_PROVINCE).find(k => CODE_TO_PROVINCE[k] === provinceName);
@@ -1620,7 +1718,7 @@ class KoreaMapQuiz {
 
         // 투영 설정
         const allFeatures = { type: 'FeatureCollection', features: districts };
-        this.projection = d3.geoMercator().fitSize([width - 40, height - 40], allFeatures);
+        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - 20, height - 20]], allFeatures);
         this.path = d3.geoPath().projection(this.projection);
 
         this.svg = d3.select(this.mapSvg)
@@ -1702,7 +1800,7 @@ class KoreaMapQuiz {
         d3.select(this.mapSvg).selectAll('*').remove();
 
         const width = this.mapContainer.clientWidth - 40;
-        const height = 600;
+        const height = this.mapContainer.clientHeight - 20;
 
         // 해당 시도의 시군구 필터링 (본토만, 섬 지역은 인셋으로 따로 표시)
         const provinceCode = Object.keys(CODE_TO_PROVINCE).find(k => CODE_TO_PROVINCE[k] === provinceName);
@@ -1733,7 +1831,7 @@ class KoreaMapQuiz {
 
         // 투영 설정 (본토 기준)
         const featureCollection = { type: 'FeatureCollection', features: districts };
-        this.projection = d3.geoMercator().fitSize([width - 40, height - 40], featureCollection);
+        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - 20, height - 20]], featureCollection);
         this.path = d3.geoPath().projection(this.projection);
 
         this.svg = d3.select(this.mapSvg)
@@ -1752,6 +1850,12 @@ class KoreaMapQuiz {
                 this.state = GameState.SELECT_SUBREGION;
                 this.updateStepIndicator();
                 this.renderSubRegionSelection(provinceName);
+            } else if (this.selectedRegionFilter && this.selectedRegionFilter !== 'all') {
+                // 필터 선택된 권역이면 필터 지도로 돌아가기
+                this.state = GameState.SELECT_PROVINCE;
+                this.selectedProvince = null;
+                this.updateStepIndicator();
+                this.renderFilteredRegionMap(this.selectedRegionFilter);
             } else if (this.selectedGroup) {
                 // 그룹에 속한 지역이면 그룹 선택 화면으로
                 this.state = GameState.SELECT_PROVINCE;
@@ -1949,8 +2053,7 @@ class KoreaMapQuiz {
     // 줌 기능 설정
     setupZoom(svg, width, height) {
         this.zoom = d3.zoom()
-            .scaleExtent([1, 8])
-            .translateExtent([[0, 0], [width, height]])
+            .scaleExtent([0.5, 8])  // 축소(0.5배)부터 확대(8배)까지 가능
             .on('zoom', (event) => {
                 if (this.mapGroup) {
                     this.mapGroup.attr('transform', event.transform);
