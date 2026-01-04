@@ -444,6 +444,28 @@ class WorldMapQuiz {
             .text('⟲');
     }
 
+    // 지도 영역 높이 계산 (다른 요소들 높이를 제외한 가용 공간)
+    calculateMapHeight() {
+        const container = document.getElementById('map-container');
+        // 컨테이너의 실제 높이가 있으면 사용
+        if (container.clientHeight > 100) {
+            return container.clientHeight - 32; // padding 제외
+        }
+        // 없으면 뷰포트에서 계산
+        const header = document.querySelector('header');
+        const questionArea = document.querySelector('.question-area');
+        const feedback = document.querySelector('.feedback');
+        const backBtns = document.querySelector('.game-back-btns');
+
+        let usedHeight = 40; // 기본 여백
+        if (header) usedHeight += header.offsetHeight;
+        if (questionArea) usedHeight += questionArea.offsetHeight + 16;
+        if (feedback) usedHeight += 60; // 피드백 영역 예상 높이
+        if (backBtns) usedHeight += backBtns.offsetHeight + 20;
+
+        return Math.max(300, window.innerHeight - usedHeight);
+    }
+
     // 전 세계 지도 그리기 (대륙별로 색상 구분)
     drawWorldMap() {
         this.mapView = 'world';
@@ -452,7 +474,7 @@ class WorldMapQuiz {
         svg.selectAll('*').remove();
 
         const width = container.clientWidth;
-        const height = Math.min(380, window.innerHeight * 0.42);
+        const height = this.calculateMapHeight();
 
         svg.attr('width', width).attr('height', height);
 
@@ -592,7 +614,7 @@ class WorldMapQuiz {
         svg.selectAll('*').remove();
 
         const width = container.clientWidth;
-        const height = Math.min(380, window.innerHeight * 0.42);
+        const height = this.calculateMapHeight();
 
         svg.attr('width', width).attr('height', height);
 
@@ -936,7 +958,7 @@ class WorldMapQuiz {
         svg.selectAll('*').remove();
 
         const width = container.clientWidth;
-        const height = Math.min(380, window.innerHeight * 0.42);
+        const height = this.calculateMapHeight();
 
         svg.attr('width', width).attr('height', height);
 

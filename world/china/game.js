@@ -329,6 +329,26 @@ class ChinaQuiz {
             .text('⟲');
     }
 
+    // 지도 영역 높이 계산 (다른 요소들 높이를 제외한 가용 공간)
+    calculateMapHeight() {
+        const container = document.getElementById('map-container');
+        if (container.clientHeight > 100) {
+            return container.clientHeight - 32;
+        }
+        const header = document.querySelector('header');
+        const questionArea = document.querySelector('.question-area');
+        const feedback = document.querySelector('.feedback');
+        const backBtns = document.querySelector('.game-back-btns');
+
+        let usedHeight = 40;
+        if (header) usedHeight += header.offsetHeight;
+        if (questionArea) usedHeight += questionArea.offsetHeight + 16;
+        if (feedback) usedHeight += 60;
+        if (backBtns) usedHeight += backBtns.offsetHeight + 20;
+
+        return Math.max(300, window.innerHeight - usedHeight);
+    }
+
     // 전체 중국 지도 그리기 (지역별로 색상 구분)
     drawCountryMap() {
         this.mapView = 'country';
@@ -337,7 +357,7 @@ class ChinaQuiz {
         svg.selectAll('*').remove();
 
         const width = container.clientWidth;
-        const height = Math.min(380, window.innerHeight * 0.42);
+        const height = this.calculateMapHeight();
 
         svg.attr('width', width).attr('height', height);
 
@@ -506,7 +526,7 @@ class ChinaQuiz {
         svg.selectAll('*').remove();
 
         const width = container.clientWidth;
-        const height = Math.min(380, window.innerHeight * 0.42);
+        const height = this.calculateMapHeight();
 
         svg.attr('width', width).attr('height', height);
 
