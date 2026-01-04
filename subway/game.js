@@ -435,15 +435,28 @@ class SubwayQuiz {
                 if (this.mode !== GameMode.TEST || this.state !== GameState.PLAYING) {
                     this.showTooltip(event, d);
                 }
+                // 전체 노선일 때 마우스 오버 시 해당 역 이름 표시
+                if (this.selectedLines.includes('all')) {
+                    this.mapGroup.selectAll('.station-label')
+                        .filter(label => label.id === d.id)
+                        .attr('opacity', 1);
+                }
+                // 동그라미 확대 (기존 8 → 6으로 축소)
+                const currentR = parseFloat(d3.select(event.target).attr('r')) || 4;
                 d3.select(event.target)
-                    .attr('r', 8)
+                    .attr('r', Math.min(currentR * 1.5, 6))
                     .attr('stroke-width', 2);
             })
-            .on('mouseout', (event) => {
+            .on('mouseout', (event, d) => {
                 this.hideTooltip();
-                d3.select(event.target)
-                    .attr('r', 4)
-                    .attr('stroke-width', 1);
+                // 전체 노선일 때 마우스 아웃 시 해당 역 이름 숨김
+                if (this.selectedLines.includes('all') && this.currentZoomScale < 6) {
+                    this.mapGroup.selectAll('.station-label')
+                        .filter(label => label.id === d.id)
+                        .attr('opacity', 0);
+                }
+                // 동그라미 원래 크기로
+                this.updateVisibilityByZoom();
             })
             .on('click', (event, d) => {
                 if (this.state === GameState.PLAYING && this.mode !== GameMode.EXPLORE) {
@@ -504,8 +517,14 @@ class SubwayQuiz {
             return;
         }
 
+        // 전체 노선일 때는 라벨 항상 숨김 (마우스 호버로만 표시)
+        const isAllLines = this.selectedLines.includes('all');
+
         // 줌 레벨별 라벨 표시
-        if (scale < 1.5) {
+        if (isAllLines) {
+            // 전체 노선: 아무리 확대해도 라벨 모두 숨김 (마우스 호버로만 표시)
+            this.mapGroup.selectAll('.station-label').attr('opacity', 0);
+        } else if (scale < 1.5) {
             // 4km 척도: 라벨 모두 숨김
             this.mapGroup.selectAll('.station-label').attr('opacity', 0);
         } else if (scale < 3) {
@@ -541,12 +560,20 @@ class SubwayQuiz {
             // 다른 노선들: 프로젝션 스케일 비율로 크기 조정
             // 2호선 프로젝션 스케일: 240230 (기준값)
             const BASE_PROJECTION_SCALE = 240230;
-            const projectionRatio = (this.currentProjectionScale || BASE_PROJECTION_SCALE) / BASE_PROJECTION_SCALE;
-            // projectionRatio: 2호선=1, 전체/1호선=~0.09
+            let projectionRatio = (this.currentProjectionScale || BASE_PROJECTION_SCALE) / BASE_PROJECTION_SCALE;
+
+            // 전체 노선은 최소 비율로, 다른 노선은 넉넉하게
+            if (isAllLines) {
+                // 전체 노선: 비율 그대로 적용 (작게)
+                projectionRatio = Math.max(0.15, projectionRatio);
+            } else {
+                // 다른 노선: 비율 최소값 0.5 → 2호선처럼 넉넉하게
+                projectionRatio = Math.max(0.5, projectionRatio);
+            }
 
             // 동그라미 크기 (2호선 기준 4px * 비율)
             const baseRadius = 4 * projectionRatio;
-            const clampedRadius = Math.max(1, Math.min(8, baseRadius / scale));
+            const clampedRadius = Math.max(1.5, Math.min(8, baseRadius / scale));
             this.mapGroup.selectAll('.station-dot')
                 .attr('r', clampedRadius)
                 .attr('stroke-width', Math.max(0.2, projectionRatio / scale));
@@ -554,7 +581,7 @@ class SubwayQuiz {
             // 글씨 크기 (2호선 기준 9px * 비율)
             const baseFontSize = 9 * projectionRatio;
             const adjustedFontSize = baseFontSize / scale;
-            const clampedFontSize = Math.max(2, Math.min(14, adjustedFontSize));
+            const clampedFontSize = Math.max(3, Math.min(14, adjustedFontSize));
             this.mapGroup.selectAll('.station-label')
                 .attr('font-size', `${clampedFontSize}px`);
         }
