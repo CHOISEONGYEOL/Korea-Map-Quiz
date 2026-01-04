@@ -100,10 +100,17 @@ header h1 {
 /* 메인 랜딩 페이지: 전체를 하나의 그룹으로 중앙 정렬 */
 body.main-landing .container {
     justify-content: center;
+    align-items: center;
 }
 
 body.main-landing header {
     margin-bottom: 0;
+    width: 100%;
+}
+
+body.main-landing main {
+    flex: none;
+    width: 100%;
 }
 
 /* 메인 랜딩 페이지에서만 큰 제목 표시 */
