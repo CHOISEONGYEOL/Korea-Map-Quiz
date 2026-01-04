@@ -92,12 +92,9 @@ main {
     overflow: hidden;
 }
 
+/* 헤더 h1은 숨김 (stats만 표시) */
 header h1 {
-    font-size: 1.8rem;
-    margin-bottom: 12px;
-    color: var(--text-primary);
-    font-weight: 700;
-    letter-spacing: -0.3px;
+    display: none;
 }
 
 .stats {
@@ -180,9 +177,9 @@ header h1 {
 }
 
 #start-screen h2 {
-    font-size: 1.5rem;
+    font-size: 5rem;
     font-weight: 700;
-    margin-bottom: 8px;
+    margin-bottom: 16px;
     text-align: center;
     color: var(--text-primary);
 }
@@ -258,7 +255,11 @@ header h1 {
     }
 
     #start-screen h2 {
-        font-size: 1.5rem;
+        font-size: 3rem;
+    }
+
+    #mode-screen h2 {
+        font-size: 3rem;
     }
 }
 
@@ -625,11 +626,11 @@ header h1 {
     text-shadow: 2px 2px 4px var(--label-shadow), -2px -2px 4px var(--label-shadow);
 }
 
-/* 전국 지도에서만 작은 글씨 */
+/* 전국 지도의 시도 라벨 */
 .region-label.province-label {
-    font-size: 12px;
-    font-weight: bold;
-    text-shadow: 1px 1px 2px var(--label-shadow), -1px -1px 2px var(--label-shadow);
+    font-size: 18px;
+    font-weight: 800;
+    text-shadow: 2px 2px 4px var(--label-shadow), -2px -2px 4px var(--label-shadow);
 }
 
 .district-label {
@@ -674,10 +675,10 @@ header h1 {
 }
 
 #mode-screen h2 {
-    font-size: 1.5rem;
+    font-size: 5rem;
     font-weight: 700;
     color: var(--text-primary);
-    margin-bottom: 8px;
+    margin-bottom: 16px;
 }
 
 #mode-screen > p {
@@ -1010,8 +1011,8 @@ header {
     }
 
     .region-label.province-label {
-        font-size: 8px !important;
-        text-shadow: 1px 1px 1px var(--label-shadow);
+        font-size: 12px !important;
+        text-shadow: 1px 1px 2px var(--label-shadow), -1px -1px 2px var(--label-shadow);
     }
 
     .district-label {

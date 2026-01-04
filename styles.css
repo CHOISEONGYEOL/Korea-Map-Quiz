@@ -93,8 +93,9 @@ header {
 }
 
 header h1 {
-    font-size: 2.5rem;
-    margin-bottom: 16px;
+    font-size: 5rem;
+    margin-bottom: 20px;
+    margin-top: 10vh;
     color: var(--text-primary);
     font-weight: 700;
     letter-spacing: -0.5px;
@@ -1057,9 +1058,13 @@ header {
     background: linear-gradient(135deg, #254670 0%, #2d4a66 50%, #21426a 100%);
 }
 
-.menu-icon {
-    font-size: 2.5rem;
+.menu-flag,
+.menu-globe {
+    width: 80px;
+    height: auto;
     margin-bottom: 16px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .menu-title {
@@ -1075,14 +1080,6 @@ header {
     line-height: 1.5;
 }
 
-.korea-btn .menu-icon::after {
-    content: '🇰🇷';
-}
-
-.world-btn .menu-icon::after {
-    content: '🌏';
-}
-
 @media (max-width: 768px) {
     .main-menu-buttons {
         flex-direction: column;
@@ -1094,8 +1091,9 @@ header {
         padding: 40px 30px;
     }
 
-    .menu-icon {
-        font-size: 3rem;
+    .menu-flag,
+    .menu-globe {
+        width: 100px;
     }
 
     .menu-title {

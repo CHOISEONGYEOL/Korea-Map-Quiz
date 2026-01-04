@@ -381,25 +381,25 @@ class CanadaProvincesQuiz {
         // 각 지역별 고정 리더 라인 위치 지정
         const leaderLineConfig = {
             // 북부 준주 - 넓어서 내부 배치 가능
-            'NU': { useLeader: false, offset: { dx: -60, dy: 180 } },  // 중앙으로 더 내림
-            'NT': { useLeader: false, offset: { dx: 0, dy: 40 } },
-            'YT': { useLeader: false, offset: { dx: 0, dy: 30 } },
+            'NU': { useLeader: false, offset: { dx: -60, dy: 150 } },
+            'NT': { useLeader: false, offset: { dx: 0, dy: 30 } },
+            'YT': { useLeader: true, direction: 'W', distance: 60 },
 
-            // 서부 주
-            'BC': { useLeader: true, direction: 'SW', distance: 80 },
-            'AB': { useLeader: true, direction: 'S', distance: 90 },
-            'SK': { useLeader: true, direction: 'S', distance: 100 },
-            'MB': { useLeader: true, direction: 'NE', distance: 70 },  // 오른쪽 상단 45도
+            // 서부 주 - 모두 리더라인으로 아래쪽에 배치
+            'BC': { useLeader: true, direction: 'SW', distance: 100 },
+            'AB': { useLeader: true, direction: 'S', distance: 110 },
+            'SK': { useLeader: true, direction: 'S', distance: 130 },
+            'MB': { useLeader: true, direction: 'SE', distance: 100 },
 
             // 중부/동부 주
-            'ON': { useLeader: true, direction: 'S', distance: 80 },
-            'QC': { useLeader: false, offset: { dx: 0, dy: 0 } },  // 퀘벡은 넓어서 내부 배치
+            'ON': { useLeader: true, direction: 'S', distance: 100 },
+            'QC': { useLeader: true, direction: 'E', distance: 80 },
 
-            // 대서양 주
-            'NB': { useLeader: true, direction: 'SW', distance: 60 },  // 왼쪽 아래 45도
-            'NS': { useLeader: true, direction: 'S', distance: 70 },
-            'PE': { useLeader: true, direction: 'NE', distance: 60 },  // 우측 상단 45도
-            'NL': { useLeader: true, direction: 'NE', distance: 60 },  // 오른쪽 상단
+            // 대서양 주 - 겹치지 않게 각자 다른 방향
+            'NL': { useLeader: true, direction: 'E', distance: 80 },
+            'NB': { useLeader: true, direction: 'SW', distance: 80 },
+            'NS': { useLeader: true, direction: 'S', distance: 90 },
+            'PE': { useLeader: true, direction: 'N', distance: 70 },
         };
 
         // 방향별 오프셋
