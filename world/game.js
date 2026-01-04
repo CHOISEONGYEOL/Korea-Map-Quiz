@@ -359,20 +359,33 @@ class WorldMapQuiz {
             this.currentQuestion = 0;
             this.score = 0;
             this.results = [];
-            this.mapView = 'continent';
             this.currentSubregion = null;
 
             this.totalQuestions = Math.min(10, this.countries.length);
             this.shuffledCountries = [...this.countries].sort(() => Math.random() - 0.5);
 
             this.showScreen('game-screen');
-            this.drawContinentMap();
+
+            // 지역 필터가 선택되어 있으면 바로 해당 지역으로 드릴다운
+            if (this.selectedSubregionFilter !== 'all') {
+                this.mapView = 'subregion';
+                this.currentSubregion = this.selectedSubregionFilter;
+                this.drawSubregionMap(this.selectedSubregionFilter);
+            } else {
+                // 전체 모드: 대륙 지도부터 시작
+                this.mapView = 'continent';
+                this.drawContinentMap();
+            }
 
             if (this.currentMode !== 'explore') {
                 this.updateScore();
                 this.nextQuestion();
             } else {
-                document.getElementById('question-text').textContent = '지역을 클릭해서 탐색하세요';
+                if (this.selectedSubregionFilter !== 'all') {
+                    document.getElementById('question-text').textContent = '국가를 클릭해서 탐색하세요';
+                } else {
+                    document.getElementById('question-text').textContent = '지역을 클릭해서 탐색하세요';
+                }
                 document.getElementById('step-indicator').textContent = '';
             }
         }

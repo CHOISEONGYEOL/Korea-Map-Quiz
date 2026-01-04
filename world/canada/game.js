@@ -239,7 +239,11 @@ class CanadaProvincesQuiz {
             this.updateScore();
             this.nextQuestion();
         } else {
-            document.getElementById('question-text').textContent = '지도를 클릭해서 탐색하세요';
+            if (this.selectedRegionFilter !== 'all') {
+                document.getElementById('question-text').textContent = '주/준주를 클릭해서 탐색하세요';
+            } else {
+                document.getElementById('question-text').textContent = '지도를 클릭해서 탐색하세요';
+            }
             document.getElementById('province-info').textContent = '';
         }
     }
