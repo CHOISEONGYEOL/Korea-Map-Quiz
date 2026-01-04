@@ -384,26 +384,26 @@ class CanadaProvincesQuiz {
         // 모든 라벨에 리더 라인 적용 (겹침 방지를 위해 적극적으로 사용)
         // 각 지역별 고정 리더 라인 위치 지정
         const leaderLineConfig = {
-            // 북부 준주 - 넓어서 내부 배치 가능
-            'NU': { useLeader: false, offset: { dx: -60, dy: 150 } },
-            'NT': { useLeader: false, offset: { dx: 0, dy: 30 } },
-            'YT': { useLeader: true, direction: 'W', distance: 60 },
+            // 북부 준주 - 넓은 지역이라 내부 배치
+            'NU': { useLeader: false, offset: { dx: -80, dy: 100 } },
+            'NT': { useLeader: false, offset: { dx: 0, dy: 20 } },
+            'YT': { useLeader: true, direction: 'W', distance: 90 },
 
-            // 서부 주 - 모두 리더라인으로 아래쪽에 배치
-            'BC': { useLeader: true, direction: 'SW', distance: 100 },
-            'AB': { useLeader: true, direction: 'S', distance: 110 },
-            'SK': { useLeader: true, direction: 'S', distance: 130 },
-            'MB': { useLeader: true, direction: 'SE', distance: 100 },
+            // 서부 주 - 모두 남쪽 바깥으로 리더라인 배치
+            'BC': { useLeader: true, direction: 'SW', distance: 140 },
+            'AB': { useLeader: true, direction: 'S', distance: 160 },
+            'SK': { useLeader: true, direction: 'S', distance: 180 },
+            'MB': { useLeader: true, direction: 'SE', distance: 160 },
 
-            // 중부/동부 주
-            'ON': { useLeader: true, direction: 'S', distance: 100 },
-            'QC': { useLeader: true, direction: 'E', distance: 80 },
+            // 중부/동부 주 - 남쪽과 동쪽으로 충분히 멀리 배치
+            'ON': { useLeader: true, direction: 'S', distance: 140 },
+            'QC': { useLeader: true, direction: 'E', distance: 120 },
 
-            // 대서양 주 - 겹치지 않게 각자 다른 방향
-            'NL': { useLeader: true, direction: 'E', distance: 80 },
-            'NB': { useLeader: true, direction: 'SW', distance: 80 },
-            'NS': { useLeader: true, direction: 'S', distance: 90 },
-            'PE': { useLeader: true, direction: 'N', distance: 70 },
+            // 대서양 주 - 각각 다른 방향으로 멀리 배치
+            'NL': { useLeader: true, direction: 'E', distance: 120 },
+            'NB': { useLeader: true, direction: 'SW', distance: 120 },
+            'NS': { useLeader: true, direction: 'SE', distance: 130 },
+            'PE': { useLeader: true, direction: 'N', distance: 100 },
         };
 
         // 방향별 오프셋
