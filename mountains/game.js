@@ -1329,6 +1329,20 @@ class MountainQuiz {
         }
         this.path = d3.geoPath().projection(this.projection);
 
+        // 줌 설정 - 6단계 동적 표시
+        const self = this;
+        const zoom = d3.zoom()
+            .scaleExtent([0.5, 10])
+            .on('zoom', (event) => {
+                this.mapGroup.attr('transform', event.transform);
+
+                // 줌 레벨별 동적 표시 (6단계)
+                const scale = event.transform.k;
+                self.updateZoomLevel(scale);
+            });
+        this.svg.call(zoom);
+        this.currentZoom = zoom;
+
         const isDark = this.isDarkMode();
 
         // 시군구 배경 - 테두리가 잘 보이도록
@@ -1357,6 +1371,54 @@ class MountainQuiz {
                 .attr('fill', isDark ? '#888' : '#666')
                 .text('이 지역에는 등록된 산이 없습니다');
         }
+
+        // 초기 줌 레벨 적용
+        this.updateZoomLevel(1);
+    }
+
+    // 줌 레벨별 6단계 동적 표시
+    // Level 1 (0.5-0.8): 배경만, 마커/라벨 숨김
+    // Level 2 (0.8-1.2): 마커 작게, 라벨 숨김
+    // Level 3 (1.2-2.0): 마커 보통, 라벨 숨김
+    // Level 4 (2.0-3.5): 마커 보통, 주요 라벨만 (featured)
+    // Level 5 (3.5-6.0): 마커 크게, 모든 라벨
+    // Level 6 (6.0+): 마커 매우 크게, 모든 라벨 크게
+    updateZoomLevel(scale) {
+        const markersGroup = this.mapGroup.select('.markers-group');
+        if (!markersGroup.node()) return;
+
+        // 줌 레벨 계산 (1-6)
+        let level;
+        if (scale < 0.8) level = 1;
+        else if (scale < 1.2) level = 2;
+        else if (scale < 2.0) level = 3;
+        else if (scale < 3.5) level = 4;
+        else if (scale < 6.0) level = 5;
+        else level = 6;
+
+        // 산 마커 크기 조절 (줌에 반비례하여 시각적 크기 유지 + 레벨별 조절)
+        const baseSize = 200;
+        const sizeMultiplier = [0, 0.3, 0.6, 1, 1.3, 1.8, 2.5][level];
+        const adjustedSize = (baseSize * sizeMultiplier) / (scale * scale);
+        const strokeWidth = (2.5 * Math.sqrt(sizeMultiplier)) / scale;
+
+        markersGroup.selectAll('path.mountain')
+            .attr('d', d3.symbol().type(d3.symbolTriangle).size(adjustedSize))
+            .attr('stroke-width', strokeWidth)
+            .style('display', level === 1 ? 'none' : 'block');
+
+        // 라벨 표시 조절
+        const fontSize = 10 / scale;
+        const labelStrokeWidth = 2 / scale;
+
+        markersGroup.selectAll('text.mountain-label')
+            .style('display', function(d) {
+                if (level < 4) return 'none';
+                if (level === 4) return d.featured ? 'block' : 'none';
+                return 'block';
+            })
+            .attr('font-size', `${fontSize}px`)
+            .attr('stroke-width', labelStrokeWidth);
     }
 
     showTooltip(event, mountain) {

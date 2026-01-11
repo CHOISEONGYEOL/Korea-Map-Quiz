@@ -1059,13 +1059,19 @@ class SubwayQuiz {
             .fitExtent([[padding, padding], [this.width - padding, this.height - padding]], districtFeature);
         this.path = d3.geoPath().projection(this.projection);
 
-        // 줌 설정
+        // 줌 설정 - 6단계 동적 표시
+        const self = this;
         const zoom = d3.zoom()
             .scaleExtent([0.5, 10])
             .on('zoom', (event) => {
                 this.mapGroup.attr('transform', event.transform);
+
+                // 줌 레벨별 동적 표시 (6단계)
+                const scale = event.transform.k;
+                self.updateZoomLevel(scale);
             });
         this.svg.call(zoom);
+        this.currentZoom = zoom;
 
         const isDark = this.isDarkMode();
 
@@ -1185,7 +1191,69 @@ class SubwayQuiz {
                 .attr('stroke-width', 2)
                 .attr('paint-order', 'stroke')
                 .attr('pointer-events', 'none')
+                .attr('class', 'station-label')
                 .text(d => d.name);
+        }
+
+        // 초기 줌 레벨 적용
+        this.updateZoomLevel(1);
+    }
+
+    // 줌 레벨별 6단계 동적 표시
+    // Level 1 (0.5-0.8): 배경만, 마커/라벨 숨김
+    // Level 2 (0.8-1.2): 마커 작게, 라벨 숨김
+    // Level 3 (1.2-2.0): 마커 보통, 라벨 숨김
+    // Level 4 (2.0-3.5): 마커 보통, 주요 라벨만
+    // Level 5 (3.5-6.0): 마커 크게, 모든 라벨
+    // Level 6 (6.0+): 마커 매우 크게, 모든 라벨 크게
+    updateZoomLevel(scale) {
+        const stationsGroup = this.mapGroup.select('.stations-group');
+        const labelsGroup = this.mapGroup.select('.labels-group');
+        const linesGroup = this.mapGroup.select('.lines-group');
+
+        if (!stationsGroup.node()) return;
+
+        // 줌 레벨 계산 (1-6)
+        let level;
+        if (scale < 0.8) level = 1;
+        else if (scale < 1.2) level = 2;
+        else if (scale < 2.0) level = 3;
+        else if (scale < 3.5) level = 4;
+        else if (scale < 6.0) level = 5;
+        else level = 6;
+
+        // 역 마커 크기 조절 (줌에 반비례하여 시각적 크기 유지 + 레벨별 조절)
+        const baseRadius = 6;
+        const radiusMultiplier = [0, 0.5, 0.8, 1, 1.2, 1.5, 2][level];
+        const adjustedRadius = (baseRadius * radiusMultiplier) / scale;
+        const strokeWidth = (2.5 * radiusMultiplier) / scale;
+
+        stationsGroup.selectAll('circle.station-dot')
+            .attr('r', adjustedRadius)
+            .attr('stroke-width', strokeWidth)
+            .style('display', level === 1 ? 'none' : 'block');
+
+        // 노선 두께 조절
+        if (linesGroup.node()) {
+            const lineWidth = 3 / scale;
+            linesGroup.selectAll('path')
+                .attr('stroke-width', lineWidth);
+        }
+
+        // 라벨 표시 조절
+        if (labelsGroup.node()) {
+            const fontSize = 11 / scale;
+            const labelStrokeWidth = 2 / scale;
+            const yOffset = 12 / scale;
+
+            labelsGroup.selectAll('text.station-label')
+                .style('display', level >= 4 ? 'block' : 'none')
+                .attr('font-size', `${fontSize}px`)
+                .attr('stroke-width', labelStrokeWidth)
+                .each(function(d) {
+                    const c = d3.select(this.parentNode.parentNode).datum();
+                    // y 좌표는 원래 설정된 값 사용
+                });
         }
     }
 
