@@ -1154,7 +1154,8 @@ header {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.menu-subway-icon {
+.menu-subway-icon,
+.menu-mountain-icon {
     font-size: 60px;
     width: auto;
     box-shadow: none;
@@ -1191,7 +1192,8 @@ header {
         width: 100px;
     }
 
-    .menu-subway-icon {
+    .menu-subway-icon,
+    .menu-mountain-icon {
         font-size: 80px;
         width: auto;
     }
