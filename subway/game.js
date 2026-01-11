@@ -1069,13 +1069,14 @@ class SubwayQuiz {
 
         const isDark = this.isDarkMode();
 
-        // 배경 지도
+        // 배경 지도 - 테두리가 잘 보이도록
         this.mapGroup.append('path')
             .datum(districtFeature)
             .attr('d', this.path)
             .attr('fill', isDark ? '#2a2a3e' : '#e8eef5')
-            .attr('stroke', isDark ? '#fff' : '#333')
-            .attr('stroke-width', 2);
+            .attr('stroke', isDark ? '#aaa' : '#444')
+            .attr('stroke-width', 3)
+            .attr('pointer-events', 'none');
 
         // 노선 그리기
         const stationById = {};
@@ -1147,17 +1148,18 @@ class SubwayQuiz {
             .attr('r', 6)
             .attr('fill', d => this.lineColors[d.line] || '#888')
             .attr('stroke', '#fff')
-            .attr('stroke-width', 2)
+            .attr('stroke-width', 2.5)
+            .attr('paint-order', 'stroke')
             .attr('cursor', 'pointer')
             .attr('class', 'station-dot')
             .attr('data-id', d => d.id)
             .on('mouseover', (event, d) => {
                 this.showTooltip(event, d);
-                d3.select(event.target).attr('r', 9).attr('stroke-width', 3);
+                d3.select(event.target).attr('r', 10).attr('stroke-width', 4);
             })
             .on('mouseout', (event) => {
                 this.hideTooltip();
-                d3.select(event.target).attr('r', 6).attr('stroke-width', 2);
+                d3.select(event.target).attr('r', 6).attr('stroke-width', 2.5);
             })
             .on('click', (event, d) => {
                 if (this.mode !== GameMode.EXPLORE) {

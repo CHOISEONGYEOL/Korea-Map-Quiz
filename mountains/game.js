@@ -352,21 +352,22 @@ class MountainQuiz {
             })
             .attr('fill', d => colors[d.region] || '#888')
             .attr('stroke', clickable ? '#fff' : 'none')
-            .attr('stroke-width', clickable ? 2 : 0)
+            .attr('stroke-width', clickable ? 2.5 : 0)
+            .attr('paint-order', 'stroke')  // stroke가 fill 뒤에 그려짐
             .attr('opacity', clickable ? 1 : 0.6)
             .attr('cursor', clickable ? 'pointer' : 'default')
             .attr('pointer-events', clickable ? 'auto' : 'none')
             .on('mouseover', clickable ? (event, d) => {
                 this.showTooltip(event, d);
                 d3.select(event.target)
-                    .attr('d', d3.symbol().type(d3.symbolTriangle).size(350))
-                    .attr('stroke-width', 3);
+                    .attr('d', d3.symbol().type(d3.symbolTriangle).size(400))
+                    .attr('stroke-width', 4);
             } : null)
             .on('mouseout', clickable ? (event) => {
                 this.hideTooltip();
                 d3.select(event.target)
                     .attr('d', d3.symbol().type(d3.symbolTriangle).size(200))
-                    .attr('stroke-width', 2);
+                    .attr('stroke-width', 2.5);
             } : null)
             .on('click', clickable ? (event, d) => {
                 if (this.mode !== GameMode.EXPLORE) {
@@ -1338,8 +1339,9 @@ class MountainQuiz {
                 .attr('d', this.path)
                 .attr('fill', isDark ? '#2a2a3e' : '#e8eef5')
                 .attr('fill-opacity', 1)
-                .attr('stroke', isDark ? '#888' : '#666')
-                .attr('stroke-width', 2);
+                .attr('stroke', isDark ? '#aaa' : '#444')
+                .attr('stroke-width', 3)
+                .attr('pointer-events', 'none');
         }
 
         // 클릭 가능한 산 마커
