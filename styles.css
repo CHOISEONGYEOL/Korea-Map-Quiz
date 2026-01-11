@@ -1590,3 +1590,31 @@ header {
     color: var(--accent-primary);
     font-size: 1.1rem;
 }
+
+
+/* 드릴다운 뒤로가기 버튼 */
+.back-btn {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 100;
+    padding: 8px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-medium);
+}
+
+.back-btn:hover {
+    background: var(--bg-tertiary);
+    transform: translateY(-1px);
+}
+
+.map-container {
+    position: relative;
+}
