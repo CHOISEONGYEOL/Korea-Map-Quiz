@@ -1,0 +1,204 @@
+/* ===== 전체 화면 지도 모드 (공통) ===== */
+
+/* 게임 활성화 시 body 설정 */
+body.game-active {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+body.game-active .container {
+    max-width: 100% !important;
+    width: 100%;
+    height: 100%;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+body.game-active main {
+    width: 100%;
+    height: 100%;
+}
+
+/* 게임 화면을 전체 화면으로 */
+body.game-active .screen.active {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    padding: 0;
+    display: flex;
+}
+
+/* 지도 컨테이너를 전체 화면 배경으로 */
+body.game-active .map-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: none !important;
+    border: none;
+    border-radius: 0;
+    z-index: 0;
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-tertiary);
+}
+
+body.game-active #map-svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* UI 요소들을 Floating 스타일로 변경 */
+body.game-active header {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 100;
+    width: auto;
+    margin: 0;
+    background: transparent;
+    pointer-events: none;
+}
+
+body.game-active header h1 {
+    display: none;
+}
+
+body.game-active .stats {
+    display: flex;
+    /* 가로 배열에서 세로 배열로 변경이 필요할 수 있음 */
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: auto;
+}
+
+body.game-active .stat-item {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 8px 16px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 80px;
+    border: none;
+    backdrop-filter: blur(4px);
+}
+
+[data-theme="dark"] body.game-active .stat-item {
+    background: rgba(44, 44, 53, 0.9);
+}
+
+body.game-active .theme-toggle {
+    pointer-events: auto;
+    position: absolute;
+    top: 0;
+    right: 140px;
+    /* 점수판 옆? */
+}
+
+/* 문제 영역 (상단 중앙) */
+body.game-active .question-area {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 12px 24px;
+    border-radius: 30px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 300px;
+    backdrop-filter: blur(5px);
+    pointer-events: none;
+    margin: 0;
+}
+
+[data-theme="dark"] body.game-active .question-area {
+    background: rgba(33, 33, 39, 0.95);
+}
+
+body.game-active .question-area h2 {
+    font-size: 1.1rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+body.game-active .question-area .highlight {
+    font-size: 1.3rem;
+    color: var(--accent-primary);
+}
+
+body.game-active .step-indicator {
+    margin-top: 4px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* 피드백 메시지 (중앙) */
+body.game-active .feedback {
+    position: absolute;
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 101;
+    min-width: 200px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    margin: 0;
+}
+
+/* 뒤로가기 버튼들 (좌측 하단) */
+body.game-active .game-back-btns {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    z-index: 100;
+    display: flex;
+    gap: 10px;
+}
+
+body.game-active .game-back-btn {
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+[data-theme="dark"] body.game-active .game-back-btn {
+    background: #2c2c35;
+    color: var(--text-primary);
+}
+
+/* 100대 명산 목록 (좌측 패널) - mountains용 */
+body.game-active .mountain-list {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    bottom: 80px;
+    /* 하단 버튼 공간 확보 */
+    width: 280px;
+    background: rgba(255, 255, 255, 0.95);
+    z-index: 90;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(5px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: none;
+}
+
+[data-theme="dark"] body.game-active .mountain-list {
+    background: rgba(33, 33, 39, 0.95);
+}

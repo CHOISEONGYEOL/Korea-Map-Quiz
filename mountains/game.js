@@ -130,7 +130,18 @@ class MountainQuiz {
         this.selectedCity = null;      // 시 이름 (예: '성남시')
         this.selectedDistrict = null;  // 시군구 코드
         this.currentQuizMountain = null;
+        this.currentQuizMountain = null;
         this.init();
+
+        // 창 크기 변경 시 지도 다시 그리기
+        window.addEventListener('resize', () => {
+            if (document.getElementById('game-screen').classList.contains('active')) {
+                clearTimeout(this.resizeTimer);
+                this.resizeTimer = setTimeout(() => {
+                    this.setupMap();
+                }, 100);
+            }
+        });
     }
 
     async init() {
@@ -186,11 +197,13 @@ class MountainQuiz {
     }
 
     showModeScreen() {
+        document.body.classList.remove('game-active');
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('mode-screen').classList.add('active');
     }
 
     showStartScreen() {
+        document.body.classList.remove('game-active');
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('start-screen').classList.add('active');
 
@@ -289,6 +302,7 @@ class MountainQuiz {
     }
 
     startGame() {
+        document.body.classList.add('game-active');
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('game-screen').classList.add('active');
 

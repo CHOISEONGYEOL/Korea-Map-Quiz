@@ -216,6 +216,18 @@ class KoreaMapQuiz {
         this.initElements();
         this.initEventListeners();
         this.loadData();
+
+        // 창 크기 변경 시 지도 다시 그리기
+        window.addEventListener('resize', () => {
+            // 게임 화면이 활성화된 경우에만 다시 그리기
+            if (this.gameScreen.classList.contains('active')) {
+                // 약간의 지연 후 렌더링 (리사이즈 완료 대기)
+                clearTimeout(this.resizeTimer);
+                this.resizeTimer = setTimeout(() => {
+                    this.rerenderCurrentMap();
+                }, 100);
+            }
+        });
     }
 
     parseGameMode() {
@@ -402,7 +414,7 @@ class KoreaMapQuiz {
                 this.modeButtonsEl.classList.remove('hidden');
             }
 
-                console.log(`로드 완료: ${this.provincesGeo.features.length}개 시도, ${this.allDistricts.length}개 시군구`);
+            console.log(`로드 완료: ${this.provincesGeo.features.length}개 시도, ${this.allDistricts.length}개 시군구`);
 
         } catch (error) {
             console.error('데이터 로딩 실패:', error);
@@ -707,6 +719,7 @@ class KoreaMapQuiz {
     }
 
     startGame() {
+        document.body.classList.add('game-active');
         this.score = 0;
         this.currentQuestion = 0;
         this.results = [];
@@ -760,6 +773,10 @@ class KoreaMapQuiz {
     }
 
     showScreen(screen) {
+        if (screen !== 'game') {
+            document.body.classList.remove('game-active');
+        }
+
         this.modeScreen.classList.remove('active');
         this.startScreen.classList.remove('active');
         this.gameScreen.classList.remove('active');
@@ -1285,18 +1302,18 @@ class KoreaMapQuiz {
                 .attr('stroke-width', 0.5)
                 .attr('data-city', islandName)
                 .attr('data-name', islandName)
-                .on('click', function() {
+                .on('click', function () {
                     self.feedbackEl.textContent = `${SHORT_NAMES[provinceName]} ${islandName}`;
                     self.feedbackEl.className = 'feedback correct';
                     d3.selectAll('.district').classed('selected', false);
                     d3.select(this).classed('selected', true);
                 })
-                .on('mouseenter', function() {
+                .on('mouseenter', function () {
                     d3.select(this)
                         .attr('stroke-width', '2px')
                         .style('filter', 'brightness(1.2)');
                 })
-                .on('mouseleave', function() {
+                .on('mouseleave', function () {
                     d3.select(this)
                         .attr('stroke-width', '0.5px')
                         .style('filter', null);
@@ -2086,12 +2103,12 @@ class KoreaMapQuiz {
                 .attr('data-city', islandName)
                 .attr('data-name', islandName)
                 .on('click', (event) => this.handleDistrictClick(islandName, event))
-                .on('mouseenter', function() {
+                .on('mouseenter', function () {
                     d3.select(this)
                         .attr('stroke-width', '2px')
                         .style('filter', 'brightness(1.2)');
                 })
-                .on('mouseleave', function() {
+                .on('mouseleave', function () {
                     d3.select(this)
                         .attr('stroke-width', '0.5px')
                         .style('filter', null);
@@ -2262,7 +2279,7 @@ class KoreaMapQuiz {
         });
 
         const correctCount = this.results.filter(r => r.correct).length;
-        html += `<p style="margin-top: 20px; text-align: center;">정답률: ${correctCount}/${this.totalQuestions} (${(correctCount/this.totalQuestions*100).toFixed(0)}%)</p>`;
+        html += `<p style="margin-top: 20px; text-align: center;">정답률: ${correctCount}/${this.totalQuestions} (${(correctCount / this.totalQuestions * 100).toFixed(0)}%)</p>`;
 
         this.resultDetailsEl.innerHTML = html;
     }

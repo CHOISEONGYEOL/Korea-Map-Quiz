@@ -35,6 +35,18 @@ class WorldMapQuiz {
         this.headerTitleEl = null;
 
         this.init();
+
+        // 창 크기 변경 시 지도 다시 그리기
+        window.addEventListener('resize', () => {
+            // 게임 화면이 활성화된 경우에만 다시 그리기
+            if (document.getElementById('game-screen').classList.contains('active')) {
+                // 약간의 지연 후 렌더링
+                clearTimeout(this.resizeTimer);
+                this.resizeTimer = setTimeout(() => {
+                    this.redrawCurrentMap();
+                }, 100);
+            }
+        });
     }
 
     async init() {
@@ -124,6 +136,10 @@ class WorldMapQuiz {
     }
 
     showScreen(screenId) {
+        if (screenId !== 'game-screen') {
+            document.body.classList.remove('game-active');
+        }
+
         document.querySelectorAll('.screen').forEach(screen => {
             screen.classList.remove('active');
         });
@@ -323,6 +339,7 @@ class WorldMapQuiz {
     }
 
     startGame() {
+        document.body.classList.add('game-active');
         if (this.currentContinent === 'world') {
             // 전 세계 모드 - 필터 적용
             this.countries = this.getFilteredCountries().length > 0
@@ -527,10 +544,10 @@ class WorldMapQuiz {
                     d3.select(event.target).classed('selected', true);
                     this.handleWorldMapClick(continentKey, d);
                 })
-                .on('mouseover', function() {
+                .on('mouseover', function () {
                     d3.select(this).attr('stroke-width', 1.5).style('filter', 'brightness(1.2)');
                 })
-                .on('mouseout', function() {
+                .on('mouseout', function () {
                     d3.select(this).attr('stroke-width', 0.5).style('filter', 'none');
                 });
         }
@@ -681,10 +698,10 @@ class WorldMapQuiz {
                     d3.select(event.target).classed('selected', true);
                     this.handleContinentMapClick(subregionKey, d);
                 })
-                .on('mouseover', function() {
+                .on('mouseover', function () {
                     d3.select(this).attr('stroke-width', 2).style('filter', 'brightness(1.2)');
                 })
-                .on('mouseout', function() {
+                .on('mouseout', function () {
                     d3.select(this).attr('stroke-width', 0.8).style('filter', 'none');
                 });
         }
@@ -1029,10 +1046,10 @@ class WorldMapQuiz {
                     this.handleCountryClick(d);
                 }
             })
-            .on('mouseover', function() {
+            .on('mouseover', function () {
                 d3.select(this).attr('stroke-width', 2.5).style('filter', 'brightness(1.2)');
             })
-            .on('mouseout', function() {
+            .on('mouseout', function () {
                 d3.select(this).attr('stroke-width', 1).style('filter', 'none');
             });
 
@@ -1069,14 +1086,14 @@ class WorldMapQuiz {
     drawCountryLabels(mapGroup, features) {
         // 스마트 리더 라인 시스템: 필요한 경우에만 자동 생성
         const DIRECTIONS = [
-            { name: 'E',  dx: 70,  dy: 0 },
-            { name: 'W',  dx: -70, dy: 0 },
-            { name: 'SE', dx: 50,  dy: 50 },
+            { name: 'E', dx: 70, dy: 0 },
+            { name: 'W', dx: -70, dy: 0 },
+            { name: 'SE', dx: 50, dy: 50 },
             { name: 'SW', dx: -50, dy: 50 },
-            { name: 'NE', dx: 50,  dy: -50 },
+            { name: 'NE', dx: 50, dy: -50 },
             { name: 'NW', dx: -50, dy: -50 },
-            { name: 'S',  dx: 0,   dy: 70 },
-            { name: 'N',  dx: 0,   dy: -70 },
+            { name: 'S', dx: 0, dy: 70 },
+            { name: 'N', dx: 0, dy: -70 },
         ];
 
         // 선호 방향 힌트 (바다/빈 공간 방향)
@@ -1135,14 +1152,14 @@ class WorldMapQuiz {
         // 라벨 겹침 확인
         const labelsOverlap = (rect1, rect2) => {
             return !(rect1.x + rect1.width < rect2.x || rect2.x + rect2.width < rect1.x ||
-                     rect1.y + rect1.height < rect2.y || rect2.y + rect2.height < rect1.y);
+                rect1.y + rect1.height < rect2.y || rect2.y + rect2.height < rect1.y);
         };
 
         // 중심 라벨이 다른 라벨과 겹치는지 확인
         const centerLabelOverlapsOthers = (centroid, labelWidth, labelHeight) => {
             const labelRect = {
-                x: centroid[0] - labelWidth/2,
-                y: centroid[1] - labelHeight/2,
+                x: centroid[0] - labelWidth / 2,
+                y: centroid[1] - labelHeight / 2,
                 width: labelWidth,
                 height: labelHeight
             };
@@ -1163,7 +1180,7 @@ class WorldMapQuiz {
             for (const dir of sortedDirs) {
                 const labelX = centroid[0] + dir.dx;
                 const labelY = centroid[1] + dir.dy;
-                const labelRect = { x: labelX - labelWidth/2, y: labelY - labelHeight/2, width: labelWidth, height: labelHeight };
+                const labelRect = { x: labelX - labelWidth / 2, y: labelY - labelHeight / 2, width: labelWidth, height: labelHeight };
                 const newLine = { x1: centroid[0], y1: centroid[1], x2: labelX, y2: labelY };
 
                 let hasConflict = false;
@@ -1207,7 +1224,7 @@ class WorldMapQuiz {
                 const labelY = centroid[1] + bestDir.dy;
 
                 placedLines.push({ x1: centroid[0], y1: centroid[1], x2: labelX, y2: labelY });
-                placedLabels.push({ x: labelX - labelWidth/2, y: labelY - labelHeight/2, width: labelWidth, height: labelHeight });
+                placedLabels.push({ x: labelX - labelWidth / 2, y: labelY - labelHeight / 2, width: labelWidth, height: labelHeight });
 
                 mapGroup.append('line')
                     .attr('class', 'leader-line')
@@ -1230,7 +1247,7 @@ class WorldMapQuiz {
                     .style('pointer-events', 'none');
             } else {
                 // 리더 라인 불필요 - 중심에 배치
-                placedLabels.push({ x: centroid[0] - labelWidth/2, y: centroid[1] - labelHeight/2, width: labelWidth, height: labelHeight });
+                placedLabels.push({ x: centroid[0] - labelWidth / 2, y: centroid[1] - labelHeight / 2, width: labelWidth, height: labelHeight });
 
                 mapGroup.append('text')
                     .attr('class', 'country-label district-label')

@@ -58,6 +58,13 @@ class SubwayQuiz {
         this.mode = null;
         this.selectedLines = ['all'];
         this.selectedProvince = null;
+
+        // 창 크기 변경 시 지도 다시 그리기
+        window.addEventListener('resize', () => {
+            if (this.state !== GameState.IDLE && document.getElementById('game-screen').classList.contains('active')) {
+                this.setupMap();
+            }
+        });
         this.selectedSubRegion = null;
         this.selectedCity = null;  // 시 (성남시, 수원시 등)
         this.selectedDistrict = null;  // 구 (분당구, 영통구 등) 또는 시군구 전체
@@ -146,11 +153,13 @@ class SubwayQuiz {
     }
 
     showModeScreen() {
+        document.body.classList.remove('game-active');
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('mode-screen').classList.add('active');
     }
 
     showStartScreen() {
+        document.body.classList.remove('game-active');
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('start-screen').classList.add('active');
 
@@ -256,6 +265,7 @@ class SubwayQuiz {
     }
 
     startGame() {
+        document.body.classList.add('game-active');
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('game-screen').classList.add('active');
 
@@ -282,10 +292,15 @@ class SubwayQuiz {
     }
 
     setupMap() {
+        // 전체 화면 크기 사용
+        this.width = window.innerWidth;
+        this.height = window.innerHeight;
+
         const container = document.getElementById('map-container');
-        this.width = container.clientWidth || 800;
-        this.height = container.clientHeight || 500;
-        if (this.height < 300) this.height = 400;
+        if (container) {
+            container.style.width = this.width + 'px';
+            container.style.height = this.height + 'px';
+        }
 
         d3.select('#map-svg').selectAll('*').remove();
 
@@ -295,13 +310,75 @@ class SubwayQuiz {
 
         this.mapGroup = this.svg.append('g').attr('class', 'map-group');
 
-        // 드릴다운 모드: 시도 선택 화면부터 시작
-        this.renderProvinceMap();
+        // 특정 노선이 선택되었을 때 (all이 아닐 때) 해당 노선만 바로 표시
+        if (!this.selectedLines.includes('all') && this.mode === GameMode.EXPLORE) {
+            this.renderLineMap();
+        } else {
+            // 전체 노선 또는 퀴즈 모드: 드릴다운 방식으로 시도 선택 화면부터 시작
+            this.renderProvinceMap();
+        }
+    }
+
+    // ===== 특정 노선만 표시하는 모드 =====
+    renderLineMap() {
+        this.state = GameState.SELECT_STATION;
+        this.mapGroup.selectAll('*').remove();
+
+        // 선택된 노선의 역들만 필터링
+        const filteredStations = this.getFilteredStations();
+        if (filteredStations.length === 0) {
+            document.getElementById('question-text').textContent = '해당 노선에 역이 없습니다';
+            return;
+        }
+
+        // 선택된 노선 이름
+        const lineNames = this.selectedLines.join(', ');
+        document.getElementById('question-text').textContent = `${lineNames} 둘러보기`;
+        document.getElementById('step-indicator').textContent = `${filteredStations.length}개 역 | 마우스 휠로 확대/축소, 드래그로 이동`;
+
+        // 해당 노선들의 역 범위에 맞게 projection 설정
+        const padding = 40;
+        const bounds = d3.geoBounds({
+            type: 'FeatureCollection',
+            features: filteredStations.map(s => ({
+                type: 'Feature',
+                geometry: { type: 'Point', coordinates: [s.lng, s.lat] }
+            }))
+        });
+
+        this.projection = d3.geoMercator()
+            .fitExtent([[padding, padding], [this.width - padding, this.height - padding]], {
+                type: 'FeatureCollection',
+                features: filteredStations.map(s => ({
+                    type: 'Feature',
+                    geometry: { type: 'Point', coordinates: [s.lng, s.lat] }
+                }))
+            });
+        this.path = d3.geoPath().projection(this.projection);
+
+        // 프로젝션 스케일 저장
+        this.currentProjectionScale = this.projection.scale();
+
+        // 줌 설정
+        this.currentZoomScale = 1;
+        const zoom = d3.zoom()
+            .scaleExtent([0.5, 10])
+            .on('zoom', (event) => {
+                this.mapGroup.attr('transform', event.transform);
+                this.currentZoomScale = event.transform.k;
+                this.updateVisibilityByZoom();
+            });
+        this.svg.call(zoom);
+        this.zoom = zoom;
+
+        // 노선과 역 렌더링 (배경 포함)
+        this.renderMap();
     }
 
     // ===== 노선도 배경 그리기 (라벨 없이) =====
     // filterStations: 해당 지역에 속한 역들만 표시
-    renderSubwayBackground(filterStations = null) {
+    // clipId: 선택적 클리핑 경로 ID
+    renderSubwayBackground(filterStations = null, clipId = null) {
         const stations = filterStations || this.stations.filter(s => s.lat && s.lng && s.districtName !== '미분류');
         if (!stations || stations.length === 0) return;
 
@@ -315,44 +392,74 @@ class SubwayQuiz {
         // 해당 역들의 ID Set (노선 그릴 때 이 역들만 연결)
         const stationIdSet = new Set(stations.map(s => s.id));
 
-        // 노선 그리기 (해당 지역 내의 역들만 연결)
+        // 노선 그리기 - 지역 내 역 + 이전/다음 역까지 확장 (클리핑 적용)
         const linesGroup = this.mapGroup.append('g').attr('class', 'bg-lines-group');
+        if (clipId) {
+            linesGroup.attr('clip-path', `url(#${clipId})`);
+        }
 
         linesToDraw.forEach(lineName => {
             const lineData = this.lines[lineName];
             if (!lineData) return;
 
-            const segments = [];
-            let currentSegment = [];
-            let prevCoords = null;
-            const MAX_DISTANCE = 200;
+            // 노선 전체 역들을 order 순으로 정렬
+            const allLineStations = lineData.stations
+                .map(id => stationById[id])
+                .filter(s => s && s.lat != null && s.lng != null)
+                .sort((a, b) => a.order - b.order);
 
-            lineData.stations.forEach(stationId => {
-                const s = stationById[stationId];
-                // 해당 지역 내의 역만 포함
-                if (s && s.lat != null && s.lng != null && stationIdSet.has(s.id)) {
-                    const coords = this.projection([s.lng, s.lat]);
-                    if (coords && !isNaN(coords[0])) {
-                        if (prevCoords) {
-                            const dist = Math.sqrt(Math.pow(coords[0] - prevCoords[0], 2) + Math.pow(coords[1] - prevCoords[1], 2));
-                            if (dist > MAX_DISTANCE) {
-                                if (currentSegment.length > 1) segments.push(currentSegment);
-                                currentSegment = [];
-                            }
-                        }
-                        currentSegment.push(coords);
-                        prevCoords = coords;
-                    } else {
-                        if (currentSegment.length > 1) segments.push(currentSegment);
-                        currentSegment = [];
-                        prevCoords = null;
-                    }
+            if (allLineStations.length === 0) return;
+
+            // 지역 내 역들의 order 값들 수집
+            const regionOrders = new Set();
+            allLineStations.forEach(s => {
+                if (stationIdSet.has(s.id)) {
+                    regionOrders.add(s.order);
                 }
             });
-            if (currentSegment.length > 1) segments.push(currentSegment);
 
+            if (regionOrders.size === 0) return;
+
+            // 지역 내 역 + 바로 이전/다음 역까지 포함 (확장된 order 범위)
+            const extendedOrders = new Set(regionOrders);
+            regionOrders.forEach(order => {
+                extendedOrders.add(order - 1); // 이전 역
+                extendedOrders.add(order + 1); // 다음 역
+            });
+
+            // 확장된 범위의 역들 필터링
+            const extendedStations = allLineStations.filter(s => extendedOrders.has(s.order));
+
+            if (extendedStations.length === 0) return;
+
+            // order가 연속인 역들만 세그먼트로 묶기
+            const segments = [];
+            let currentSegment = [extendedStations[0]];
+
+            for (let i = 1; i < extendedStations.length; i++) {
+                const prev = extendedStations[i - 1];
+                const curr = extendedStations[i];
+
+                // order가 연속이면 (차이가 1이면) 같은 세그먼트에 추가
+                if (curr.order - prev.order === 1) {
+                    currentSegment.push(curr);
+                } else {
+                    // order가 연속이 아니면 세그먼트 끊기
+                    if (currentSegment.length > 1) {
+                        segments.push(currentSegment);
+                    }
+                    currentSegment = [curr];
+                }
+            }
+            // 마지막 세그먼트 추가
+            if (currentSegment.length > 1) {
+                segments.push(currentSegment);
+            }
+
+            // 각 세그먼트별로 선 그리기
             const lineGenerator = d3.line().curve(d3.curveLinear);
-            segments.forEach(points => {
+            segments.forEach(segmentStations => {
+                const points = segmentStations.map(s => this.projection([s.lng, s.lat]));
                 linesGroup.append('path')
                     .attr('d', lineGenerator(points))
                     .attr('fill', 'none')
@@ -435,12 +542,12 @@ class SubwayQuiz {
             .attr('fill', 'transparent')
             .attr('stroke', 'transparent')
             .attr('cursor', 'pointer')
-            .on('mouseover', function(event, d) {
+            .on('mouseover', function (event, d) {
                 d3.select(this.parentNode).selectAll('path.province')
                     .filter(p => p.properties.name === d.properties.name)
                     .attr('fill-opacity', 0.6);
             })
-            .on('mouseout', function(event, d) {
+            .on('mouseout', function (event, d) {
                 d3.select(this.parentNode).selectAll('path.province')
                     .filter(p => p.properties.name === d.properties.name)
                     .attr('fill-opacity', 0.3);
@@ -659,6 +766,18 @@ class SubwayQuiz {
         const colorMap = this.buildColorMap(allDistricts);
         const isDark = this.isDarkMode();
 
+        // 클리핑 경로 정의 (경기도 북부/남부 경계로 노선 자르기)
+        const clipId = `subregion-clip-${subRegion}`;
+        this.svg.select('defs').remove();
+        const defs = this.svg.append('defs');
+        defs.append('clipPath')
+            .attr('id', clipId)
+            .selectAll('path')
+            .data(allDistricts)
+            .enter()
+            .append('path')
+            .attr('d', this.path);
+
         // 시군구 배경 (반투명) - 같은 시는 같은 색
         this.mapGroup.selectAll('path.district')
             .data(allDistricts)
@@ -672,13 +791,13 @@ class SubwayQuiz {
             .attr('stroke-width', 1)
             .attr('pointer-events', 'none');
 
-        // 노선도 배경 - districtCode로 필터링
+        // 노선도 배경 - districtCode로 필터링 (클리핑 적용)
         const districtCodes = allDistricts.map(d => d.properties.code);
         const provinceStations = this.stations.filter(s =>
             districtCodes.includes(s.districtCode) && s.lat && s.lng && s.districtName !== '미분류'
         );
         console.log(`renderCityMap: ${subRegion} - ${districtCodes.length}개 구, ${provinceStations.length}개 역`);
-        this.renderSubwayBackground(provinceStations);
+        this.renderSubwayBackground(provinceStations, clipId);
 
         // 클릭 영역 - 같은 "시"는 모두 같은 클릭으로 처리
         this.mapGroup.selectAll('path.district-click')
@@ -809,6 +928,18 @@ class SubwayQuiz {
         const colorMap = this.buildColorMap(guDistricts);
         const isDark = this.isDarkMode();
 
+        // 클리핑 경로 정의 (시 경계로 노선 자르기)
+        const clipId = `city-clip-${cityName.replace(/\s/g, '')}`;
+        this.svg.select('defs').remove();
+        const defs = this.svg.append('defs');
+        defs.append('clipPath')
+            .attr('id', clipId)
+            .selectAll('path')
+            .data(guDistricts)
+            .enter()
+            .append('path')
+            .attr('d', this.path);
+
         // 구 배경 (반투명)
         this.mapGroup.selectAll('path.district')
             .data(guDistricts)
@@ -822,13 +953,13 @@ class SubwayQuiz {
             .attr('stroke-width', 1)
             .attr('pointer-events', 'none');
 
-        // 노선도 배경 - 해당 시에 속한 모든 구의 역 (districtCode로 필터링)
+        // 노선도 배경 - 해당 시에 속한 모든 구의 역 (클리핑 적용)
         const guCodes = guDistricts.map(d => d.properties.code);
         const cityStations = this.stations.filter(s =>
             guCodes.includes(s.districtCode) && s.lat && s.lng && s.districtName !== '미분류'
         );
         console.log(`renderGuMap: ${cityName} - ${guCodes.length}개 구, ${cityStations.length}개 역`);
-        this.renderSubwayBackground(cityStations);
+        this.renderSubwayBackground(cityStations, clipId);
 
         // 클릭 영역
         this.mapGroup.selectAll('path.district-click')
@@ -839,12 +970,12 @@ class SubwayQuiz {
             .attr('d', this.path)
             .attr('fill', 'transparent')
             .attr('cursor', 'pointer')
-            .on('mouseover', function(event, d) {
+            .on('mouseover', function (event, d) {
                 d3.select(this.parentNode).selectAll('path.district')
                     .filter(p => p.properties.code === d.properties.code)
                     .attr('fill-opacity', 0.6);
             })
-            .on('mouseout', function(event, d) {
+            .on('mouseout', function (event, d) {
                 d3.select(this.parentNode).selectAll('path.district')
                     .filter(p => p.properties.code === d.properties.code)
                     .attr('fill-opacity', 0.3);
@@ -936,6 +1067,18 @@ class SubwayQuiz {
         const colorMap = this.buildColorMap(districts);
         const isDark = this.isDarkMode();
 
+        // 클리핑 경로 정의 (시 경계로 노선 자르기)
+        const clipId = `province-clip-${provinceName.replace(/\s/g, '')}`;
+        this.svg.select('defs').remove();
+        const defs = this.svg.append('defs');
+        defs.append('clipPath')
+            .attr('id', clipId)
+            .selectAll('path')
+            .data(districts)
+            .enter()
+            .append('path')
+            .attr('d', this.path);
+
         // 시군구 배경 (반투명)
         this.mapGroup.selectAll('path.district')
             .data(districts)
@@ -949,8 +1092,8 @@ class SubwayQuiz {
             .attr('stroke-width', 1)
             .attr('pointer-events', 'none');
 
-        // 노선도 배경
-        this.renderSubwayBackground(provinceStations);
+        // 노선도 배경 (클리핑 적용)
+        this.renderSubwayBackground(provinceStations, clipId);
 
         // 클릭 영역 (투명)
         this.mapGroup.selectAll('path.district-click')
@@ -961,12 +1104,12 @@ class SubwayQuiz {
             .attr('d', this.path)
             .attr('fill', 'transparent')
             .attr('cursor', 'pointer')
-            .on('mouseover', function(event, d) {
+            .on('mouseover', function (event, d) {
                 d3.select(this.parentNode).selectAll('path.district')
                     .filter(p => p.properties.code === d.properties.code)
                     .attr('fill-opacity', 0.6);
             })
-            .on('mouseout', function(event, d) {
+            .on('mouseout', function (event, d) {
                 d3.select(this.parentNode).selectAll('path.district')
                     .filter(p => p.properties.code === d.properties.code)
                     .attr('fill-opacity', 0.3);
@@ -1069,6 +1212,16 @@ class SubwayQuiz {
 
         const isDark = this.isDarkMode();
 
+        // 클리핑 경로 정의 (지역 경계로 노선 자르기)
+        const clipId = `district-clip-${districtCode}`;
+        this.svg.select('defs').remove(); // 기존 defs 제거
+        const defs = this.svg.append('defs');
+        defs.append('clipPath')
+            .attr('id', clipId)
+            .append('path')
+            .datum(districtFeature)
+            .attr('d', this.path);
+
         // 배경 지도
         this.mapGroup.append('path')
             .datum(districtFeature)
@@ -1077,12 +1230,17 @@ class SubwayQuiz {
             .attr('stroke', isDark ? '#fff' : '#333')
             .attr('stroke-width', 2);
 
-        // 노선 그리기
+        // 노선 그리기 - 지역 내 역들 + 이전/다음 역까지 확장하여 연결 (클리핑 적용)
         const stationById = {};
         this.stations.forEach(s => { stationById[s.id] = s; });
 
-        const linesGroup = this.mapGroup.append('g').attr('class', 'lines-group');
+        const linesGroup = this.mapGroup.append('g')
+            .attr('class', 'lines-group')
+            .attr('clip-path', `url(#${clipId})`); // 클리핑 적용
         const drawnLines = new Set();
+
+        // 해당 지역에 있는 역들의 ID Set
+        const districtStationIds = new Set(districtStations.map(s => s.id));
 
         districtStations.forEach(station => {
             if (drawnLines.has(station.line)) return;
@@ -1091,40 +1249,65 @@ class SubwayQuiz {
             const lineData = this.lines[station.line];
             if (!lineData) return;
 
-            const segments = [];
-            let currentSegment = [];
-            let prevCoords = null;
-            const MAX_DISTANCE = 80;
+            // 노선 전체 역들을 order 순으로 정렬
+            const allLineStations = lineData.stations
+                .map(id => stationById[id])
+                .filter(s => s && s.lat != null && s.lng != null)
+                .sort((a, b) => a.order - b.order);
 
-            lineData.stations.forEach(stationId => {
-                const s = stationById[stationId];
-                if (s && s.lat != null && s.lng != null) {
-                    const coords = this.projection([s.lng, s.lat]);
-                    if (coords && !isNaN(coords[0])) {
-                        if (prevCoords) {
-                            const dist = Math.sqrt(Math.pow(coords[0] - prevCoords[0], 2) + Math.pow(coords[1] - prevCoords[1], 2));
-                            if (dist > MAX_DISTANCE) {
-                                if (currentSegment.length > 1) segments.push(currentSegment);
-                                currentSegment = [];
-                            }
-                        }
-                        currentSegment.push(coords);
-                        prevCoords = coords;
-                    } else {
-                        if (currentSegment.length > 1) segments.push(currentSegment);
-                        currentSegment = [];
-                        prevCoords = null;
-                    }
-                } else {
-                    if (currentSegment.length > 1) segments.push(currentSegment);
-                    currentSegment = [];
-                    prevCoords = null;
+            if (allLineStations.length === 0) return;
+
+            // 지역 내 역들의 order 값들 수집
+            const districtOrders = new Set();
+            allLineStations.forEach(s => {
+                if (districtStationIds.has(s.id)) {
+                    districtOrders.add(s.order);
                 }
             });
-            if (currentSegment.length > 1) segments.push(currentSegment);
 
+            if (districtOrders.size === 0) return;
+
+            // 지역 내 역 + 바로 이전/다음 역까지 포함 (확장된 order 범위)
+            const extendedOrders = new Set(districtOrders);
+            districtOrders.forEach(order => {
+                extendedOrders.add(order - 1); // 이전 역
+                extendedOrders.add(order + 1); // 다음 역
+            });
+
+            // 확장된 범위의 역들 필터링
+            const extendedStations = allLineStations.filter(s => extendedOrders.has(s.order));
+
+            // order가 연속인 역들만 세그먼트로 묶기
+            const segments = [];
+            let currentSegment = [];
+            if (extendedStations.length > 0) {
+                currentSegment.push(extendedStations[0]);
+            }
+
+            for (let i = 1; i < extendedStations.length; i++) {
+                const prev = extendedStations[i - 1];
+                const curr = extendedStations[i];
+
+                // order가 연속이면 (차이가 1이면) 같은 세그먼트에 추가
+                if (curr.order - prev.order === 1) {
+                    currentSegment.push(curr);
+                } else {
+                    // order가 연속이 아니면 세그먼트 끊기
+                    if (currentSegment.length > 1) {
+                        segments.push(currentSegment);
+                    }
+                    currentSegment = [curr];
+                }
+            }
+            // 마지막 세그먼트 추가
+            if (currentSegment.length > 1) {
+                segments.push(currentSegment);
+            }
+
+            // 각 세그먼트별로 선 그리기
             const lineGenerator = d3.line().curve(d3.curveLinear);
-            segments.forEach(points => {
+            segments.forEach(segmentStations => {
+                const points = segmentStations.map(s => this.projection([s.lng, s.lat]));
                 linesGroup.append('path')
                     .attr('d', lineGenerator(points))
                     .attr('fill', 'none')
@@ -1203,20 +1386,31 @@ class SubwayQuiz {
             .attr('fill', isDarkMode ? '#1a1a2e' : '#f0f4f8');
 
         // 시도 경계 지도 배경 그리기
-        if (this.topoData) {
-            const objectName = Object.keys(this.topoData.objects)[0];
-            const provinces = topojson.feature(this.topoData, this.topoData.objects[objectName]);
-
+        if (this.provincesGeo) {
             this.mapGroup.append('g')
                 .attr('class', 'map-background')
                 .selectAll('path')
-                .data(provinces.features)
+                .data(this.provincesGeo.features)
                 .enter()
                 .append('path')
                 .attr('d', this.path)
                 .attr('fill', isDarkMode ? '#2a2a3e' : '#e8eef5')
-                .attr('stroke', isDarkMode ? '#3a3a4e' : '#c0c8d0')
-                .attr('stroke-width', 0.8);
+                .attr('stroke', isDarkMode ? '#555' : '#aaa')
+                .attr('stroke-width', 1.5);
+        }
+
+        // 시군구 경계 표시
+        if (this.metroMunicipalities) {
+            this.mapGroup.append('g')
+                .attr('class', 'district-background')
+                .selectAll('path')
+                .data(this.metroMunicipalities)
+                .enter()
+                .append('path')
+                .attr('d', this.path)
+                .attr('fill', 'none')
+                .attr('stroke', isDarkMode ? '#444' : '#ccc')
+                .attr('stroke-width', 0.5);
         }
 
         // 역 ID → 역 데이터 매핑
@@ -1225,7 +1419,7 @@ class SubwayQuiz {
             stationById[s.id] = s;
         });
 
-        // 노선 그리기 (각 노선별로 순서대로 연결)
+        // 노선 그리기 - order 순서대로 연결
         const linesGroup = this.mapGroup.append('g').attr('class', 'lines-group');
 
         Object.entries(this.lines).forEach(([lineName, lineData]) => {
@@ -1238,53 +1432,33 @@ class SubwayQuiz {
                 return;
             }
 
-            // 노선의 역들을 순서대로 연결 (null 좌표 또는 너무 먼 거리면 선을 끊음)
-            const segments = []; // 연속된 좌표 세그먼트들
-            let currentSegment = [];
-            let prevCoords = null;
+            // 노선의 역들을 order 순으로 정렬
+            const lineStations = lineData.stations
+                .map(id => stationById[id])
+                .filter(s => s && s.lat != null && s.lng != null)
+                .sort((a, b) => a.order - b.order);
 
-            // 거리 임계값 (픽셀 단위) - 이 이상 떨어지면 연결하지 않음
-            const MAX_DISTANCE = 120;
+            if (lineStations.length === 0) return;
 
-            lineData.stations.forEach(stationId => {
-                const station = stationById[stationId];
-                if (station && station.lat != null && station.lng != null) {
-                    const coords = this.projection([station.lng, station.lat]);
-                    if (coords && !isNaN(coords[0]) && !isNaN(coords[1])) {
-                        // 이전 좌표와의 거리 체크
-                        if (prevCoords) {
-                            const dist = Math.sqrt(
-                                Math.pow(coords[0] - prevCoords[0], 2) +
-                                Math.pow(coords[1] - prevCoords[1], 2)
-                            );
-                            if (dist > MAX_DISTANCE) {
-                                // 너무 멀면 세그먼트 끊기
-                                if (currentSegment.length > 1) {
-                                    segments.push(currentSegment);
-                                }
-                                currentSegment = [];
-                            }
-                        }
-                        currentSegment.push(coords);
-                        prevCoords = coords;
-                    } else {
-                        // 투영 실패 시 세그먼트 끊기
-                        if (currentSegment.length > 1) {
-                            segments.push(currentSegment);
-                        }
-                        currentSegment = [];
-                        prevCoords = null;
-                    }
+            // order가 연속인 역들만 세그먼트로 묶기
+            const segments = [];
+            let currentSegment = [lineStations[0]];
+
+            for (let i = 1; i < lineStations.length; i++) {
+                const prev = lineStations[i - 1];
+                const curr = lineStations[i];
+
+                // order가 연속이면 (차이가 1이면) 같은 세그먼트에 추가
+                if (curr.order - prev.order === 1) {
+                    currentSegment.push(curr);
                 } else {
-                    // null 좌표인 역 - 세그먼트 끊기
+                    // order가 연속이 아니면 세그먼트 끊기
                     if (currentSegment.length > 1) {
                         segments.push(currentSegment);
                     }
-                    currentSegment = [];
-                    prevCoords = null;
+                    currentSegment = [curr];
                 }
-            });
-
+            }
             // 마지막 세그먼트 추가
             if (currentSegment.length > 1) {
                 segments.push(currentSegment);
@@ -1293,7 +1467,8 @@ class SubwayQuiz {
             // 각 세그먼트별로 선 그리기
             const lineGenerator = d3.line().curve(d3.curveLinear);
 
-            segments.forEach(points => {
+            segments.forEach(segmentStations => {
+                const points = segmentStations.map(s => this.projection([s.lng, s.lat]));
                 linesGroup.append('path')
                     .attr('d', lineGenerator(points))
                     .attr('fill', 'none')

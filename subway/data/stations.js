@@ -448,15 +448,15 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.64202,
     "lng": 127.12684,
-    "order": 1
+    "order": 24
   },
   {
     "id": 57,
     "name": "다산",
     "line": "8호선",
-    "lat": 37.5636,
+    "lat": 37.6253,
     "lng": 127.1595,
-    "order": 2
+    "order": 22
   },
   {
     "id": 58,
@@ -464,7 +464,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.6159,
     "lng": 127.1444,
-    "order": 3
+    "order": 21
   },
   {
     "id": 59,
@@ -472,7 +472,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.603392,
     "lng": 127.143869,
-    "order": 4
+    "order": 20
   },
   {
     "id": 60,
@@ -480,7 +480,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.6376,
     "lng": 127.135,
-    "order": 5
+    "order": 23
   },
   {
     "id": 61,
@@ -488,7 +488,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.5541,
     "lng": 127.1274,
-    "order": 6
+    "order": 19
   },
   {
     "id": 62,
@@ -496,7 +496,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.55021,
     "lng": 127.127562,
-    "order": 7
+    "order": 18
   },
   {
     "id": 63,
@@ -504,7 +504,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.538397,
     "lng": 127.123572,
-    "order": 8
+    "order": 17
   },
   {
     "id": 64,
@@ -512,7 +512,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.530341,
     "lng": 127.120508,
-    "order": 9
+    "order": 16
   },
   {
     "id": 65,
@@ -520,7 +520,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.517409,
     "lng": 127.112359,
-    "order": 10
+    "order": 15
   },
   {
     "id": 66,
@@ -528,7 +528,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.51395,
     "lng": 127.102234,
-    "order": 11
+    "order": 14
   },
   {
     "id": 67,
@@ -536,7 +536,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.505431,
     "lng": 127.106979,
-    "order": 12
+    "order": 13
   },
   {
     "id": 68,
@@ -544,7 +544,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.499703,
     "lng": 127.112183,
-    "order": 13
+    "order": 12
   },
   {
     "id": 69,
@@ -552,7 +552,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.492522,
     "lng": 127.118234,
-    "order": 14
+    "order": 11
   },
   {
     "id": 70,
@@ -560,7 +560,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.485855,
     "lng": 127.1225,
-    "order": 15
+    "order": 10
   },
   {
     "id": 71,
@@ -568,7 +568,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.478703,
     "lng": 127.126191,
-    "order": 16
+    "order": 9
   },
   {
     "id": 72,
@@ -576,7 +576,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.470047,
     "lng": 127.126662,
-    "order": 17
+    "order": 8
   },
   {
     "id": 73,
@@ -584,7 +584,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.4779,
     "lng": 127.1429,
-    "order": 18
+    "order": 7
   },
   {
     "id": 74,
@@ -592,7 +592,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.457122,
     "lng": 127.149908,
-    "order": 19
+    "order": 6
   },
   {
     "id": 75,
@@ -600,7 +600,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.451535,
     "lng": 127.159816,
-    "order": 20
+    "order": 5
   },
   {
     "id": 76,
@@ -608,7 +608,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.44521,
     "lng": 127.156866,
-    "order": 21
+    "order": 4
   },
   {
     "id": 77,
@@ -616,7 +616,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.440918,
     "lng": 127.147564,
-    "order": 22
+    "order": 3
   },
   {
     "id": 78,
@@ -624,7 +624,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.437428,
     "lng": 127.140722,
-    "order": 23
+    "order": 2
   },
   {
     "id": 79,
@@ -632,7 +632,7 @@ const SUBWAY_STATIONS = [
     "line": "8호선",
     "lat": 37.43213,
     "lng": 127.129087,
-    "order": 24
+    "order": 1
   },
   {
     "id": 80,
@@ -2840,7 +2840,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.660878,
     "lng": 127.073572,
-    "order": 5
+    "order": 2
   },
   {
     "id": 356,
@@ -2848,7 +2848,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.655128,
     "lng": 127.061368,
-    "order": 6
+    "order": 3
   },
   {
     "id": 357,
@@ -2856,7 +2856,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.653166,
     "lng": 127.047731,
-    "order": 7
+    "order": 4
   },
   {
     "id": 358,
@@ -2864,7 +2864,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.648627,
     "lng": 127.034709,
-    "order": 8
+    "order": 5
   },
   {
     "id": 359,
@@ -2872,7 +2872,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.638052,
     "lng": 127.025732,
-    "order": 9
+    "order": 6
   },
   {
     "id": 360,
@@ -2880,7 +2880,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.62667,
     "lng": 127.025983,
-    "order": 10
+    "order": 7
   },
   {
     "id": 361,
@@ -2888,7 +2888,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.613292,
     "lng": 127.030053,
-    "order": 11
+    "order": 8
   },
   {
     "id": 362,
@@ -2896,7 +2896,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.603407,
     "lng": 127.025053,
-    "order": 12
+    "order": 9
   },
   {
     "id": 363,
@@ -2904,7 +2904,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.592624,
     "lng": 127.016403,
-    "order": 13
+    "order": 10
   },
   {
     "id": 364,
@@ -2912,7 +2912,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.588458,
     "lng": 127.006221,
-    "order": 14
+    "order": 11
   },
   {
     "id": 365,
@@ -2920,7 +2920,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.582336,
     "lng": 127.001844,
-    "order": 15
+    "order": 12
   },
   {
     "id": 366,
@@ -2928,7 +2928,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.57142,
     "lng": 127.009745,
-    "order": 16
+    "order": 13
   },
   {
     "id": 367,
@@ -2936,7 +2936,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.565138,
     "lng": 127.007896,
-    "order": 17
+    "order": 14
   },
   {
     "id": 368,
@@ -2944,7 +2944,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.561243,
     "lng": 126.99428,
-    "order": 18
+    "order": 15
   },
   {
     "id": 369,
@@ -2952,7 +2952,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.560989,
     "lng": 126.986325,
-    "order": 19
+    "order": 16
   },
   {
     "id": 370,
@@ -2968,7 +2968,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.554648,
     "lng": 126.972559,
-    "order": 21
+    "order": 18
   },
   {
     "id": 372,
@@ -2976,7 +2976,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.54456,
     "lng": 126.972106,
-    "order": 22
+    "order": 19
   },
   {
     "id": 373,
@@ -2984,7 +2984,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.534777,
     "lng": 126.97311,
-    "order": 23
+    "order": 20
   },
   {
     "id": 374,
@@ -2992,7 +2992,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.52917,
     "lng": 126.967894,
-    "order": 24
+    "order": 21
   },
   {
     "id": 375,
@@ -3000,7 +3000,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.522272,
     "lng": 126.974345,
-    "order": 25
+    "order": 22
   },
   {
     "id": 376,
@@ -3008,7 +3008,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.502971,
     "lng": 126.979306,
-    "order": 26
+    "order": 23
   },
   {
     "id": 377,
@@ -3016,7 +3016,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.486263,
     "lng": 126.981989,
-    "order": 27
+    "order": 24
   },
   {
     "id": 378,
@@ -3024,7 +3024,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.47653,
     "lng": 126.981685,
-    "order": 28
+    "order": 25
   },
   {
     "id": 379,
@@ -3032,7 +3032,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.463873,
     "lng": 126.989134,
-    "order": 29
+    "order": 26
   },
   {
     "id": 380,
@@ -3040,7 +3040,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.451673,
     "lng": 127.002303,
-    "order": 30
+    "order": 27
   },
   {
     "id": 381,
@@ -3048,7 +3048,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.443885,
     "lng": 127.007888,
-    "order": 31
+    "order": 28
   },
   {
     "id": 382,
@@ -3056,7 +3056,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.435675,
     "lng": 127.006523,
-    "order": 32
+    "order": 29
   },
   {
     "id": 383,
@@ -3064,7 +3064,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.433021,
     "lng": 126.996568,
-    "order": 33
+    "order": 30
   },
   {
     "id": 384,
@@ -3072,7 +3072,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.426513,
     "lng": 126.98978,
-    "order": 34
+    "order": 31
   },
   {
     "id": 385,
@@ -3080,7 +3080,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.401553,
     "lng": 126.976715,
-    "order": 35
+    "order": 32
   },
   {
     "id": 386,
@@ -3088,7 +3088,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.394287,
     "lng": 126.963883,
-    "order": 36
+    "order": 33
   },
   {
     "id": 387,
@@ -3096,7 +3096,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.389793,
     "lng": 126.950806,
-    "order": 37
+    "order": 34
   },
   {
     "id": 388,
@@ -3104,7 +3104,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.372221,
     "lng": 126.943429,
-    "order": 38
+    "order": 35
   },
   {
     "id": 389,
@@ -3112,7 +3112,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.358101,
     "lng": 126.933274,
-    "order": 39
+    "order": 36
   },
   {
     "id": 390,
@@ -3120,7 +3120,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.349801,
     "lng": 126.925365,
-    "order": 40
+    "order": 37
   },
   {
     "id": 391,
@@ -3128,7 +3128,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.328467,
     "lng": 126.917332,
-    "order": 41
+    "order": 38
   },
   {
     "id": 392,
@@ -3136,7 +3136,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.312212,
     "lng": 126.903524,
-    "order": 42
+    "order": 39
   },
   {
     "id": 393,
@@ -3144,7 +3144,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.302795,
     "lng": 126.866489,
-    "order": 43
+    "order": 40
   },
   {
     "id": 394,
@@ -3152,7 +3152,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.309689,
     "lng": 126.85344,
-    "order": 44
+    "order": 41
   },
   {
     "id": 395,
@@ -3160,7 +3160,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.315941,
     "lng": 126.838573,
-    "order": 45
+    "order": 42
   },
   {
     "id": 396,
@@ -3168,7 +3168,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.316777,
     "lng": 126.823249,
-    "order": 46
+    "order": 43
   },
   {
     "id": 397,
@@ -3176,7 +3176,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.320646,
     "lng": 126.805913,
-    "order": 47
+    "order": 44
   },
   {
     "id": 398,
@@ -3184,7 +3184,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.327082,
     "lng": 126.788532,
-    "order": 48
+    "order": 45
   },
   {
     "id": 399,
@@ -3192,7 +3192,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.338212,
     "lng": 126.765844,
-    "order": 49
+    "order": 46
   },
   {
     "id": 400,
@@ -3200,7 +3200,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.351735,
     "lng": 126.742989,
-    "order": 50
+    "order": 47
   },
   {
     "id": 401,
@@ -3208,7 +3208,7 @@ const SUBWAY_STATIONS = [
     "line": "4호선",
     "lat": 37.362357,
     "lng": 126.738714,
-    "order": 51
+    "order": 48
   },
   {
     "id": 402,
@@ -3510,40 +3510,40 @@ const SUBWAY_STATIONS = [
     "id": 439,
     "name": "고색",
     "line": "수인분당",
-    "lat": 37.2599,
-    "lng": 127.0137,
+    "lat": 37.249694,
+    "lng": 126.980333,
     "order": 38
   },
   {
     "id": 440,
     "name": "오목천",
     "line": "수인분당",
-    "lat": 37.2393,
-    "lng": 127.006,
+    "lat": 37.2433111,
+    "lng": 126.9637389,
     "order": 39
   },
   {
     "id": 441,
     "name": "어천",
     "line": "수인분당",
-    "lat": 37.2188,
-    "lng": 126.9926,
+    "lat": 37.2516694,
+    "lng": 126.9228278,
     "order": 40
   },
   {
     "id": 442,
     "name": "야목",
     "line": "수인분당",
-    "lat": 37.2064,
-    "lng": 126.9569,
+    "lat": 37.2611111,
+    "lng": 126.8843611,
     "order": 41
   },
   {
     "id": 443,
     "name": "사리",
     "line": "수인분당",
-    "lat": 37.2032,
-    "lng": 126.9165,
+    "lat": 37.2908694,
+    "lng": 126.8571889,
     "order": 42
   },
   {
