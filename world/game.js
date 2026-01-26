@@ -1866,15 +1866,26 @@ class WorldMapQuiz {
 
     // ===== 명예의 전당 관련 메서드 =====
 
-    async checkAndShowLeaderboard() {
-        if (this.currentMode !== 'test' || !leaderboardService?.isAvailable()) {
-            return;
-        }
+    // 4단계 테스트 모드일 때 명예의 전당 등록 버튼 표시
+    showLeaderboardButton() {
+        const registerBtn = document.getElementById('register-leaderboard-btn');
+        if (!registerBtn) return;
 
+        if (this.currentMode === 'test' && leaderboardService?.isAvailable()) {
+            registerBtn.classList.remove('hidden');
+            // 버튼 클릭 이벤트 (한 번만 등록)
+            registerBtn.onclick = () => this.openLeaderboardRegistration();
+        } else {
+            registerBtn.classList.add('hidden');
+        }
+    }
+
+    // 명예의 전당 등록 버튼 클릭 시 호출
+    async openLeaderboardRegistration() {
         const mode = this.testSubMode;
         const rank = await leaderboardService.checkRank('world', mode, this.score);
 
-        // 항상 닉네임 입력 모달 표시 (등록 여부 선택 가능)
+        // 닉네임 입력용 데이터 준비
         this.pendingLeaderboardEntry = {
             topic: 'world',
             mode: mode,
@@ -2073,8 +2084,8 @@ class WorldMapQuiz {
 
         details.innerHTML = html;
 
-        // 4단계 테스트 모드일 때 명예의 전당 처리
-        this.checkAndShowLeaderboard();
+        // 4단계 테스트 모드일 때 명예의 전당 등록 버튼 표시
+        this.showLeaderboardButton();
     }
 
     resetGame() {
