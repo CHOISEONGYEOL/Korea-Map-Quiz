@@ -5,7 +5,7 @@ const QUIZ_REGIONS = {
     '서울특별시': ['도봉구', '노원구', '강북구', '은평구', '성북구', '중랑구', '서대문구', '종로구', '동대문구', '강서구', '마포구', '중구', '성동구', '광진구', '강동구', '양천구', '영등포구', '용산구', '동작구', '송파구', '구로구', '금천구', '관악구', '서초구', '강남구'],
     '부산광역시': [],  // 인접 지역으로만 표시
     '대구광역시': [],  // 인접 지역으로만 표시 (달성군 포함)
-    '인천광역시': [],  // 인접 지역으로만 표시 (강화군, 옹진군 포함)
+    '인천광역시': ['중구', '동구', '미추홀구', '연수구', '남동구', '부평구', '계양구', '서구', '강화군', '옹진군'],
     '광주광역시': [],  // 인접 지역으로만 표시
     '대전광역시': [],  // 인접 지역으로만 표시
     '울산광역시': [],  // 인접 지역으로만 표시
@@ -17,10 +17,11 @@ const QUIZ_REGIONS = {
     '전라북도': ['군산시', '익산시', '완주군', '진안군', '무주군', '김제시', '전주시', '부안군', '정읍시', '임실군', '장수군', '고창군', '순창군', '남원시'],
     '전라남도': ['영광군', '장성군', '담양군', '곡성군', '구례군', '함평군', '화순군', '순천시', '광양시', '신안군', '무안군', '나주시', '목포시', '영암군', '장흥군', '보성군', '여수시', '진도군', '해남군', '강진군', '고흥군', '완도군'],
     '경상북도': ['봉화군', '울진군', '영주시', '예천군', '문경시', '안동시', '영양군', '상주시', '의성군', '청송군', '영덕군', '김천시', '구미시', '군위군', '칠곡군', '영천시', '포항시', '성주군', '고령군', '경산시', '경주시', '청도군', '울릉군'],
-    '경상남도': ['거창군', '함양군', '합천군', '창녕군', '밀양시', '양산시', '산청군', '의령군', '함안군', '창원시', '김해시', '하동군', '진주시', '사천시', '고성군', '남해군', '통영시', '거제시']
+    '경상남도': ['거창군', '함양군', '합천군', '창녕군', '밀양시', '양산시', '산청군', '의령군', '함안군', '창원시', '김해시', '하동군', '진주시', '사천시', '고성군', '남해군', '통영시', '거제시'],
+    '제주특별자치도': ['제주시', '서귀포시']
 };
 
-// 시도별 색상 (제주도 제외) - 다크 모드용
+// 시도별 색상 - 다크 모드용
 const PROVINCE_COLORS_DARK = {
     '서울특별시': '#FF6B6B',
     '부산광역시': '#4ECDC4',
@@ -37,7 +38,8 @@ const PROVINCE_COLORS_DARK = {
     '전라북도': '#2ECC71',
     '전라남도': '#1E8449',
     '경상북도': '#B8860B',
-    '경상남도': '#8B4513'
+    '경상남도': '#8B4513',
+    '제주특별자치도': '#E91E63'
 };
 
 // 시도별 색상 - 라이트 모드용 (중간 톤 파스텔)
@@ -57,7 +59,8 @@ const PROVINCE_COLORS_LIGHT = {
     '전라북도': '#82E0AA',
     '전라남도': '#58D68D',
     '경상북도': '#D4AC0D',
-    '경상남도': '#AF601A'
+    '경상남도': '#AF601A',
+    '제주특별자치도': '#F48FB1'
 };
 
 // 테마에 따른 시도 색상 반환 (라이트 모드가 기본)
@@ -74,7 +77,17 @@ function getSubRegionColors() {
         : { north: '#64B5F6', south: '#F48FB1' }; // 라이트 모드: 파스텔 블루/핑크
 }
 
-// 시도 약칭 (제주도 제외)
+// TopoJSON 데이터명 → 실제 표시명 변환 (개명된 지역)
+const DISPLAY_NAME_MAP = {
+    '남구': '미추홀구',  // 인천 남구 → 미추홀구 (2018년 개명)
+};
+
+// 표시명 → TopoJSON 데이터명 역변환
+const DATA_NAME_MAP = {
+    '미추홀구': '남구',
+};
+
+// 시도 약칭
 const SHORT_NAMES = {
     '서울특별시': '서울',
     '부산광역시': '부산',
@@ -91,10 +104,11 @@ const SHORT_NAMES = {
     '전라북도': '전북',
     '전라남도': '전남',
     '경상북도': '경북',
-    '경상남도': '경남'
+    '경상남도': '경남',
+    '제주특별자치도': '제주'
 };
 
-// 시도코드로 시도명 매핑 (시군구 코드 앞 2자리, 제주도 제외)
+// 시도코드로 시도명 매핑 (시군구 코드 앞 2자리)
 // TopoJSON 데이터의 코드 체계에 맞춤
 const CODE_TO_PROVINCE = {
     '11': '서울특별시',
@@ -112,19 +126,22 @@ const CODE_TO_PROVINCE = {
     '35': '전라북도',
     '36': '전라남도',
     '37': '경상북도',
-    '38': '경상남도'
+    '38': '경상남도',
+    '39': '제주특별자치도',
+    '50': '제주특별자치도'  // 일부 데이터에서 50 사용
 };
 
-// 북부/남부 구분이 필요한 도 지역
-const LARGE_PROVINCES = ['경기도', '강원도', '충청북도', '충청남도', '전라북도', '전라남도', '경상북도', '경상남도'];
+// 북부/남부 구분이 필요한 도 지역 (경기도만 해당)
+const LARGE_PROVINCES = ['경기도'];
 
 // 별도 인셋 박스로 표시할 섬 지역
-// 인천 옹진군, 경북 울릉군(울릉도/독도)
-const ISLAND_DISTRICTS = ['옹진군', '울릉군'];
+// 인천 강화군/옹진군, 경북 울릉군(울릉도/독도)
+const ISLAND_DISTRICTS = ['강화군', '옹진군', '울릉군'];
 
 // 섬 지역 인셋 설정 (소속 시도, 인셋 위치)
 const ISLAND_INSET_CONFIG = {
-    '옹진군': { province: '인천광역시', position: 'bottom-left' },
+    '강화군': { province: '인천광역시', position: 'center-left-top' },
+    '옹진군': { province: '인천광역시', position: 'center-left-bottom' },
     '울릉군': { province: '경상북도', position: 'top-right' }
 };
 
@@ -144,7 +161,8 @@ const QUIZ_FILTER_REGIONS = {
     '충청권': ['충청북도', '충청남도', '대전광역시', '세종특별자치시'],
     '전라권': ['전라북도', '전라남도', '광주광역시'],
     '경상권': ['경상북도', '경상남도', '대구광역시', '부산광역시', '울산광역시'],
-    '강원권': ['강원도']
+    '강원권': ['강원도'],
+    '제주권': ['제주특별자치도']
 };
 
 // 그룹에 속한 지역 → 그룹명 역매핑
@@ -183,6 +201,12 @@ class KoreaMapQuiz {
         this.allDistricts = [];       // 모든 시군구 목록
 
         this.score = 0;
+        this.combo = 0;
+        this.maxComboAchieved = 0;  // 게임 중 달성한 최대 콤보
+        this.maxCombo = 10;  // 콤보 상한
+        this.baseScore = 100;  // 기본 점수
+        this.comboBonus = 10;  // 콤보당 보너스
+        this.wrongPenalty = 20;  // 오답 감점
         this.currentQuestion = 0;
         this.totalQuestions = 10;
         this.timeLimit = 5000;
@@ -194,6 +218,16 @@ class KoreaMapQuiz {
         this.correctSubRegion = null;
         this.questions = [];
         this.results = [];
+
+        // 4단계 테스트 서브모드 (speed / survival)
+        this.testSubMode = 'speed';
+        // 스피드 모드용
+        this.speedTimeLimit = 60000;  // 60초 총 시간
+        this.speedTimer = null;
+        this.speedTimeRemaining = 60000;
+        // 서바이벌 모드용
+        this.lives = 3;
+        this.maxLives = 3;
 
         this.svg = null;
         this.projection = null;
@@ -244,6 +278,10 @@ class KoreaMapQuiz {
             case 'practice':
                 this.timerEnabled = false;
                 this.showLabels = true;
+                break;
+            case 'practice-blind':
+                this.timerEnabled = false;
+                this.showLabels = false;
                 break;
             case 'quiz':
                 this.timerEnabled = true;
@@ -345,11 +383,13 @@ class KoreaMapQuiz {
         this.loadingEl = document.getElementById('loading');
         this.modeButtonsEl = document.getElementById('mode-buttons');
         this.scoreEl = document.getElementById('score');
+        this.comboEl = document.getElementById('combo');
         this.questionNumEl = document.getElementById('question-num');
         this.timerEl = document.getElementById('timer');
         this.timerFillEl = document.getElementById('timer-fill');
         this.questionTextEl = document.getElementById('question-text');
         this.stepIndicatorEl = document.getElementById('step-indicator');
+        this.questionAreaEl = document.querySelector('.question-area');
         this.mapContainer = document.getElementById('map-container');
         this.mapSvg = document.getElementById('map-svg');
         this.feedbackEl = document.getElementById('feedback');
@@ -359,6 +399,10 @@ class KoreaMapQuiz {
         this.modeDescriptionEl = document.getElementById('mode-description');
         this.instructionsEl = document.getElementById('instructions');
         this.themeToggleBtn = document.getElementById('theme-toggle');
+        this.labelToggleEl = document.getElementById('label-toggle');
+        this.testModeSelectEl = document.getElementById('test-mode-select');
+        this.choicesContainer = document.getElementById('choices-container');
+        this.choicesGrid = document.getElementById('choices-grid');
     }
 
     initEventListeners() {
@@ -376,6 +420,30 @@ class KoreaMapQuiz {
                     opt.classList.remove('selected');
                 });
                 e.target.closest('.filter-option').classList.add('selected');
+            });
+        });
+
+        // 이름 표시 토글 이벤트 (연습 모드)
+        const labelOptions = document.querySelectorAll('#label-toggle input[name="showLabels"]');
+        labelOptions.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                // 선택 상태 UI 업데이트
+                document.querySelectorAll('#label-toggle .toggle-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                e.target.closest('.toggle-option').classList.add('selected');
+            });
+        });
+
+        // 4단계 테스트 모드 선택 이벤트 (스피드/서바이벌)
+        const testModeOptions = document.querySelectorAll('#test-mode-select input[name="testSubMode"]');
+        testModeOptions.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                // 선택 상태 UI 업데이트
+                document.querySelectorAll('#test-mode-select .toggle-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                e.target.closest('.toggle-option').classList.add('selected');
             });
         });
     }
@@ -431,7 +499,7 @@ class KoreaMapQuiz {
                     <h3>탐색 방법</h3>
                     <ol>
                         <li>원하는 <strong>도/광역시</strong>를 클릭하세요</li>
-                        <li>도 지역의 경우 <strong>북부/남부</strong>를 선택하세요</li>
+                        <li>경기도는 <strong>북부/남부</strong>를 선택하세요</li>
                         <li>시/군/구를 클릭하면 지역 정보가 표시됩니다</li>
                         <li>뒤로가기 버튼으로 언제든 돌아갈 수 있어요</li>
                     </ol>
@@ -440,14 +508,14 @@ class KoreaMapQuiz {
             },
             practice: {
                 title: '연습 모드',
-                description: '시간제한 없이 천천히 문제를 풀어보세요',
+                description: '시간 제한 없이 천천히 문제를 풀어보세요',
                 instructions: `
                     <h3>게임 방법</h3>
                     <ol>
                         <li>문제가 출제되면 해당 지역이 속한 <strong>도/광역시</strong>를 먼저 클릭</li>
-                        <li>도 지역의 경우 <strong>북부/남부</strong> 선택</li>
-                        <li>마지막으로 정확한 <strong>시/군/구</strong>를 클릭</li>
-                        <li><strong>시간제한 없음!</strong> 천천히 풀어보세요</li>
+                        <li>경기도는 <strong>북부/남부</strong> 선택</li>
+                        <li>정확한 <strong>시/군/구</strong>를 클릭</li>
+                        <li><strong>시간제한 없음!</strong> 틀려도 정답을 찾을 때까지 계속 도전!</li>
                     </ol>
                 `,
                 buttonText: '연습 시작'
@@ -459,8 +527,8 @@ class KoreaMapQuiz {
                     <h3>게임 방법</h3>
                     <ol>
                         <li>문제가 출제되면 해당 지역이 속한 <strong>도/광역시</strong>를 먼저 클릭</li>
-                        <li>도 지역의 경우 <strong>북부/남부</strong> 선택</li>
-                        <li>마지막으로 정확한 <strong>시/군/구</strong>를 클릭</li>
+                        <li>경기도는 <strong>북부/남부</strong> 선택</li>
+                        <li>정확한 <strong>시/군/구</strong>를 클릭</li>
                         <li>각 문제당 <strong>5초</strong> 제한시간!</li>
                     </ol>
                 `,
@@ -468,14 +536,14 @@ class KoreaMapQuiz {
             },
             test: {
                 title: '실전 테스트',
-                description: '지역 이름 없이 지도 모양만 보고 맞춰보세요!',
+                description: '하이라이트된 지역의 이름을 8개 보기 중에서 맞춰보세요!',
                 instructions: `
                     <h3>게임 방법</h3>
                     <ol>
-                        <li>문제가 출제되면 해당 지역이 속한 <strong>도/광역시</strong>를 먼저 클릭</li>
-                        <li>도 지역의 경우 <strong>북부/남부</strong> 선택</li>
-                        <li>시/군/구를 클릭 - <strong>이름이 표시되지 않습니다!</strong></li>
+                        <li>지도에서 <strong>빨간색으로 표시된 지역</strong>을 확인하세요</li>
+                        <li>아래 <strong>8개의 보기</strong> 중 정답을 선택하세요</li>
                         <li>각 문제당 <strong>5초</strong> 제한시간!</li>
+                        <li>틀리면 바로 다음 문제로 넘어갑니다</li>
                     </ol>
                 `,
                 buttonText: '테스트 시작'
@@ -494,6 +562,27 @@ class KoreaMapQuiz {
         const regionFilter = document.getElementById('region-filter');
         if (regionFilter) {
             regionFilter.classList.remove('hidden');
+        }
+
+        // 이름 표시 토글 (explore, practice, quiz 모드에서만 표시)
+        // test 모드는 8지선다라서 이름 표시 옵션 불필요
+        if (this.labelToggleEl) {
+            if (this.gameMode === 'test') {
+                this.labelToggleEl.classList.add('hidden');
+            } else if (this.gameMode === 'explore' || this.gameMode === 'practice' || this.gameMode === 'quiz') {
+                this.labelToggleEl.classList.remove('hidden');
+            } else {
+                this.labelToggleEl.classList.add('hidden');
+            }
+        }
+
+        // 4단계 테스트 모드 선택 (스피드/서바이벌 - test 모드에서만 표시)
+        if (this.testModeSelectEl) {
+            if (this.gameMode === 'test') {
+                this.testModeSelectEl.classList.remove('hidden');
+            } else {
+                this.testModeSelectEl.classList.add('hidden');
+            }
         }
     }
 
@@ -682,16 +771,20 @@ class KoreaMapQuiz {
                 const allowedDistricts = QUIZ_REGIONS[provinceName];
 
                 // "시+구" 패턴인 경우 시 단위로 변환
-                const cityName = this.extractCityName(originalName);
+                let cityName = this.extractCityName(originalName);
 
-                // QUIZ_REGIONS에 시 이름이 있고, 아직 추가 안 된 경우에만 추가
-                if (allowedDistricts.length > 0 && allowedDistricts.includes(cityName)) {
-                    const uniqueKey = `${provinceName}-${cityName}`;
+                // TopoJSON 데이터명 → 표시명 변환 (예: 남구 → 미추홀구)
+                const displayName = DISPLAY_NAME_MAP[cityName] || cityName;
+
+                // QUIZ_REGIONS에 표시 이름이 있고, 아직 추가 안 된 경우에만 추가
+                if (allowedDistricts.length > 0 && allowedDistricts.includes(displayName)) {
+                    const uniqueKey = `${provinceName}-${displayName}`;
 
                     if (!addedCities.has(uniqueKey)) {
                         addedCities.add(uniqueKey);
                         this.allDistricts.push({
-                            name: cityName,  // 시 단위 이름 사용
+                            name: displayName,  // 표시용 이름 사용 (미추홀구)
+                            dataName: cityName,  // TopoJSON 데이터 이름 (남구)
                             originalName: originalName,  // 원래 이름 보관
                             provinceName: provinceName,
                             code: code,
@@ -721,8 +814,25 @@ class KoreaMapQuiz {
     startGame() {
         document.body.classList.add('game-active');
         this.score = 0;
+        this.combo = 0;
+        this.maxComboAchieved = 0;
         this.currentQuestion = 0;
         this.results = [];
+        this.practiceAttempts = 0;
+
+        // 이름 표시 옵션 적용 (explore, practice, quiz 모드)
+        if (this.gameMode === 'explore' || this.gameMode === 'practice' || this.gameMode === 'quiz') {
+            const labelToggle = document.querySelector('#label-toggle input[name="showLabels"]:checked');
+            this.showLabels = labelToggle?.value !== 'hide';
+
+            // 라벨 숨김 처리 업데이트
+            const mapContainer = document.getElementById('map-container');
+            if (this.showLabels) {
+                mapContainer?.classList.remove('hide-labels');
+            } else {
+                mapContainer?.classList.add('hide-labels');
+            }
+        }
 
         if (this.gameMode === 'explore') {
             // 탐색 모드: 퀴즈 없이 지도 둘러보기
@@ -738,10 +848,49 @@ class KoreaMapQuiz {
             } else {
                 this.renderExploreProvinceMap();
             }
-        } else {
-            // 퀴즈 모드
+        } else if (this.gameMode === 'test') {
+            // 4단계 실전 테스트: 지역 보여주고 이름 맞추기 (8지선다)
+            // 서브모드 읽기 (스피드 / 서바이벌)
+            const testSubModeRadio = document.querySelector('#test-mode-select input[name="testSubMode"]:checked');
+            this.testSubMode = testSubModeRadio?.value || 'speed';
+            console.log('[테스트모드] 게임 시작 - 서브모드:', this.testSubMode);
+
+            // 서브모드별 초기화
+            if (this.testSubMode === 'speed') {
+                // 스피드 모드: 60초 총 시간, 무제한 문제
+                this.speedTimeRemaining = this.speedTimeLimit;
+                this.totalQuestions = 9999;  // 무제한 (시간 내 최대한 많이)
+            } else {
+                // 서바이벌 모드: 목숨 3개, 무제한 문제
+                this.lives = this.maxLives;
+                this.totalQuestions = 9999;  // 무제한 (목숨 다 떨어질 때까지)
+            }
+
             this.generateQuestions();
             this.showScreen('game');
+
+            // 4단계에서는 "문제: 이 지역의 이름은?" 영역 숨기기
+            this.questionAreaEl?.classList.add('hidden');
+            if (this.questionAreaEl) {
+                this.questionAreaEl.style.display = 'none';
+            }
+            document.body.classList.add('test-mode');
+
+            this.choicesContainer?.classList.remove('hidden');
+            console.log('[테스트모드] 8지선다 컨테이너 표시');
+            this.updateUI();
+
+            // 스피드 모드: 전체 타이머 시작
+            if (this.testSubMode === 'speed') {
+                this.startSpeedTimer();
+            }
+
+            this.nextTestQuestion();
+        } else {
+            // 퀴즈 모드 (practice, quiz)
+            this.generateQuestions();
+            this.showScreen('game');
+            this.choicesContainer?.classList.add('hidden');
             this.updateUI();
             this.nextQuestion();
         }
@@ -796,11 +945,53 @@ class KoreaMapQuiz {
             case 'game': this.gameScreen.classList.add('active'); break;
             case 'result': this.resultScreen.classList.add('active'); break;
         }
+
+        // 4단계 테스트 모드에서는 question-area 숨김
+        if (screen === 'game' && this.gameMode === 'test') {
+            const questionArea = document.querySelector('.question-area');
+            if (questionArea) {
+                questionArea.style.display = 'none';
+            }
+        }
     }
 
     updateUI() {
         this.scoreEl.textContent = this.score;
-        this.questionNumEl.textContent = `${this.currentQuestion}/${this.totalQuestions}`;
+
+        // 4단계 테스트 모드 서브모드별 표시
+        if (this.gameMode === 'test') {
+            if (this.testSubMode === 'speed') {
+                // 스피드 모드: 맞춘 개수만 표시
+                this.questionNumEl.textContent = `${this.currentQuestion}문제`;
+            } else if (this.testSubMode === 'survival') {
+                // 서바이벌 모드: 목숨 표시
+                this.questionNumEl.textContent = '❤️'.repeat(this.lives) + '🖤'.repeat(this.maxLives - this.lives);
+            }
+        } else {
+            this.questionNumEl.textContent = `${this.currentQuestion}/${this.totalQuestions}`;
+        }
+        this.updateComboDisplay();
+    }
+
+    updateScore() {
+        this.scoreEl.textContent = this.score;
+        this.updateComboDisplay();
+    }
+
+    updateComboDisplay() {
+        if (this.comboEl) {
+            this.comboEl.textContent = this.combo;
+            // 콤보에 따라 시각적 효과 추가
+            if (this.combo >= 10) {
+                this.comboEl.className = 'value combo-value combo-max';
+            } else if (this.combo >= 5) {
+                this.comboEl.className = 'value combo-value combo-high';
+            } else if (this.combo >= 3) {
+                this.comboEl.className = 'value combo-value combo-mid';
+            } else {
+                this.comboEl.className = 'value combo-value';
+            }
+        }
     }
 
     nextQuestion() {
@@ -845,6 +1036,339 @@ class KoreaMapQuiz {
         }
     }
 
+    // ===== 4단계 실전 테스트 (8지선다) 전용 함수들 =====
+
+    nextTestQuestion() {
+        // 문제를 다 풀었는지 확인
+        if (this.currentQuestion >= this.questions.length) {
+            // 스피드/서바이벌 모드: 문제 다 풀면 다시 셔플해서 계속
+            if (this.gameMode === 'test' && (this.testSubMode === 'speed' || this.testSubMode === 'survival')) {
+                console.log('[테스트모드] 문제 다 풀음 - 다시 셔플');
+                this.generateQuestions();
+                this.currentQuestion = 0;
+            } else {
+                // 일반 모드: 게임 종료
+                this.choicesContainer?.classList.add('hidden');
+                this.endGame();
+                return;
+            }
+        }
+
+        this.currentAnswer = this.questions[this.currentQuestion];
+        this.currentQuestion++;
+        this.updateUI();
+
+        // 문제 안내 텍스트
+        this.questionTextEl.textContent = '이 지역의 이름은?';
+        this.stepIndicatorEl.textContent = `하이라이트된 지역의 이름을 맞춰보세요`;
+        this.feedbackEl.textContent = '';
+        this.feedbackEl.className = 'feedback';
+
+        // 지도에 해당 지역 하이라이트
+        this.renderTestMap();
+
+        // 8지선다 생성
+        this.generateTestChoices();
+
+        // 타이머 시작
+        console.log('[테스트모드] 타이머 시작 호출');
+        this.startTimer();
+    }
+
+    renderTestMap() {
+        d3.select(this.mapSvg).selectAll('*').remove();
+
+        const width = this.mapContainer.clientWidth - 40;
+        const height = this.mapContainer.clientHeight - 20;
+
+        // 현재 문제의 시도 찾기
+        const provinceName = this.currentAnswer.provinceName;
+        const provinceCode = Object.keys(CODE_TO_PROVINCE).find(k => CODE_TO_PROVINCE[k] === provinceName);
+
+        // 해당 시도의 모든 시군구 가져오기
+        let allDistricts = this.municipalitiesGeo.features.filter(f =>
+            f.properties.code.startsWith(provinceCode)
+        );
+
+        // 본토만 (섬 제외)
+        const districts = allDistricts.filter(f => !ISLAND_DISTRICTS.includes(f.properties.name));
+        const islandDistricts = allDistricts.filter(f => ISLAND_DISTRICTS.includes(f.properties.name));
+
+        // 인천의 섬 지역이 있으면 왼쪽에 인셋 박스 공간 확보
+        const hasIncheonIslands = provinceName === '인천광역시' && islandDistricts.length > 0;
+        const leftMargin = hasIncheonIslands ? 340 : 20;
+
+        // 투영 설정
+        const featureCollection = { type: 'FeatureCollection', features: districts };
+        this.projection = d3.geoMercator().fitExtent([[leftMargin, 20], [width - 20, height - 20]], featureCollection);
+        this.path = d3.geoPath().projection(this.projection);
+
+        this.svg = d3.select(this.mapSvg)
+            .attr('width', width)
+            .attr('height', height);
+
+        this.mapGroup = this.svg.append('g').attr('class', 'map-group');
+
+        // 정답 지역 찾기
+        const answerName = this.currentAnswer.name;
+        const isIslandAnswer = ISLAND_DISTRICTS.includes(answerName);
+
+        // 시군구 그리기
+        this.mapGroup.selectAll('.district')
+            .data(districts)
+            .enter()
+            .append('path')
+            .attr('class', d => {
+                const isAnswer = d.properties.name === answerName;
+                return `district ${isAnswer ? 'highlighted-answer' : ''}`;
+            })
+            .attr('d', this.path)
+            .attr('fill', d => {
+                const isAnswer = d.properties.name === answerName;
+                return isAnswer ? '#FF6B6B' : '#444';
+            })
+            .attr('stroke', '#666')
+            .attr('stroke-width', 0.5);
+
+        // 섬 지역 인셋 박스 렌더링
+        const shouldShowInsets = islandDistricts.filter(island => {
+            const islandName = island.properties.name;
+            if (islandName === '강화군' || islandName === '옹진군') {
+                return provinceName === '인천광역시';
+            } else if (islandName === '울릉군') {
+                return provinceName === '경상북도';
+            }
+            return false;
+        });
+
+        if (shouldShowInsets.length > 0) {
+            this.renderTestIslandInsets(shouldShowInsets, answerName, width, height);
+        }
+    }
+
+    renderTestIslandInsets(islandDistricts, answerName, width, height) {
+        const insetSize = 300;
+        const padding = 20;
+        const gap = 15;
+
+        const centerLeftIslands = islandDistricts.filter(island => {
+            const cfg = ISLAND_INSET_CONFIG[island.properties.name];
+            return cfg && (cfg.position === 'center-left-top' || cfg.position === 'center-left-bottom');
+        });
+        const totalCenterHeight = centerLeftIslands.length * insetSize + (centerLeftIslands.length - 1) * gap;
+        const centerStartY = (height - totalCenterHeight) / 2;
+        let centerLeftIndex = 0;
+
+        islandDistricts.forEach((island, index) => {
+            const islandName = island.properties.name;
+            const config = ISLAND_INSET_CONFIG[islandName];
+            if (!config) return;
+
+            const isAnswer = islandName === answerName;
+
+            let insetX, insetY;
+            if (config.position === 'center-left-top' || config.position === 'center-left-bottom') {
+                insetX = padding;
+                insetY = centerStartY + (centerLeftIndex * (insetSize + gap));
+                centerLeftIndex++;
+            } else if (config.position === 'top-right') {
+                insetX = width - insetSize - padding;
+                insetY = padding;
+            } else {
+                insetX = padding + (index * (insetSize + padding));
+                insetY = height - insetSize - padding - 30;
+            }
+
+            const insetGroup = this.mapGroup.append('g')
+                .attr('class', 'island-inset')
+                .attr('transform', `translate(${insetX}, ${insetY})`);
+
+            insetGroup.append('rect')
+                .attr('width', insetSize)
+                .attr('height', insetSize)
+                .attr('fill', 'rgba(0, 0, 0, 0.3)')
+                .attr('stroke', isAnswer ? '#FF6B6B' : '#fff')
+                .attr('stroke-width', isAnswer ? 3 : 1)
+                .attr('rx', 5);
+
+            const islandCollection = { type: 'FeatureCollection', features: [island] };
+            const islandProjection = d3.geoMercator()
+                .fitSize([insetSize - 20, insetSize - 30], islandCollection);
+            const islandPath = d3.geoPath().projection(islandProjection);
+
+            insetGroup.append('path')
+                .datum(island)
+                .attr('class', `district ${isAnswer ? 'highlighted-answer' : ''}`)
+                .attr('d', islandPath)
+                .attr('transform', 'translate(10, 5)')
+                .attr('fill', isAnswer ? '#FF6B6B' : '#444')
+                .attr('stroke', '#666')
+                .attr('stroke-width', 0.5);
+        });
+    }
+
+    generateTestChoices() {
+        // 8개의 선택지 생성 (1개 정답 + 7개 오답)
+        const correctAnswer = this.currentAnswer.name;
+        const provinceName = this.currentAnswer.provinceName;
+
+        // 같은 시도 내 다른 지역들에서 오답 후보 가져오기
+        let wrongCandidates = this.allDistricts
+            .filter(d => d.provinceName === provinceName && d.name !== correctAnswer)
+            .map(d => d.name);
+
+        // 같은 시도 내 후보가 부족하면 다른 시도에서 추가
+        if (wrongCandidates.length < 7) {
+            const otherDistricts = this.allDistricts
+                .filter(d => d.provinceName !== provinceName && d.name !== correctAnswer)
+                .map(d => d.name);
+            this.shuffleArray(otherDistricts);
+            wrongCandidates = [...wrongCandidates, ...otherDistricts];
+        }
+
+        // 중복 제거 후 셔플
+        wrongCandidates = [...new Set(wrongCandidates)];
+        this.shuffleArray(wrongCandidates);
+
+        // 7개 오답 선택
+        const wrongAnswers = wrongCandidates.slice(0, 7);
+
+        // 정답과 오답 합쳐서 셔플 (정확히 8개)
+        const choices = [correctAnswer, ...wrongAnswers];
+        this.shuffleArray(choices);
+
+        // 버튼 생성
+        if (!this.choicesGrid) {
+            console.error('choicesGrid element not found');
+            return;
+        }
+
+        this.choicesGrid.innerHTML = '';
+        choices.forEach((choice, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.textContent = `${index + 1}. ${DISPLAY_NAME_MAP[choice] || choice}`;
+            btn.dataset.answer = choice;
+            btn.addEventListener('click', () => this.handleTestChoice(choice, btn));
+            this.choicesGrid.appendChild(btn);
+        });
+
+        console.log(`8지선다 생성 완료: ${choices.length}개 선택지`);
+    }
+
+    handleTestChoice(selectedAnswer, btnElement) {
+        this.stopTimer();
+
+        const correctAnswer = this.currentAnswer.name;
+        const isCorrect = selectedAnswer === correctAnswer;
+
+        // 모든 버튼 비활성화
+        const allBtns = this.choicesGrid.querySelectorAll('.choice-btn');
+        allBtns.forEach(btn => {
+            btn.disabled = true;
+            if (btn.dataset.answer === correctAnswer) {
+                btn.classList.add('correct');
+            }
+        });
+
+        if (isCorrect) {
+            btnElement.classList.add('correct');
+            // 콤보 증가 (최대 10)
+            this.combo = Math.min(this.combo + 1, this.maxCombo);
+            this.maxComboAchieved = Math.max(this.maxComboAchieved, this.combo);
+            // 점수 계산: 기본 100점 + 콤보 보너스 (콤보 * 10점)
+            const comboBonus = (this.combo - 1) * this.comboBonus;
+            const earnedScore = this.baseScore + comboBonus;
+            this.score += earnedScore;
+            this.updateScore();
+            this.results.push({
+                question: this.currentAnswer.name,
+                correct: true,
+                earnedScore: earnedScore,
+                combo: this.combo
+            });
+            const comboText = this.combo > 1 ? ` (${this.combo}콤보!)` : '';
+            this.showFeedback(`정답! +${earnedScore}점${comboText}`, 'correct');
+        } else {
+            btnElement.classList.add('incorrect');
+            // 오답 감점 (-20점, 0점 미만 방지)
+            this.score = Math.max(0, this.score - this.wrongPenalty);
+            // 콤보 초기화
+            this.combo = 0;
+            this.updateScore();
+
+            // 서바이벌 모드: 목숨 감소
+            if (this.testSubMode === 'survival') {
+                this.lives--;
+                this.updateUI();  // 목숨 UI 업데이트
+            }
+
+            this.results.push({
+                question: this.currentAnswer.name,
+                correct: false,
+                userAnswer: selectedAnswer,
+                penalty: this.wrongPenalty
+            });
+            const displayName = DISPLAY_NAME_MAP[correctAnswer] || correctAnswer;
+            this.showFeedback(`오답! -${this.wrongPenalty}점 정답: ${displayName}`, 'incorrect');
+
+            // 서바이벌 모드: 목숨이 0이면 게임 종료
+            if (this.testSubMode === 'survival' && this.lives <= 0) {
+                setTimeout(() => this.endGame(), 500);
+                return;
+            }
+        }
+
+        // 0.5초 후 다음 문제 (정답 확인 후 빠르게 진행)
+        setTimeout(() => this.nextTestQuestion(), 500);
+    }
+
+    handleTestTimeout() {
+        console.log('[테스트모드] 타임아웃 발생!');
+        // 타임아웃 시 오답 처리
+        const correctAnswer = this.currentAnswer.name;
+
+        // 모든 버튼 비활성화 및 정답 표시
+        const allBtns = this.choicesGrid.querySelectorAll('.choice-btn');
+        allBtns.forEach(btn => {
+            btn.disabled = true;
+            if (btn.dataset.answer === correctAnswer) {
+                btn.classList.add('correct');
+            }
+        });
+
+        // 오답 감점 (-20점, 0점 미만 방지)
+        this.score = Math.max(0, this.score - this.wrongPenalty);
+        // 콤보 초기화
+        this.combo = 0;
+        this.updateScore();
+
+        // 서바이벌 모드: 목숨 감소
+        if (this.testSubMode === 'survival') {
+            this.lives--;
+            this.updateUI();  // 목숨 UI 업데이트
+        }
+
+        this.results.push({
+            question: this.currentAnswer.name,
+            correct: false,
+            userAnswer: '시간 초과',
+            penalty: this.wrongPenalty
+        });
+
+        const displayName = DISPLAY_NAME_MAP[correctAnswer] || correctAnswer;
+        this.showFeedback(`시간 초과! -${this.wrongPenalty}점 정답: ${displayName}`, 'timeout');
+
+        // 서바이벌 모드: 목숨이 0이면 게임 종료
+        if (this.testSubMode === 'survival' && this.lives <= 0) {
+            setTimeout(() => this.endGame(), 500);
+            return;
+        }
+
+        // 0.5초 후 다음 문제 (정답 확인 후 빠르게 진행)
+        setTimeout(() => this.nextTestQuestion(), 500);
+    }
+
     // ===== EXPLORE 모드 전용 함수들 =====
 
     renderExploreProvinceMap() {
@@ -863,18 +1387,18 @@ class KoreaMapQuiz {
         // 지도 그룹 생성 (줌 적용 대상)
         this.mapGroup = this.svg.append('g').attr('class', 'map-group');
 
-        const filteredProvinces = this.provincesGeo.features.filter(f =>
-            f.properties.name !== '제주특별자치도'
-        );
+        // 모든 시도 포함 (제주도 포함)
+        const allProvinces = this.provincesGeo.features;
 
-        // fitExtent로 여백을 주고 가운데 정렬
-        const featureCollection = { type: 'FeatureCollection', features: filteredProvinces };
+        // 본토만으로 지도 크기 계산 (제주도 제외) - 본토를 크게 표시
+        const mainlandProvinces = allProvinces.filter(f => f.properties.name !== '제주특별자치도');
+        const mainlandCollection = { type: 'FeatureCollection', features: mainlandProvinces };
         const padding = 20;
-        this.projection = d3.geoMercator().fitExtent([[padding, padding], [width - padding, height - padding]], featureCollection);
+        this.projection = d3.geoMercator().fitExtent([[padding, padding], [width - padding, height - padding]], mainlandCollection);
         this.path = d3.geoPath().projection(this.projection);
 
         this.mapGroup.selectAll('.province')
-            .data(filteredProvinces)
+            .data(allProvinces)
             .enter()
             .append('path')
             .attr('class', 'province')
@@ -884,13 +1408,16 @@ class KoreaMapQuiz {
             .attr('data-group', d => PROVINCE_TO_GROUP[d.properties.name] || null)
             .on('click', (event, d) => this.handleExploreRegionGroupClick(d.properties.name));
 
-        this.mapGroup.selectAll('.region-label')
-            .data(filteredProvinces)
-            .enter()
-            .append('text')
-            .attr('class', 'region-label province-label')
-            .attr('transform', d => `translate(${this.path.centroid(d)})`)
-            .text(d => SHORT_NAMES[d.properties.name] || d.properties.name);
+        // 시도 라벨 (showLabels 옵션 체크)
+        if (this.showLabels) {
+            this.mapGroup.selectAll('.region-label')
+                .data(allProvinces)
+                .enter()
+                .append('text')
+                .attr('class', 'region-label province-label')
+                .attr('transform', d => `translate(${this.path.centroid(d)})`)
+                .text(d => SHORT_NAMES[d.properties.name] || d.properties.name);
+        }
     }
 
     handleExploreRegionGroupClick(provinceName) {
@@ -916,12 +1443,22 @@ class KoreaMapQuiz {
         const height = this.mapContainer.clientHeight - 20;
 
         const groupProvinces = REGION_GROUPS[groupName];
-        const filteredProvinces = this.provincesGeo.features.filter(f =>
-            groupProvinces.includes(f.properties.name)
-        );
 
-        const featureCollection = { type: 'FeatureCollection', features: filteredProvinces };
-        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - 20, height - 20]], featureCollection);
+        // 해당 그룹의 모든 시군구 가져오기
+        const allDistricts = this.municipalitiesGeo.features.filter(f => {
+            const provinceName = CODE_TO_PROVINCE[f.properties.code.substring(0, 2)];
+            return groupProvinces.includes(provinceName);
+        });
+
+        // 본토 시군구와 섬 시군구 분리
+        const mainlandDistricts = allDistricts.filter(f => !ISLAND_DISTRICTS.includes(f.properties.name));
+        const islandDistricts = allDistricts.filter(f => ISLAND_DISTRICTS.includes(f.properties.name));
+
+        // 본토 기준으로 projection 설정
+        const hasIslands = islandDistricts.length > 0;
+        const leftMargin = hasIslands ? 340 : 20;
+        const mainlandCollection = { type: 'FeatureCollection', features: mainlandDistricts };
+        this.projection = d3.geoMercator().fitExtent([[leftMargin, 20], [width - 20, height - 20]], mainlandCollection);
         this.path = d3.geoPath().projection(this.projection);
 
         this.svg = d3.select(this.mapSvg)
@@ -940,23 +1477,54 @@ class KoreaMapQuiz {
             this.renderExploreProvinceMap();
         });
 
-        this.mapGroup.selectAll('.province')
-            .data(filteredProvinces)
+        // 시군구를 시도별 색상으로 렌더링
+        this.mapGroup.selectAll('.district')
+            .data(mainlandDistricts)
             .enter()
             .append('path')
-            .attr('class', 'province')
+            .attr('class', 'district')
             .attr('d', this.path)
-            .attr('fill', d => getProvinceColors()[d.properties.name] || '#666')
+            .attr('fill', d => {
+                const provinceName = CODE_TO_PROVINCE[d.properties.code.substring(0, 2)];
+                return getProvinceColors()[provinceName] || '#666';
+            })
+            .attr('stroke', '#fff')
+            .attr('stroke-width', 0.3)
             .attr('data-name', d => d.properties.name)
-            .on('click', (event, d) => this.handleExploreProvinceClick(d.properties.name));
+            .attr('data-province', d => CODE_TO_PROVINCE[d.properties.code.substring(0, 2)])
+            .on('click', (event, d) => {
+                const provinceName = CODE_TO_PROVINCE[d.properties.code.substring(0, 2)];
+                this.handleExploreProvinceClick(provinceName);
+            });
 
-        this.mapGroup.selectAll('.region-label')
-            .data(filteredProvinces)
-            .enter()
-            .append('text')
-            .attr('class', 'region-label')
-            .attr('transform', d => `translate(${this.path.centroid(d)})`)
-            .text(d => SHORT_NAMES[d.properties.name] || d.properties.name);
+        // 시도 라벨 (showLabels 옵션 체크)
+        if (this.showLabels) {
+            const provinceGroups = {};
+            mainlandDistricts.forEach(d => {
+                const provinceName = CODE_TO_PROVINCE[d.properties.code.substring(0, 2)];
+                if (!provinceGroups[provinceName]) {
+                    provinceGroups[provinceName] = [];
+                }
+                provinceGroups[provinceName].push(d);
+            });
+
+            Object.entries(provinceGroups).forEach(([provinceName, districts]) => {
+                const centroids = districts.map(d => this.path.centroid(d)).filter(c => !isNaN(c[0]));
+                if (centroids.length > 0) {
+                    const avgX = d3.mean(centroids, c => c[0]);
+                    const avgY = d3.mean(centroids, c => c[1]);
+                    this.mapGroup.append('text')
+                        .attr('class', 'region-label')
+                        .attr('transform', `translate(${avgX}, ${avgY})`)
+                        .text(SHORT_NAMES[provinceName] || provinceName);
+                }
+            });
+        }
+
+        // 섬 지역 인셋 박스 렌더링
+        if (islandDistricts.length > 0) {
+            this.renderFilteredRegionIslandInsets(islandDistricts, width, height);
+        }
     }
 
     // Explore 모드: 지역 필터 선택 시 해당 권역 지도 표시
@@ -972,12 +1540,19 @@ class KoreaMapQuiz {
             return;
         }
 
-        const filteredProvinces = this.provincesGeo.features.filter(f =>
-            allowedProvinces.includes(f.properties.name)
-        );
+        // 해당 권역의 모든 시군구 가져오기
+        const allDistricts = this.municipalitiesGeo.features.filter(f => {
+            const provinceName = CODE_TO_PROVINCE[f.properties.code.substring(0, 2)];
+            return allowedProvinces.includes(provinceName);
+        });
 
-        const featureCollection = { type: 'FeatureCollection', features: filteredProvinces };
-        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - 20, height - 20]], featureCollection);
+        // 본토 시군구와 섬 시군구 분리
+        const mainlandDistricts = allDistricts.filter(f => !ISLAND_DISTRICTS.includes(f.properties.name));
+        const islandDistricts = allDistricts.filter(f => ISLAND_DISTRICTS.includes(f.properties.name));
+
+        // 본토 기준으로 projection 설정 (섬 제외)
+        const mainlandCollection = { type: 'FeatureCollection', features: mainlandDistricts };
+        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - 220, height - 20]], mainlandCollection);
         this.path = d3.geoPath().projection(this.projection);
 
         this.svg = d3.select(this.mapSvg)
@@ -996,25 +1571,128 @@ class KoreaMapQuiz {
             this.renderExploreProvinceMap();
         });
 
-        this.mapGroup.selectAll('.province')
-            .data(filteredProvinces)
+        // 시군구를 시도별 색상으로 렌더링 (본토만)
+        this.mapGroup.selectAll('.district')
+            .data(mainlandDistricts)
             .enter()
             .append('path')
-            .attr('class', 'province')
+            .attr('class', 'district')
             .attr('d', this.path)
-            .attr('fill', d => getProvinceColors()[d.properties.name] || '#666')
+            .attr('fill', d => {
+                const provinceName = CODE_TO_PROVINCE[d.properties.code.substring(0, 2)];
+                return getProvinceColors()[provinceName] || '#666';
+            })
+            .attr('stroke', '#fff')
+            .attr('stroke-width', 0.3)
             .attr('data-name', d => d.properties.name)
-            .on('click', (event, d) => this.handleExploreProvinceClick(d.properties.name));
+            .attr('data-province', d => CODE_TO_PROVINCE[d.properties.code.substring(0, 2)])
+            .on('click', (event, d) => {
+                const provinceName = CODE_TO_PROVINCE[d.properties.code.substring(0, 2)];
+                this.handleExploreProvinceClick(provinceName);
+            });
 
-        this.mapGroup.selectAll('.region-label')
-            .data(filteredProvinces)
-            .enter()
-            .append('text')
-            .attr('class', 'region-label')
-            .attr('transform', d => `translate(${this.path.centroid(d)})`)
-            .text(d => SHORT_NAMES[d.properties.name] || d.properties.name);
+        // 시도 라벨 (showLabels 옵션 체크)
+        if (this.showLabels) {
+            const provinceGroups = {};
+            mainlandDistricts.forEach(d => {
+                const provinceName = CODE_TO_PROVINCE[d.properties.code.substring(0, 2)];
+                if (!provinceGroups[provinceName]) {
+                    provinceGroups[provinceName] = [];
+                }
+                provinceGroups[provinceName].push(d);
+            });
+
+            Object.entries(provinceGroups).forEach(([provinceName, districts]) => {
+                // 해당 시도의 모든 시군구 중심점 평균으로 라벨 위치 결정
+                const centroids = districts.map(d => this.path.centroid(d)).filter(c => !isNaN(c[0]));
+                if (centroids.length > 0) {
+                    const avgX = d3.mean(centroids, c => c[0]);
+                    const avgY = d3.mean(centroids, c => c[1]);
+                    this.mapGroup.append('text')
+                        .attr('class', 'region-label')
+                        .attr('transform', `translate(${avgX}, ${avgY})`)
+                        .text(SHORT_NAMES[provinceName] || provinceName);
+                }
+            });
+        }
+
+        // 섬 지역 인셋 박스 렌더링
+        if (islandDistricts.length > 0) {
+            this.renderFilteredRegionIslandInsets(islandDistricts, width, height);
+        }
 
         this.feedbackEl.textContent = `${regionFilter} 지역을 탐색하세요`;
+    }
+
+    // 권역 지도용 섬 인셋 박스 렌더링
+    renderFilteredRegionIslandInsets(islandDistricts, width, height) {
+        const insetSize = 300;
+        const padding = 20;
+        const gap = 15;
+
+        // 중앙 정렬 계산
+        const totalHeight = islandDistricts.length * insetSize + (islandDistricts.length - 1) * gap;
+        const startY = (height - totalHeight) / 2;
+
+        islandDistricts.forEach((island, index) => {
+            const islandName = island.properties.name;
+            const provinceName = CODE_TO_PROVINCE[island.properties.code.substring(0, 2)];
+            const color = getProvinceColors()[provinceName] || '#666';
+
+            const insetX = padding;
+            const insetY = startY + (index * (insetSize + gap));
+
+            const insetGroup = this.mapGroup.append('g')
+                .attr('class', 'island-inset')
+                .attr('transform', `translate(${insetX}, ${insetY})`);
+
+            insetGroup.append('rect')
+                .attr('width', insetSize)
+                .attr('height', insetSize)
+                .attr('fill', 'rgba(0, 0, 0, 0.3)')
+                .attr('stroke', '#fff')
+                .attr('stroke-width', 1)
+                .attr('rx', 5);
+
+            const islandCollection = { type: 'FeatureCollection', features: [island] };
+            const islandProjection = d3.geoMercator()
+                .fitSize([insetSize - 30, insetSize - 40], islandCollection);
+            const islandPath = d3.geoPath().projection(islandProjection);
+
+            const self = this;
+            insetGroup.append('path')
+                .datum(island)
+                .attr('class', 'district')
+                .attr('d', islandPath)
+                .attr('transform', 'translate(15, 10)')
+                .attr('fill', color)
+                .attr('stroke', '#fff')
+                .attr('stroke-width', 0.5)
+                .attr('data-name', islandName)
+                .on('click', function () {
+                    self.handleExploreProvinceClick(provinceName);
+                })
+                .on('mouseenter', function () {
+                    d3.select(this)
+                        .attr('stroke-width', '2px')
+                        .style('filter', 'brightness(1.2)');
+                })
+                .on('mouseleave', function () {
+                    d3.select(this)
+                        .attr('stroke-width', '0.5px')
+                        .style('filter', null);
+                });
+
+            // 라벨 표시 (showLabels 옵션 체크)
+            if (this.showLabels) {
+                insetGroup.append('text')
+                    .attr('class', 'district-label')
+                    .attr('x', insetSize / 2)
+                    .attr('y', insetSize - 8)
+                    .attr('text-anchor', 'middle')
+                    .text(islandName);
+            }
+        });
     }
 
     handleExploreProvinceClick(provinceName) {
@@ -1093,18 +1771,21 @@ class KoreaMapQuiz {
             .attr('fill', getSubRegionColors().south)
             .on('click', () => this.renderExploreDistricts(provinceName, 'south'));
 
-        const northCenter = d3.geoCentroid({ type: 'FeatureCollection', features: northFeatures });
-        const southCenter = d3.geoCentroid({ type: 'FeatureCollection', features: southFeatures });
+        // 북부/남부 라벨 (showLabels 옵션 체크)
+        if (this.showLabels) {
+            const northCenter = d3.geoCentroid({ type: 'FeatureCollection', features: northFeatures });
+            const southCenter = d3.geoCentroid({ type: 'FeatureCollection', features: southFeatures });
 
-        this.mapGroup.append('text')
-            .attr('class', 'region-label')
-            .attr('transform', `translate(${this.projection(northCenter)})`)
-            .text(`${SHORT_NAMES[provinceName]} 북부`);
+            this.mapGroup.append('text')
+                .attr('class', 'region-label')
+                .attr('transform', `translate(${this.projection(northCenter)})`)
+                .text(`${SHORT_NAMES[provinceName]} 북부`);
 
-        this.mapGroup.append('text')
-            .attr('class', 'region-label')
-            .attr('transform', `translate(${this.projection(southCenter)})`)
-            .text(`${SHORT_NAMES[provinceName]} 남부`);
+            this.mapGroup.append('text')
+                .attr('class', 'region-label')
+                .attr('transform', `translate(${this.projection(southCenter)})`)
+                .text(`${SHORT_NAMES[provinceName]} 남부`);
+        }
     }
 
     renderExploreDistricts(provinceName, subRegion = null) {
@@ -1141,8 +1822,12 @@ class KoreaMapQuiz {
             }
         }
 
+        // 인천의 섬 지역이 있으면 왼쪽에 인셋 박스 공간 확보
+        const hasIncheonIslands = provinceName === '인천광역시' && islandDistricts.length > 0;
+        const leftMargin = hasIncheonIslands ? 340 : 20; // 인셋 박스 300px + 여백
+
         const featureCollection = { type: 'FeatureCollection', features: districts };
-        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - 20, height - 20]], featureCollection);
+        this.projection = d3.geoMercator().fitExtent([[leftMargin, 20], [width - 20, height - 20]], featureCollection);
         this.path = d3.geoPath().projection(this.projection);
 
         this.svg = d3.select(this.mapSvg)
@@ -1214,34 +1899,37 @@ class KoreaMapQuiz {
                     .style('filter', null);
             });
 
-        // 시 단위 라벨 (각 시마다 하나씩만)
-        const cityNames = [...cityColorMap.keys()];
-        cityNames.forEach(cityName => {
-            // 섬 지역은 인셋에서 라벨 표시
-            if (ISLAND_DISTRICTS.includes(cityName)) return;
+        // 시 단위 라벨 (각 시마다 하나씩만) - showLabels 옵션 체크
+        if (this.showLabels) {
+            const cityNames = [...cityColorMap.keys()];
+            cityNames.forEach(cityName => {
+                // 섬 지역은 인셋에서 라벨 표시
+                if (ISLAND_DISTRICTS.includes(cityName)) return;
 
-            const cityDistricts = districts.filter(d =>
-                this.extractCityName(d.properties.name) === cityName
-            );
-            if (cityDistricts.length === 0) return;
+                const cityDistricts = districts.filter(d =>
+                    this.extractCityName(d.properties.name) === cityName
+                );
+                if (cityDistricts.length === 0) return;
 
-            const cityCollection = { type: 'FeatureCollection', features: cityDistricts };
-            const center = d3.geoCentroid(cityCollection);
+                const cityCollection = { type: 'FeatureCollection', features: cityDistricts };
+                const center = d3.geoCentroid(cityCollection);
 
-            this.mapGroup.append('text')
-                .attr('class', 'district-label')
-                .attr('transform', `translate(${this.projection(center)})`)
-                .text(cityName);
-        });
+                this.mapGroup.append('text')
+                    .attr('class', 'district-label')
+                    .attr('transform', `translate(${this.projection(center)})`)
+                    .text(DISPLAY_NAME_MAP[cityName] || cityName);
+            });
+        }
 
         // 섬 지역 인셋 박스 렌더링 (Explore 모드)
-        // 울릉군은 경북 북부에서만 표시, 옹진군은 인천에서 항상 표시
+        // 울릉군은 경북 북부에서만 표시, 강화군/옹진군은 인천에서 항상 표시
         const shouldShowInsets = islandDistricts.filter(island => {
             const islandName = island.properties.name;
             if (islandName === '울릉군') {
                 return provinceName === '경상북도' && subRegion === 'north';
-            } else if (islandName === '옹진군') {
-                return provinceName === '인천광역시' && !subRegion;
+            } else if (islandName === '강화군' || islandName === '옹진군') {
+                // 인천 섬 지역은 항상 인셋으로 표시
+                return provinceName === '인천광역시';
             }
             return !subRegion;
         });
@@ -1253,8 +1941,18 @@ class KoreaMapQuiz {
 
     // Explore 모드용 섬 지역 인셋 박스 렌더링
     renderExploreIslandInsets(islandDistricts, cityColorMap, width, height, provinceName) {
-        const insetSize = 80;
-        const padding = 10;
+        const insetSize = 300; // 인셋 박스 크기 대폭 확대
+        const padding = 20;
+        const gap = 15; // 인셋 박스 간 간격
+
+        // 인천 섬 지역(center-left) 개수로 전체 높이 계산하여 중앙 정렬
+        const centerLeftIslands = islandDistricts.filter(island => {
+            const cfg = ISLAND_INSET_CONFIG[island.properties.name];
+            return cfg && (cfg.position === 'center-left-top' || cfg.position === 'center-left-bottom');
+        });
+        const totalCenterHeight = centerLeftIslands.length * insetSize + (centerLeftIslands.length - 1) * gap;
+        const centerStartY = (height - totalCenterHeight) / 2;
+        let centerLeftIndex = 0;
 
         islandDistricts.forEach((island, index) => {
             const islandName = island.properties.name;
@@ -1262,12 +1960,20 @@ class KoreaMapQuiz {
             if (!config) return;
 
             let insetX, insetY;
-            if (config.position === 'bottom-left') {
+            if (config.position === 'top-left') {
+                insetX = padding;
+                insetY = padding;
+            } else if (config.position === 'bottom-left') {
                 insetX = padding;
                 insetY = height - insetSize - padding - 30;
             } else if (config.position === 'top-right') {
                 insetX = width - insetSize - padding;
                 insetY = padding;
+            } else if (config.position === 'center-left-top' || config.position === 'center-left-bottom') {
+                // 왼쪽 중앙에 세로로 나란히 배치 (화면 중앙 정렬)
+                insetX = padding;
+                insetY = centerStartY + (centerLeftIndex * (insetSize + gap));
+                centerLeftIndex++;
             } else {
                 insetX = padding + (index * (insetSize + padding));
                 insetY = height - insetSize - padding - 30;
@@ -1319,12 +2025,15 @@ class KoreaMapQuiz {
                         .style('filter', null);
                 });
 
-            insetGroup.append('text')
-                .attr('class', 'district-label')
-                .attr('x', insetSize / 2)
-                .attr('y', insetSize - 5)
-                .attr('text-anchor', 'middle')
-                .text(islandName);
+            // 라벨 표시 (showLabels 옵션 체크)
+            if (this.showLabels) {
+                insetGroup.append('text')
+                    .attr('class', 'district-label')
+                    .attr('x', insetSize / 2)
+                    .attr('y', insetSize - 5)
+                    .attr('text-anchor', 'middle')
+                    .text(islandName);
+            }
         });
     }
 
@@ -1351,7 +2060,7 @@ class KoreaMapQuiz {
                 this.stepIndicatorEl.textContent = '2단계: 도/광역시를 선택하세요';
                 break;
             case GameState.SELECT_SUBREGION:
-                this.stepIndicatorEl.textContent = '3단계: 북부/남부를 선택하세요';
+                this.stepIndicatorEl.textContent = '경기 북부/남부를 선택하세요';
                 break;
             case GameState.SELECT_DISTRICT:
                 this.stepIndicatorEl.textContent = '마지막 단계: 정확한 시/군/구를 선택하세요';
@@ -1360,6 +2069,7 @@ class KoreaMapQuiz {
     }
 
     startTimer() {
+        console.log('[타이머] 시작 - timeLimit:', this.timeLimit, 'gameMode:', this.gameMode);
         this.timeRemaining = this.timeLimit;
         this.updateTimerDisplay();
 
@@ -1370,13 +2080,76 @@ class KoreaMapQuiz {
             this.updateTimerDisplay();
 
             if (this.timeRemaining <= 0) {
+                console.log('[타이머] 시간 초과! handleTimeout 호출');
                 clearInterval(this.timer);
                 this.handleTimeout();
             }
         }, 100);
     }
 
+    stopTimer() {
+        if (this.timer) {
+            clearInterval(this.timer);
+            this.timer = null;
+        }
+    }
+
+    // 스피드 모드 전용: 60초 전체 타이머
+    startSpeedTimer() {
+        this.speedTimeRemaining = this.speedTimeLimit;
+        this.updateSpeedTimerDisplay();
+
+        if (this.speedTimer) clearInterval(this.speedTimer);
+
+        this.speedTimer = setInterval(() => {
+            this.speedTimeRemaining -= 100;
+            this.updateSpeedTimerDisplay();
+
+            if (this.speedTimeRemaining <= 0) {
+                console.log('[스피드모드] 60초 종료!');
+                clearInterval(this.speedTimer);
+                this.speedTimer = null;
+                // 문제 타이머도 정지
+                this.stopTimer();
+                // 게임 종료
+                this.endGame();
+            }
+        }, 100);
+    }
+
+    stopSpeedTimer() {
+        if (this.speedTimer) {
+            clearInterval(this.speedTimer);
+            this.speedTimer = null;
+        }
+    }
+
+    updateSpeedTimerDisplay() {
+        // 스피드 모드에서는 전체 남은 시간을 표시
+        const seconds = Math.ceil(this.speedTimeRemaining / 1000);
+        // 타이머 라벨을 "남은 시간"으로 표시하고 값은 초 단위
+        this.timerEl.textContent = `${seconds}초`;
+        const percentage = (this.speedTimeRemaining / this.speedTimeLimit) * 100;
+        this.timerFillEl.style.width = `${percentage}%`;
+
+        if (percentage <= 20) {
+            this.timerFillEl.classList.add('warning');
+        } else {
+            this.timerFillEl.classList.remove('warning');
+        }
+    }
+
+    showFeedback(message, type) {
+        this.feedbackEl.textContent = message;
+        this.feedbackEl.className = `feedback ${type}`;
+    }
+
     updateTimerDisplay() {
+        // 스피드 모드에서는 전체 타이머만 표시 (문제별 타이머는 표시 안 함)
+        if (this.gameMode === 'test' && this.testSubMode === 'speed') {
+            return;  // 스피드 모드에서는 updateSpeedTimerDisplay에서 처리
+        }
+
         const seconds = (this.timeRemaining / 1000).toFixed(1);
         this.timerEl.textContent = seconds;
         const percentage = (this.timeRemaining / this.timeLimit) * 100;
@@ -1390,18 +2163,31 @@ class KoreaMapQuiz {
     }
 
     handleTimeout() {
+        // 4단계 실전 테스트 모드는 별도 처리
+        if (this.gameMode === 'test') {
+            this.handleTestTimeout();
+            return;
+        }
+
         this.state = GameState.SHOWING_RESULT;
         const backBtn = this.mapContainer.querySelector('.back-btn');
         if (backBtn) backBtn.remove();
 
+        // 오답 감점 (-20점, 0점 미만 방지)
+        this.score = Math.max(0, this.score - this.wrongPenalty);
+        // 콤보 초기화
+        this.combo = 0;
+        this.updateScore();
+
         const displayName = this.getDisplayName(this.currentAnswer.name, this.currentAnswer.provinceName);
-        this.feedbackEl.textContent = `시간 초과! 정답: ${displayName}`;
+        this.feedbackEl.textContent = `시간 초과! -${this.wrongPenalty}점 정답: ${displayName}`;
         this.feedbackEl.className = 'feedback timeout';
 
         this.results.push({
             question: displayName,
             correct: false,
-            answer: '시간 초과'
+            answer: '시간 초과',
+            penalty: this.wrongPenalty
         });
 
         setTimeout(() => this.nextQuestion(), 2000);
@@ -1424,18 +2210,17 @@ class KoreaMapQuiz {
         // 지도 그룹 생성 (줌 적용 대상)
         this.mapGroup = this.svg.append('g').attr('class', 'map-group');
 
-        // 시도 경계 그리기 (제주도 제외)
-        const filteredProvinces = this.provincesGeo.features.filter(f =>
-            f.properties.name !== '제주특별자치도'
-        );
+        // 모든 시도 포함 (제주도 포함)
+        const allProvinces = this.provincesGeo.features;
 
-        // fitExtent로 여백을 주고 가운데 정렬
-        const featureCollection = { type: 'FeatureCollection', features: filteredProvinces };
-        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - 20, height - 20]], featureCollection);
+        // 본토만으로 지도 크기 계산 (제주도 제외) - 본토를 크게 표시
+        const mainlandProvinces = allProvinces.filter(f => f.properties.name !== '제주특별자치도');
+        const mainlandCollection = { type: 'FeatureCollection', features: mainlandProvinces };
+        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - 20, height - 20]], mainlandCollection);
         this.path = d3.geoPath().projection(this.projection);
 
         this.mapGroup.selectAll('.province')
-            .data(filteredProvinces)
+            .data(allProvinces)
             .enter()
             .append('path')
             .attr('class', 'province')
@@ -1445,14 +2230,16 @@ class KoreaMapQuiz {
             .attr('data-group', d => PROVINCE_TO_GROUP[d.properties.name] || null)
             .on('click', (event, d) => this.handleRegionGroupClick(d.properties.name, event));
 
-        // 시도 라벨
-        this.mapGroup.selectAll('.region-label')
-            .data(filteredProvinces)
-            .enter()
-            .append('text')
-            .attr('class', 'region-label province-label')
-            .attr('transform', d => `translate(${this.path.centroid(d)})`)
-            .text(d => SHORT_NAMES[d.properties.name] || d.properties.name);
+        // 시도 라벨 (showLabels 옵션 체크)
+        if (this.showLabels) {
+            this.mapGroup.selectAll('.region-label')
+                .data(allProvinces)
+                .enter()
+                .append('text')
+                .attr('class', 'region-label province-label')
+                .attr('transform', d => `translate(${this.path.centroid(d)})`)
+                .text(d => SHORT_NAMES[d.properties.name] || d.properties.name);
+        }
     }
 
     handleRegionGroupClick(provinceName, event) {
@@ -1556,14 +2343,16 @@ class KoreaMapQuiz {
             .attr('data-name', d => d.properties.name)
             .on('click', (event, d) => this.handleGroupProvinceClick(d.properties.name, event));
 
-        // 시도 라벨
-        this.mapGroup.selectAll('.region-label')
-            .data(filteredProvinces)
-            .enter()
-            .append('text')
-            .attr('class', 'region-label')
-            .attr('transform', d => `translate(${this.path.centroid(d)})`)
-            .text(d => SHORT_NAMES[d.properties.name] || d.properties.name);
+        // 시도 라벨 (showLabels 옵션 체크)
+        if (this.showLabels) {
+            this.mapGroup.selectAll('.region-label')
+                .data(filteredProvinces)
+                .enter()
+                .append('text')
+                .attr('class', 'region-label')
+                .attr('transform', d => `translate(${this.path.centroid(d)})`)
+                .text(d => SHORT_NAMES[d.properties.name] || d.properties.name);
+        }
     }
 
     // 필터 선택된 권역 지도 렌더링 (QUIZ_FILTER_REGIONS 사용)
@@ -1609,14 +2398,16 @@ class KoreaMapQuiz {
             .attr('data-name', d => d.properties.name)
             .on('click', (event, d) => this.handleFilteredProvinceClick(d.properties.name, event));
 
-        // 시도 라벨
-        this.mapGroup.selectAll('.region-label')
-            .data(filteredProvinces)
-            .enter()
-            .append('text')
-            .attr('class', 'region-label')
-            .attr('transform', d => `translate(${this.path.centroid(d)})`)
-            .text(d => SHORT_NAMES[d.properties.name] || d.properties.name);
+        // 시도 라벨 (showLabels 옵션 체크)
+        if (this.showLabels) {
+            this.mapGroup.selectAll('.region-label')
+                .data(filteredProvinces)
+                .enter()
+                .append('text')
+                .attr('class', 'region-label')
+                .attr('transform', d => `translate(${this.path.centroid(d)})`)
+                .text(d => SHORT_NAMES[d.properties.name] || d.properties.name);
+        }
     }
 
     // 필터된 권역에서 시도 클릭 처리
@@ -1634,13 +2425,21 @@ class KoreaMapQuiz {
             if (provinceName === '세종특별자치시') {
                 this.stopTimer();
                 d3.select(event.target).classed('correct', true);
-                this.score += 10;
+                // 콤보 증가 및 점수 계산
+                this.combo = Math.min(this.combo + 1, this.maxCombo);
+            this.maxComboAchieved = Math.max(this.maxComboAchieved, this.combo);
+                const comboBonus = (this.combo - 1) * this.comboBonus;
+                const earnedScore = this.baseScore + comboBonus;
+                this.score += earnedScore;
                 this.updateScore();
                 this.results.push({
                     question: this.currentAnswer.name,
-                    correct: true
+                    correct: true,
+                    earnedScore: earnedScore,
+                    combo: this.combo
                 });
-                this.showFeedback(`정답입니다! ${this.getDisplayName(this.currentAnswer.name, provinceName)}`, 'correct');
+                const comboText = this.combo > 1 ? ` (${this.combo}콤보!)` : '';
+                this.showFeedback(`정답입니다! +${earnedScore}점${comboText} ${this.getDisplayName(this.currentAnswer.name, provinceName)}`, 'correct');
                 setTimeout(() => this.nextQuestion(), 1500);
                 return;
             }
@@ -1675,13 +2474,21 @@ class KoreaMapQuiz {
             if (provinceName === '세종특별자치시') {
                 this.stopTimer();
                 d3.select(event.target).classed('correct', true);
-                this.score += 10;
+                // 콤보 증가 및 점수 계산
+                this.combo = Math.min(this.combo + 1, this.maxCombo);
+            this.maxComboAchieved = Math.max(this.maxComboAchieved, this.combo);
+                const comboBonus = (this.combo - 1) * this.comboBonus;
+                const earnedScore = this.baseScore + comboBonus;
+                this.score += earnedScore;
                 this.updateScore();
                 this.results.push({
                     question: this.currentAnswer.name,
-                    correct: true
+                    correct: true,
+                    earnedScore: earnedScore,
+                    combo: this.combo
                 });
-                this.showFeedback(`정답입니다! ${this.getDisplayName(this.currentAnswer.name, provinceName)}`, 'correct');
+                const comboText = this.combo > 1 ? ` (${this.combo}콤보!)` : '';
+                this.showFeedback(`정답입니다! +${earnedScore}점${comboText} ${this.getDisplayName(this.currentAnswer.name, provinceName)}`, 'correct');
                 setTimeout(() => this.nextQuestion(), 1500);
             } else if (LARGE_PROVINCES.includes(provinceName)) {
                 this.state = GameState.SELECT_SUBREGION;
@@ -1713,18 +2520,17 @@ class KoreaMapQuiz {
         // 지도 그룹 생성 (줌 적용 대상)
         this.mapGroup = this.svg.append('g').attr('class', 'map-group');
 
-        // 시도 경계 그리기 (제주도 제외)
-        const filteredProvinces = this.provincesGeo.features.filter(f =>
-            f.properties.name !== '제주특별자치도'
-        );
+        // 모든 시도 포함 (제주도 포함)
+        const allProvinces = this.provincesGeo.features;
 
-        // fitExtent로 여백을 주고 가운데 정렬
-        const featureCollection = { type: 'FeatureCollection', features: filteredProvinces };
-        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - 20, height - 20]], featureCollection);
+        // 본토 기준으로 지도 크기 조정 (제주도 제외하여 본토가 더 크게 보이도록)
+        const mainlandProvinces = allProvinces.filter(f => f.properties.name !== '제주특별자치도');
+        const mainlandCollection = { type: 'FeatureCollection', features: mainlandProvinces };
+        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - 20, height - 20]], mainlandCollection);
         this.path = d3.geoPath().projection(this.projection);
 
         this.mapGroup.selectAll('.province')
-            .data(filteredProvinces)
+            .data(allProvinces)
             .enter()
             .append('path')
             .attr('class', 'province')
@@ -1733,14 +2539,16 @@ class KoreaMapQuiz {
             .attr('data-name', d => d.properties.name)
             .on('click', (event, d) => this.handleProvinceClick(d.properties.name, event));
 
-        // 시도 라벨 (제주도 제외)
-        this.mapGroup.selectAll('.region-label')
-            .data(filteredProvinces)
-            .enter()
-            .append('text')
-            .attr('class', 'region-label')
-            .attr('transform', d => `translate(${this.path.centroid(d)})`)
-            .text(d => SHORT_NAMES[d.properties.name] || d.properties.name);
+        // 시도 라벨 (showLabels 옵션 체크)
+        if (this.showLabels) {
+            this.mapGroup.selectAll('.region-label')
+                .data(allProvinces)
+                .enter()
+                .append('text')
+                .attr('class', 'region-label')
+                .attr('transform', d => `translate(${this.path.centroid(d)})`)
+                .text(d => SHORT_NAMES[d.properties.name] || d.properties.name);
+        }
     }
 
     handleProvinceClick(provinceName, event) {
@@ -1757,13 +2565,21 @@ class KoreaMapQuiz {
             if (provinceName === '세종특별자치시') {
                 this.stopTimer();
                 d3.select(event.target).classed('correct', true);
-                this.score += 10;
+                // 콤보 증가 및 점수 계산
+                this.combo = Math.min(this.combo + 1, this.maxCombo);
+            this.maxComboAchieved = Math.max(this.maxComboAchieved, this.combo);
+                const comboBonus = (this.combo - 1) * this.comboBonus;
+                const earnedScore = this.baseScore + comboBonus;
+                this.score += earnedScore;
                 this.updateScore();
                 this.results.push({
                     question: this.currentAnswer.name,
-                    correct: true
+                    correct: true,
+                    earnedScore: earnedScore,
+                    combo: this.combo
                 });
-                this.showFeedback(`정답입니다! ${this.getDisplayName(this.currentAnswer.name, provinceName)}`, 'correct');
+                const comboText = this.combo > 1 ? ` (${this.combo}콤보!)` : '';
+                this.showFeedback(`정답입니다! +${earnedScore}점${comboText} ${this.getDisplayName(this.currentAnswer.name, provinceName)}`, 'correct');
                 setTimeout(() => this.nextQuestion(), 1500);
             } else if (LARGE_PROVINCES.includes(provinceName)) {
                 this.state = GameState.SELECT_SUBREGION;
@@ -1919,9 +2735,13 @@ class KoreaMapQuiz {
             }
         }
 
+        // 인천의 섬 지역이 있으면 왼쪽에 인셋 박스 공간 확보
+        const hasIncheonIslands = provinceName === '인천광역시' && islandDistricts.length > 0;
+        const leftMargin = hasIncheonIslands ? 340 : 20;
+
         // 투영 설정 (본토 기준)
         const featureCollection = { type: 'FeatureCollection', features: districts };
-        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - 20, height - 20]], featureCollection);
+        this.projection = d3.geoMercator().fitExtent([[leftMargin, 20], [width - 20, height - 20]], featureCollection);
         this.path = d3.geoPath().projection(this.projection);
 
         this.svg = d3.select(this.mapSvg)
@@ -2024,7 +2844,7 @@ class KoreaMapQuiz {
                 this.mapGroup.append('text')
                     .attr('class', 'district-label')
                     .attr('transform', `translate(${this.projection(center)})`)
-                    .text(cityName);
+                    .text(DISPLAY_NAME_MAP[cityName] || cityName);
             });
         }
 
@@ -2035,9 +2855,9 @@ class KoreaMapQuiz {
             if (islandName === '울릉군') {
                 // 경북에서 북부 선택 시에만 표시
                 return provinceName === '경상북도' && subRegion === 'north';
-            } else if (islandName === '옹진군') {
-                // 인천은 LARGE_PROVINCES가 아니므로 subRegion 없이 표시
-                return provinceName === '인천광역시' && !subRegion;
+            } else if (islandName === '강화군' || islandName === '옹진군') {
+                // 인천 섬 지역은 인천에서 항상 표시
+                return provinceName === '인천광역시';
             }
             return !subRegion; // 기본적으로 subRegion 없을 때만
         });
@@ -2049,8 +2869,18 @@ class KoreaMapQuiz {
 
     // 섬 지역 인셋 박스 렌더링
     renderIslandInsets(islandDistricts, cityColorMap, width, height) {
-        const insetSize = 80; // 인셋 박스 크기
-        const padding = 10;
+        const insetSize = 300; // 인셋 박스 크기 대폭 확대
+        const padding = 20;
+        const gap = 15; // 인셋 박스 간 간격
+
+        // 인천 섬 지역(center-left) 개수로 전체 높이 계산하여 중앙 정렬
+        const centerLeftIslands = islandDistricts.filter(island => {
+            const cfg = ISLAND_INSET_CONFIG[island.properties.name];
+            return cfg && (cfg.position === 'center-left-top' || cfg.position === 'center-left-bottom');
+        });
+        const totalCenterHeight = centerLeftIslands.length * insetSize + (centerLeftIslands.length - 1) * gap;
+        const centerStartY = (height - totalCenterHeight) / 2;
+        let centerLeftIndex = 0;
 
         islandDistricts.forEach((island, index) => {
             const islandName = island.properties.name;
@@ -2059,12 +2889,20 @@ class KoreaMapQuiz {
 
             // 인셋 위치 결정
             let insetX, insetY;
-            if (config.position === 'bottom-left') {
+            if (config.position === 'top-left') {
                 insetX = padding;
-                insetY = height - insetSize - padding - 30; // 30은 뒤로가기 버튼 공간
+                insetY = padding;
+            } else if (config.position === 'bottom-left') {
+                insetX = padding;
+                insetY = height - insetSize - padding - 30;
             } else if (config.position === 'top-right') {
                 insetX = width - insetSize - padding;
                 insetY = padding;
+            } else if (config.position === 'center-left-top' || config.position === 'center-left-bottom') {
+                // 왼쪽 중앙에 세로로 나란히 배치 (화면 중앙 정렬)
+                insetX = padding;
+                insetY = centerStartY + (centerLeftIndex * (insetSize + gap));
+                centerLeftIndex++;
             } else {
                 insetX = padding + (index * (insetSize + padding));
                 insetY = height - insetSize - padding - 30;
@@ -2188,98 +3026,232 @@ class KoreaMapQuiz {
     handleDistrictClick(districtName, event) {
         if (this.state !== GameState.SELECT_DISTRICT) return;
 
-        clearInterval(this.timer);
-        const backBtn = this.mapContainer.querySelector('.back-btn');
-        if (backBtn) backBtn.remove();
-
         const correctDistrict = this.currentAnswer.name;
         const displayName = this.getDisplayName(this.currentAnswer.name, this.currentAnswer.provinceName);
 
         // 클릭한 지역을 시 단위로 변환해서 비교 (예: "수원시장안구" -> "수원시")
-        const clickedCity = this.extractCityName(districtName);
+        let clickedCity = this.extractCityName(districtName);
+        // TopoJSON 데이터명 → 표시명 변환 (예: 남구 → 미추홀구)
+        clickedCity = DISPLAY_NAME_MAP[clickedCity] || clickedCity;
         const isCorrect = (clickedCity === correctDistrict) || (districtName === correctDistrict);
 
+        // 연습 모드인지 확인
+        const isPracticeMode = this.gameMode === 'practice' || this.gameMode === 'practice-blind';
+
         if (isCorrect) {
+            clearInterval(this.timer);
+            const backBtn = this.mapContainer.querySelector('.back-btn');
+            if (backBtn) backBtn.remove();
+
             d3.select(event.target).classed('correct', true);
-            this.score += 10;
+
+            // 콤보 증가 및 점수 계산
+            this.combo = Math.min(this.combo + 1, this.maxCombo);
+            this.maxComboAchieved = Math.max(this.maxComboAchieved, this.combo);
+            const comboBonus = (this.combo - 1) * this.comboBonus;
+            const earnedScore = this.baseScore + comboBonus;
+            this.score += earnedScore;
             this.updateUI();
 
-            this.feedbackEl.textContent = `정답입니다! +10점`;
+            const comboText = this.combo > 1 ? ` (${this.combo}콤보!)` : '';
+            this.feedbackEl.textContent = `정답입니다! +${earnedScore}점${comboText}`;
             this.feedbackEl.className = 'feedback correct';
 
-            this.results.push({
-                question: displayName,
-                correct: true,
-                answer: districtName
-            });
+            // 연습 모드에서 여러 번 틀린 경우 결과 기록 업데이트
+            if (isPracticeMode && this.practiceAttempts > 0) {
+                this.results.push({
+                    question: displayName,
+                    correct: false,
+                    answer: `${this.practiceAttempts}번 틀린 후 정답`
+                });
+            } else {
+                this.results.push({
+                    question: displayName,
+                    correct: true,
+                    answer: districtName,
+                    earnedScore: earnedScore,
+                    combo: this.combo
+                });
+            }
+
+            this.practiceAttempts = 0; // 초기화
+            this.state = GameState.SHOWING_RESULT;
+            setTimeout(() => this.nextQuestion(), 2000);
         } else {
             d3.select(event.target).classed('incorrect', true);
 
-            this.feedbackEl.textContent = `틀렸습니다! 정답: ${displayName}`;
-            this.feedbackEl.className = 'feedback incorrect';
+            if (isPracticeMode) {
+                // 연습 모드: 틀려도 계속 클릭 가능, 감점 없음
+                this.practiceAttempts = (this.practiceAttempts || 0) + 1;
+                this.feedbackEl.textContent = `틀렸습니다! 다시 찾아보세요.`;
+                this.feedbackEl.className = 'feedback incorrect';
+                // state를 유지하여 계속 클릭 가능
+            } else {
+                // 퀴즈/테스트 모드: 감점 및 콤보 초기화
+                clearInterval(this.timer);
+                const backBtn = this.mapContainer.querySelector('.back-btn');
+                if (backBtn) backBtn.remove();
 
-            this.results.push({
-                question: displayName,
-                correct: false,
-                answer: districtName
-            });
+                // 오답 감점 (-20점, 0점 미만 방지)
+                this.score = Math.max(0, this.score - this.wrongPenalty);
+                // 콤보 초기화
+                this.combo = 0;
+                this.updateScore();
 
-            // 정답 하이라이트 (해당 시의 모든 구를 하이라이트)
-            d3.selectAll('.district')
-                .filter(d => {
-                    const name = d.properties.name;
-                    const cityName = this.extractCityName(name);
-                    return name === correctDistrict || cityName === correctDistrict;
-                })
-                .classed('highlight', true);
+                this.feedbackEl.textContent = `틀렸습니다! -${this.wrongPenalty}점 정답: ${displayName}`;
+                this.feedbackEl.className = 'feedback incorrect';
+
+                this.results.push({
+                    question: displayName,
+                    correct: false,
+                    answer: districtName,
+                    penalty: this.wrongPenalty
+                });
+
+                // 정답 하이라이트 (해당 시의 모든 구를 하이라이트)
+                d3.selectAll('.district')
+                    .filter(d => {
+                        const name = d.properties.name;
+                        const cityName = this.extractCityName(name);
+                        return name === correctDistrict || cityName === correctDistrict;
+                    })
+                    .classed('highlight', true);
+
+                this.state = GameState.SHOWING_RESULT;
+                setTimeout(() => this.nextQuestion(), 2000);
+            }
         }
-
-        this.state = GameState.SHOWING_RESULT;
-        setTimeout(() => this.nextQuestion(), 2000);
     }
 
     handleWrongAnswer(element, message) {
-        clearInterval(this.timer);
-        const backBtn = this.mapContainer.querySelector('.back-btn');
-        if (backBtn) backBtn.remove();
+        // 연습 모드인지 확인
+        const isPracticeMode = this.gameMode === 'practice' || this.gameMode === 'practice-blind';
 
         if (element) {
             d3.select(element).classed('incorrect', true);
         }
 
-        this.feedbackEl.textContent = message;
-        this.feedbackEl.className = 'feedback incorrect';
+        if (isPracticeMode) {
+            // 연습 모드: 틀려도 계속 클릭 가능, 감점 없음
+            this.practiceAttempts = (this.practiceAttempts || 0) + 1;
+            this.feedbackEl.textContent = message.replace('틀렸습니다!', '틀렸습니다!').replace('가 정답입니다.', '을(를) 선택하세요.');
+            this.feedbackEl.className = 'feedback incorrect';
+            // state를 유지하여 계속 클릭 가능
+        } else {
+            // 퀴즈/테스트 모드: 감점 및 콤보 초기화
+            clearInterval(this.timer);
+            const backBtn = this.mapContainer.querySelector('.back-btn');
+            if (backBtn) backBtn.remove();
 
-        const displayName = this.getDisplayName(this.currentAnswer.name, this.currentAnswer.provinceName);
-        this.results.push({
-            question: displayName,
-            correct: false,
-            answer: '잘못된 선택'
-        });
+            // 오답 감점 (-20점, 0점 미만 방지)
+            this.score = Math.max(0, this.score - this.wrongPenalty);
+            // 콤보 초기화
+            this.combo = 0;
+            this.updateScore();
 
-        this.state = GameState.SHOWING_RESULT;
-        setTimeout(() => this.nextQuestion(), 2000);
+            this.feedbackEl.textContent = `${message} -${this.wrongPenalty}점`;
+            this.feedbackEl.className = 'feedback incorrect';
+
+            const displayName = this.getDisplayName(this.currentAnswer.name, this.currentAnswer.provinceName);
+            this.results.push({
+                question: displayName,
+                correct: false,
+                answer: '잘못된 선택',
+                penalty: this.wrongPenalty
+            });
+
+            this.state = GameState.SHOWING_RESULT;
+            setTimeout(() => this.nextQuestion(), 2000);
+        }
     }
 
     endGame() {
         clearInterval(this.timer);
+        this.stopSpeedTimer();  // 스피드 모드 타이머 정리
+
+        // 4단계 test-mode 정리
+        document.body.classList.remove('test-mode');
+        this.questionAreaEl?.classList.remove('hidden');
+        if (this.questionAreaEl) {
+            this.questionAreaEl.style.display = '';
+        }
+
         this.showScreen('result');
         this.finalScoreEl.textContent = this.score;
 
-        let html = '<h3>문제별 결과</h3>';
+        const correctCount = this.results.filter(r => r.correct).length;
+        const totalAnswered = this.results.length;
+
+        // 게임 통계 요약
+        let html = '<div class="game-stats">';
+
+        // 4단계 테스트 모드: 서브모드별 다른 통계 표시
+        if (this.gameMode === 'test' && this.testSubMode === 'speed') {
+            // 스피드 모드 결과
+            html += `<div class="stat-summary">
+                <span class="stat-label">⚡ 스피드 모드</span>
+                <span class="stat-value">${totalAnswered}문제</span>
+            </div>`;
+            html += `<div class="stat-summary">
+                <span class="stat-label">정답</span>
+                <span class="stat-value">${correctCount}개</span>
+            </div>`;
+            html += `<div class="stat-summary">
+                <span class="stat-label">정답률</span>
+                <span class="stat-value">${totalAnswered > 0 ? (correctCount / totalAnswered * 100).toFixed(0) : 0}%</span>
+            </div>`;
+            html += `<div class="stat-summary">
+                <span class="stat-label">최대 콤보</span>
+                <span class="stat-value combo-highlight">${this.maxComboAchieved}</span>
+            </div>`;
+        } else if (this.gameMode === 'test' && this.testSubMode === 'survival') {
+            // 서바이벌 모드 결과
+            html += `<div class="stat-summary">
+                <span class="stat-label">❤️ 서바이벌 모드</span>
+                <span class="stat-value">${totalAnswered}문제</span>
+            </div>`;
+            html += `<div class="stat-summary">
+                <span class="stat-label">정답</span>
+                <span class="stat-value">${correctCount}개</span>
+            </div>`;
+            html += `<div class="stat-summary">
+                <span class="stat-label">최대 콤보</span>
+                <span class="stat-value combo-highlight">${this.maxComboAchieved}</span>
+            </div>`;
+        } else {
+            // 기존 모드 결과 표시
+            html += `<div class="stat-summary">
+                <span class="stat-label">정답</span>
+                <span class="stat-value">${correctCount}/${this.totalQuestions}</span>
+            </div>`;
+            html += `<div class="stat-summary">
+                <span class="stat-label">정답률</span>
+                <span class="stat-value">${(correctCount / this.totalQuestions * 100).toFixed(0)}%</span>
+            </div>`;
+            html += `<div class="stat-summary">
+                <span class="stat-label">최대 콤보</span>
+                <span class="stat-value combo-highlight">${this.maxComboAchieved}</span>
+            </div>`;
+        }
+        html += '</div>';
+
+        html += '<h3>문제별 결과</h3>';
         this.results.forEach((result, index) => {
             const className = result.correct ? 'correct-result' : 'incorrect-result';
             const icon = result.correct ? '✓' : '✗';
+            let scoreText = '';
+            if (result.earnedScore) {
+                scoreText = ` (+${result.earnedScore}점)`;
+            } else if (result.penalty) {
+                scoreText = ` (-${result.penalty}점)`;
+            }
             html += `
                 <div class="result-item ${className}">
                     <span>${index + 1}. ${result.question}</span>
-                    <span>${icon} ${result.answer}</span>
+                    <span>${icon}${scoreText}</span>
                 </div>
             `;
         });
-
-        const correctCount = this.results.filter(r => r.correct).length;
-        html += `<p style="margin-top: 20px; text-align: center;">정답률: ${correctCount}/${this.totalQuestions} (${(correctCount / this.totalQuestions * 100).toFixed(0)}%)</p>`;
 
         this.resultDetailsEl.innerHTML = html;
     }
