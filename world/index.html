@@ -8,7 +8,7 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/topojson-client@3"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="../styles.css?v=26">
+    <link rel="stylesheet" href="../styles.css?v=27">
     <link rel="stylesheet" href="../common-fullscreen.css?v=5">
     <script src="data/countries.js?v=6"></script>
     <script src="../config.js"></script>
@@ -51,6 +51,11 @@
             <div id="continent-screen" class="screen active">
                 <h2>세계 지도 퀴즈</h2>
                 <p>학습할 대륙을 선택하세요</p>
+                <!-- 명예의 전당 TOP 3 미리보기 -->
+                <div id="top3-preview" class="top3-preview hidden">
+                    <div class="top3-header">🏆 명예의 전당</div>
+                    <div id="top3-list" class="top3-list"></div>
+                </div>
                 <div id="loading" class="loading">지도 데이터 로딩 중...</div>
                 <div id="continent-buttons" class="continent-buttons hidden">
                     <a href="?continent=asia" class="continent-btn asia-btn">
@@ -276,7 +281,7 @@
         </main>
     </div>
 
-    <script src="game.js?v=18"></script>
+    <script src="game.js?v=19"></script>
 </body>
 
 </html>

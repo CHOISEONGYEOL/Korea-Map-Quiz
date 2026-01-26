@@ -504,6 +504,8 @@ class KoreaMapQuiz {
             } else {
                 // 모드 선택 화면 표시
                 this.modeButtonsEl.classList.remove('hidden');
+                // TOP 3 미리보기 로드
+                this.loadTop3Preview();
             }
 
             console.log(`로드 완료: ${this.provincesGeo.features.length}개 시도, ${this.allDistricts.length}개 시군구`);
@@ -3185,6 +3187,36 @@ class KoreaMapQuiz {
     }
 
     // ===== 명예의 전당 관련 메서드 =====
+
+    // 모드 선택 화면에 TOP 3 미리보기 로드
+    async loadTop3Preview() {
+        const previewEl = document.getElementById('top3-preview');
+        const listEl = document.getElementById('top3-list');
+        if (!previewEl || !listEl || !leaderboardService?.isAvailable()) return;
+
+        try {
+            // 스피드 모드 TOP 3 가져오기
+            const entries = await leaderboardService.getLeaderboard('korea', 'speed', 3);
+
+            if (entries.length === 0) {
+                listEl.innerHTML = '<div class="top3-empty">아직 기록이 없습니다</div>';
+            } else {
+                const medals = ['🥇', '🥈', '🥉'];
+                listEl.innerHTML = entries.map((entry, i) => `
+                    <div class="top3-item">
+                        <span class="top3-rank">${medals[i]}</span>
+                        <div class="top3-info">
+                            <span class="top3-nickname">${this.escapeHtml(entry.nickname)}</span>
+                            <span class="top3-score">${entry.score.toLocaleString()}점</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            previewEl.classList.remove('hidden');
+        } catch (e) {
+            console.error('TOP 3 로드 실패:', e);
+        }
+    }
 
     // 4단계 테스트 모드일 때 명예의 전당 등록 버튼 표시
     showLeaderboardButton() {

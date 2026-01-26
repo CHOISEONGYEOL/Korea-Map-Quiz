@@ -1982,6 +1982,78 @@ header {
 
 /* ===== 명예의 전당 (리더보드) ===== */
 
+/* 모드 선택 화면 TOP 3 미리보기 */
+.top3-preview {
+    margin: 0 auto 20px;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 165, 0, 0.1));
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: 16px;
+    max-width: 500px;
+}
+
+.top3-preview.hidden {
+    display: none;
+}
+
+.top3-header {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.top3-list {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.top3-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--card-bg);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    min-width: 120px;
+}
+
+.top3-rank {
+    font-size: 1.2rem;
+}
+
+.top3-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.top3-nickname {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.top3-score {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.top3-empty {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 8px;
+}
+
 .hall-of-fame {
     margin-top: 24px;
     padding: 20px;
