@@ -805,11 +805,11 @@ class WorldMapQuiz {
         const subregionColors = this.generateSubregionColors(continent);
 
         for (const [subregionKey, subregion] of Object.entries(continent.subregions)) {
-            const countryIds = subregion.countries.map(c => c.id);
+            const countryIds = subregion.countries.map(c => String(c.id));
             const color = subregionColors[subregionKey];
 
             this.mapGroup.selectAll(`.subregion-${subregionKey}`)
-                .data(countries.features.filter(d => countryIds.includes(d.id)))
+                .data(countries.features.filter(d => countryIds.includes(String(d.id))))
                 .enter()
                 .append('path')
                 .attr('class', `country subregion-country`)
@@ -1034,8 +1034,8 @@ class WorldMapQuiz {
         const countries = topojson.feature(this.topoData, this.topoData.objects.countries);
 
         for (const [subregionKey, subregion] of Object.entries(continent.subregions)) {
-            const countryIds = subregion.countries.map(c => c.id);
-            const subregionCountries = countries.features.filter(d => countryIds.includes(d.id));
+            const countryIds = subregion.countries.map(c => String(c.id));
+            const subregionCountries = countries.features.filter(d => countryIds.includes(String(d.id)));
 
             if (subregionCountries.length === 0) continue;
 
@@ -1125,7 +1125,7 @@ class WorldMapQuiz {
         this.path = d3.geoPath().projection(this.projection);
 
         const countries = topojson.feature(this.topoData, this.topoData.objects.countries);
-        const subregionCountryIds = subregion.countries.map(c => c.id);
+        const subregionCountryIds = subregion.countries.map(c => String(c.id));
 
         // 배경
         this.mapGroup.append('rect')
@@ -1146,7 +1146,7 @@ class WorldMapQuiz {
 
         // 해당 지역 국가들 (인접 국가 색상 분리 알고리즘 적용)
         const countryPalette = this.getColorPalette();
-        const countryFeatures = countries.features.filter(d => subregionCountryIds.includes(d.id));
+        const countryFeatures = countries.features.filter(d => subregionCountryIds.includes(String(d.id)));
 
         // 인접 국가 색상 분리
         const colorAssignment = this.assignColorsToFeatures(countryFeatures);
@@ -1164,7 +1164,7 @@ class WorldMapQuiz {
                 // 클릭 = 선택 + 동작
                 d3.selectAll('.country').classed('selected', false);
                 d3.select(event.target).classed('selected', true);
-                const countryInfo = getCountryById(d.id);
+                const countryInfo = getCountryById(String(d.id));
                 const name = countryInfo ? countryInfo.name : `국가 ${d.id}`;
                 if (this.currentMode === 'explore') {
                     this.showFeedback(`${name} 선택됨`, 'info');
@@ -1181,7 +1181,7 @@ class WorldMapQuiz {
 
         // 국가 라벨 (test 모드 제외, showLabels 옵션 반영)
         if (this.currentMode !== 'test' && this.showLabels) {
-            this.drawCountryLabels(this.mapGroup, countries.features.filter(d => subregionCountryIds.includes(d.id)));
+            this.drawCountryLabels(this.mapGroup, countries.features.filter(d => subregionCountryIds.includes(String(d.id))));
         }
 
         // 뒤로가기 버튼 (줌 그룹 밖)
@@ -1330,7 +1330,7 @@ class WorldMapQuiz {
             const centroid = this.path.centroid(d);
             if (isNaN(centroid[0]) || isNaN(centroid[1])) return;
 
-            const country = getCountryById(d.id);
+            const country = getCountryById(String(d.id));
             if (!country) return;
 
             const labelWidth = country.name.length * 7 + 10;
@@ -1411,7 +1411,7 @@ class WorldMapQuiz {
     }
 
     handleCountryClick(feature) {
-        const countryId = feature.id;
+        const countryId = String(feature.id);
         const countryInfo = getCountryById(countryId);
 
         // 4단계 테스트 모드에서는 지도 클릭 무시 (8지선다 버튼 사용)
@@ -1439,7 +1439,7 @@ class WorldMapQuiz {
         if (this.currentQuestion >= this.totalQuestions) return;
 
         const currentCountry = this.shuffledCountries[this.currentQuestion];
-        const isCorrect = countryId === currentCountry.id;
+        const isCorrect = countryId === String(currentCountry.id);
 
         this.stopTimer();
 
