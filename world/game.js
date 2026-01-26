@@ -1414,6 +1414,11 @@ class WorldMapQuiz {
         const countryId = feature.id;
         const countryInfo = getCountryById(countryId);
 
+        // 4단계 테스트 모드에서는 지도 클릭 무시 (8지선다 버튼 사용)
+        if (this.currentMode === 'test') {
+            return;
+        }
+
         // 미국 클릭시 미국 주 퀴즈로 이동
         if (countryId === '840') {
             if (this.currentMode === 'explore') {
@@ -1473,8 +1478,9 @@ class WorldMapQuiz {
     }
 
     highlightCountry(countryId, className) {
+        const targetId = String(countryId);
         this.svg.selectAll('.country')
-            .filter(d => d.id === countryId)
+            .filter(d => String(d.id) === targetId)
             .classed(className, true);
     }
 
@@ -1581,11 +1587,27 @@ class WorldMapQuiz {
         const targetCountry = this.shuffledCountries[this.currentQuestion];
         this.targetCountry = targetCountry;
 
-        // 지도에서 해당 국가 하이라이트
-        this.highlightTargetCountry(targetCountry.id);
+        // 정답 국가의 정보 가져오기 (대륙, 하위지역)
+        const countryInfo = getCountryById(targetCountry.id);
+
+        // 해당 국가가 있는 하위지역 지도 그리기
+        if (countryInfo) {
+            this.selectedContinent = countryInfo.continent;
+            this.currentSubregion = countryInfo.subregion;
+            this.drawSubregionMap(countryInfo.subregion);
+        }
+
+        // 지도에서 해당 국가 하이라이트 (지도 그린 후)
+        setTimeout(() => {
+            this.highlightTargetCountry(targetCountry.id);
+        }, 50);
 
         // 8지선다 생성
         this.generateChoices(targetCountry);
+
+        // 질문 텍스트 설정
+        document.getElementById('question-text').textContent = '이 나라의 이름은?';
+        document.getElementById('step-indicator').textContent = '지도에서 하이라이트된 국가를 찾으세요';
 
         // UI 업데이트
         if (this.testSubMode === 'speed') {
@@ -1606,9 +1628,10 @@ class WorldMapQuiz {
             .classed('correct', false)
             .classed('incorrect', false);
 
-        // 새 타겟 하이라이트
+        // 새 타겟 하이라이트 (String으로 변환하여 타입 일치)
+        const targetId = String(countryId);
         this.svg?.selectAll('.country')
-            .filter(d => d.id === countryId)
+            .filter(d => String(d.id) === targetId)
             .classed('target-highlight', true);
     }
 
@@ -1617,7 +1640,8 @@ class WorldMapQuiz {
         if (!this.choicesGrid) return;
 
         // 오답 후보들 (정답 제외)
-        const otherCountries = this.countries.filter(c => c.id !== correctCountry.id);
+        const correctId = String(correctCountry.id);
+        const otherCountries = this.countries.filter(c => String(c.id) !== correctId);
         const shuffledOthers = [...otherCountries].sort(() => Math.random() - 0.5);
         const wrongAnswers = shuffledOthers.slice(0, 7);
 
@@ -1640,15 +1664,17 @@ class WorldMapQuiz {
     handleChoiceClick(selectedCountry) {
         this.stopTimer();
 
-        const isCorrect = selectedCountry.id === this.targetCountry.id;
+        const isCorrect = String(selectedCountry.id) === String(this.targetCountry.id);
 
         // 버튼 스타일 업데이트
         const buttons = this.choicesGrid.querySelectorAll('.choice-btn');
+        const targetId = String(this.targetCountry.id);
+        const selectedId = String(selectedCountry.id);
         buttons.forEach(btn => {
             btn.disabled = true;
-            if (btn.dataset.countryId === this.targetCountry.id) {
+            if (btn.dataset.countryId === targetId) {
                 btn.classList.add('correct');
-            } else if (btn.dataset.countryId === selectedCountry.id && !isCorrect) {
+            } else if (btn.dataset.countryId === selectedId && !isCorrect) {
                 btn.classList.add('incorrect');
             }
         });
@@ -1708,9 +1734,10 @@ class WorldMapQuiz {
 
         // 정답 버튼 표시
         const buttons = this.choicesGrid?.querySelectorAll('.choice-btn');
+        const targetId = String(this.targetCountry.id);
         buttons?.forEach(btn => {
             btn.disabled = true;
-            if (btn.dataset.countryId === this.targetCountry.id) {
+            if (btn.dataset.countryId === targetId) {
                 btn.classList.add('correct');
             }
         });
