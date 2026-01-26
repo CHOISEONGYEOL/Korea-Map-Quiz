@@ -86,6 +86,15 @@ class WorldMapQuiz {
         this.labelToggleEl = document.getElementById('label-toggle');
         this.testModeSelectEl = document.getElementById('test-mode-select');
 
+        // 명예의 전당 요소
+        this.hallOfFameEl = document.getElementById('hall-of-fame');
+        this.leaderboardListEl = document.getElementById('leaderboard-list');
+        this.nicknameModal = document.getElementById('nickname-modal');
+        this.nicknameInput = document.getElementById('nickname-input');
+        this.submitNicknameBtn = document.getElementById('submit-nickname');
+        this.skipNicknameBtn = document.getElementById('skip-nickname');
+        this.hallTabs = document.querySelectorAll('.hall-tab');
+
         this.setupTheme();
         await this.loadMapData();
         this.setupScreen();
@@ -292,6 +301,21 @@ class WorldMapQuiz {
 
         // 지역 필터 설정
         this.setupRegionFilter();
+
+        // 명예의 전당 이벤트
+        this.submitNicknameBtn?.addEventListener('click', () => this.submitNickname());
+        this.skipNicknameBtn?.addEventListener('click', () => this.hideNicknameModal());
+        this.nicknameInput?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.submitNickname();
+        });
+        this.hallTabs?.forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                const mode = e.target.dataset.mode;
+                this.hallTabs.forEach(t => t.classList.remove('active'));
+                e.target.classList.add('active');
+                this.displayLeaderboard('world', mode);
+            });
+        });
     }
 
     // 지역 필터 UI 생성
@@ -1840,6 +1864,134 @@ class WorldMapQuiz {
         feedback.className = 'feedback';
     }
 
+    // ===== 명예의 전당 관련 메서드 =====
+
+    async checkAndShowLeaderboard() {
+        if (this.currentMode !== 'test' || !leaderboardService?.isAvailable()) {
+            return;
+        }
+
+        const mode = this.testSubMode;
+        const rank = await leaderboardService.checkRank('world', mode, this.score);
+
+        // 항상 닉네임 입력 모달 표시 (등록 여부 선택 가능)
+        this.pendingLeaderboardEntry = {
+            topic: 'world',
+            mode: mode,
+            score: this.score,
+            correctCount: this.results.filter(r => r.correct).length,
+            maxCombo: this.maxComboAchieved
+        };
+        this.showNicknameModal(rank);
+
+        // 명예의 전당 표시
+        this.showHallOfFame(mode);
+    }
+
+    showNicknameModal(rank) {
+        if (!this.nicknameModal) return;
+
+        const modalTitle = this.nicknameModal.querySelector('.modal-content h3');
+        const modalDesc = this.nicknameModal.querySelector('.modal-content p');
+
+        if (modalTitle && modalDesc) {
+            if (rank <= 10) {
+                modalTitle.textContent = `TOP ${rank} 진입!`;
+                modalDesc.textContent = '축하합니다! 닉네임을 입력하면 명예의 전당에 등록됩니다';
+            } else if (rank <= 100) {
+                modalTitle.textContent = `TOP 100 진입! (${rank}위)`;
+                modalDesc.textContent = '닉네임을 입력하면 명예의 전당에 등록됩니다';
+            } else {
+                modalTitle.textContent = '기록 등록';
+                modalDesc.textContent = `현재 ${rank}위입니다. 닉네임을 입력하면 명예의 전당에 등록됩니다`;
+            }
+        }
+
+        this.nicknameModal.classList.remove('hidden');
+        this.nicknameInput?.focus();
+    }
+
+    hideNicknameModal() {
+        this.nicknameModal?.classList.add('hidden');
+        if (this.nicknameInput) this.nicknameInput.value = '';
+        this.pendingLeaderboardEntry = null;
+    }
+
+    async submitNickname() {
+        const nickname = this.nicknameInput?.value.trim();
+        if (!nickname) {
+            this.nicknameInput?.focus();
+            return;
+        }
+
+        if (this.pendingLeaderboardEntry) {
+            this.pendingLeaderboardEntry.nickname = nickname;
+            const success = await leaderboardService.saveScore(this.pendingLeaderboardEntry);
+
+            if (success) {
+                // 저장 후 리더보드 갱신
+                this.displayLeaderboard('world', this.testSubMode);
+            }
+        }
+
+        this.hideNicknameModal();
+    }
+
+    showHallOfFame(activeMode) {
+        if (!this.hallOfFameEl) return;
+
+        // 탭 활성화
+        this.hallTabs?.forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.mode === activeMode);
+        });
+
+        this.hallOfFameEl.classList.remove('hidden');
+        this.displayLeaderboard('world', activeMode);
+    }
+
+    async displayLeaderboard(topic, mode) {
+        if (!this.leaderboardListEl) return;
+
+        this.leaderboardListEl.innerHTML = '<div class="loading-leaderboard">불러오는 중...</div>';
+
+        const entries = await leaderboardService.getLeaderboard(topic, mode, 10);
+
+        if (entries.length === 0) {
+            this.leaderboardListEl.innerHTML = '<div class="no-entries">아직 기록이 없습니다</div>';
+            return;
+        }
+
+        const medals = ['gold', 'silver', 'bronze'];
+        let html = '';
+        entries.forEach((entry, index) => {
+            const rankClass = index < 3 ? `rank-${medals[index]}` : '';
+            const rankDisplay = index < 3
+                ? ['🥇', '🥈', '🥉'][index]
+                : `${index + 1}`;
+            const date = new Date(entry.date).toLocaleDateString('ko-KR');
+
+            html += `
+                <div class="leaderboard-entry ${rankClass}">
+                    <span class="entry-rank">${rankDisplay}</span>
+                    <span class="entry-nickname">${this.escapeHtml(entry.nickname)}</span>
+                    <span class="entry-score">${entry.score.toLocaleString()}점</span>
+                    <span class="entry-combo">x${entry.maxCombo}</span>
+                    <span class="entry-date">${date}</span>
+                </div>
+            `;
+        });
+
+        this.leaderboardListEl.innerHTML = html;
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // ===== 게임 종료 =====
+
     endGame() {
         this.stopTimer();
         this.stopSpeedTimer();
@@ -1920,6 +2072,9 @@ class WorldMapQuiz {
         });
 
         details.innerHTML = html;
+
+        // 4단계 테스트 모드일 때 명예의 전당 처리
+        this.checkAndShowLeaderboard();
     }
 
     resetGame() {

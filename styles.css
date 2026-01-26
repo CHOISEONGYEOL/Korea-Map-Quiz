@@ -1944,3 +1944,280 @@ header {
 .map-container {
     position: relative;
 }
+
+/* ===== 명예의 전당 (리더보드) ===== */
+
+.hall-of-fame {
+    margin-top: 24px;
+    padding: 20px;
+    background: var(--bg-secondary);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+}
+
+.hall-of-fame h3 {
+    margin: 0 0 16px 0;
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    text-align: center;
+}
+
+.hall-of-fame-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.hall-tab {
+    padding: 8px 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.hall-tab:hover {
+    background: var(--bg-tertiary);
+}
+
+.hall-tab.active {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+.leaderboard-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.leaderboard-entry {
+    display: grid;
+    grid-template-columns: 40px 1fr 80px 50px 80px;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--bg-primary);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.leaderboard-entry:hover {
+    transform: translateX(4px);
+    box-shadow: var(--shadow-medium);
+}
+
+.leaderboard-entry.rank-gold {
+    background: linear-gradient(135deg, #fff9e6 0%, #fff3cc 100%);
+    border-color: #ffd700;
+}
+
+.leaderboard-entry.rank-silver {
+    background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+    border-color: #c0c0c0;
+}
+
+.leaderboard-entry.rank-bronze {
+    background: linear-gradient(135deg, #fff5ee 0%, #ffe4d6 100%);
+    border-color: #cd7f32;
+}
+
+[data-theme="dark"] .leaderboard-entry.rank-gold {
+    background: linear-gradient(135deg, #3d3820 0%, #4a4428 100%);
+    border-color: #b8960f;
+}
+
+[data-theme="dark"] .leaderboard-entry.rank-silver {
+    background: linear-gradient(135deg, #2a2a2a 0%, #333333 100%);
+    border-color: #808080;
+}
+
+[data-theme="dark"] .leaderboard-entry.rank-bronze {
+    background: linear-gradient(135deg, #3a2a20 0%, #4a3428 100%);
+    border-color: #a66528;
+}
+
+.entry-rank {
+    font-weight: 700;
+    font-size: 1rem;
+    text-align: center;
+}
+
+.entry-nickname {
+    font-weight: 600;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.entry-score {
+    font-weight: 700;
+    color: var(--accent-color);
+    text-align: right;
+}
+
+.entry-combo {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.entry-date {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-align: right;
+}
+
+.loading-leaderboard,
+.no-entries {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+/* ===== 닉네임 입력 모달 ===== */
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    position: relative;
+    background: var(--bg-primary);
+    border-radius: 20px;
+    padding: 32px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: var(--shadow-large);
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-content h3 {
+    margin: 0 0 8px 0;
+    font-size: 1.5rem;
+    color: var(--accent-color);
+}
+
+.modal-content p {
+    margin: 0 0 20px 0;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+.modal-content input[type="text"] {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.2s ease;
+    box-sizing: border-box;
+}
+
+.modal-content input[type="text"]:focus {
+    border-color: var(--accent-color);
+}
+
+.modal-content input[type="text"]::placeholder {
+    color: var(--text-muted);
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.modal-buttons button {
+    flex: 1;
+    padding: 14px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-buttons .btn-primary {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+}
+
+.modal-buttons .btn-primary:hover {
+    background: var(--accent-hover);
+    transform: translateY(-2px);
+}
+
+.modal-buttons .btn-secondary {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.modal-buttons .btn-secondary:hover {
+    background: var(--bg-tertiary);
+}
+
+/* 반응형 - 모바일 */
+@media (max-width: 600px) {
+    .leaderboard-entry {
+        grid-template-columns: 35px 1fr 70px 45px;
+        font-size: 0.85rem;
+        padding: 10px 12px;
+    }
+
+    .entry-date {
+        display: none;
+    }
+
+    .modal-content {
+        padding: 24px;
+    }
+}
