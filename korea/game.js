@@ -961,11 +961,13 @@ class KoreaMapQuiz {
         // 4단계 테스트 모드 서브모드별 표시
         if (this.gameMode === 'test') {
             if (this.testSubMode === 'speed') {
-                // 스피드 모드: 맞춘 개수만 표시
-                this.questionNumEl.textContent = `${this.currentQuestion}문제`;
+                // 스피드 모드: 전체 시간 + 맞춘 개수 (updateSpeedTimerDisplay에서 갱신)
+                const seconds = Math.ceil(this.speedTimeRemaining / 1000);
+                this.questionNumEl.textContent = `⏱️${seconds}초 | ${this.currentQuestion}문제`;
             } else if (this.testSubMode === 'survival') {
-                // 서바이벌 모드: 목숨 표시
-                this.questionNumEl.textContent = '❤️'.repeat(this.lives) + '🖤'.repeat(this.maxLives - this.lives);
+                // 서바이벌 모드: 목숨 + 맞춘 개수
+                const hearts = '❤️'.repeat(this.lives) + '🖤'.repeat(this.maxLives - this.lives);
+                this.questionNumEl.textContent = `${hearts} | ${this.currentQuestion}문제`;
             }
         } else {
             this.questionNumEl.textContent = `${this.currentQuestion}/${this.totalQuestions}`;
@@ -2125,18 +2127,10 @@ class KoreaMapQuiz {
     }
 
     updateSpeedTimerDisplay() {
-        // 스피드 모드에서는 전체 남은 시간을 표시
+        // 스피드 모드에서는 전체 남은 시간을 문제 번호 영역에 표시
         const seconds = Math.ceil(this.speedTimeRemaining / 1000);
-        // 타이머 라벨을 "남은 시간"으로 표시하고 값은 초 단위
-        this.timerEl.textContent = `${seconds}초`;
-        const percentage = (this.speedTimeRemaining / this.speedTimeLimit) * 100;
-        this.timerFillEl.style.width = `${percentage}%`;
-
-        if (percentage <= 20) {
-            this.timerFillEl.classList.add('warning');
-        } else {
-            this.timerFillEl.classList.remove('warning');
-        }
+        // 문제 번호 영역에 전체 시간 + 맞춘 개수 표시
+        this.questionNumEl.textContent = `⏱️${seconds}초 | ${this.currentQuestion}문제`;
     }
 
     showFeedback(message, type) {
@@ -2145,11 +2139,7 @@ class KoreaMapQuiz {
     }
 
     updateTimerDisplay() {
-        // 스피드 모드에서는 전체 타이머만 표시 (문제별 타이머는 표시 안 함)
-        if (this.gameMode === 'test' && this.testSubMode === 'speed') {
-            return;  // 스피드 모드에서는 updateSpeedTimerDisplay에서 처리
-        }
-
+        // 5초 문제별 타이머는 모든 테스트 서브모드(스피드/서바이벌)에서 동작
         const seconds = (this.timeRemaining / 1000).toFixed(1);
         this.timerEl.textContent = seconds;
         const percentage = (this.timeRemaining / this.timeLimit) * 100;

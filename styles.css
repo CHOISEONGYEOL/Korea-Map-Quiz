@@ -1747,6 +1747,10 @@ header {
     display: none;
 }
 
+.test-mode-select.hidden {
+    display: none;
+}
+
 .label-toggle h3 {
     font-size: 0.9rem;
     color: var(--text-primary);
