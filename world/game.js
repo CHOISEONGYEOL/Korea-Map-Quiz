@@ -1151,13 +1151,21 @@ class WorldMapQuiz {
         // 인접 국가 색상 분리
         const colorAssignment = this.assignColorsToFeatures(countryFeatures);
 
+        // 테스트 모드에서는 정답 국가만 색상 표시, 나머지는 옅은 회색
+        const targetId = this.currentMode === 'test' && this.targetCountry ? String(this.targetCountry.id) : null;
+
         this.mapGroup.selectAll('.country')
             .data(countryFeatures)
             .enter()
             .append('path')
             .attr('class', 'country')
             .attr('d', this.path)
-            .attr('fill', d => countryPalette[colorAssignment.get(d.id) || 0])
+            .attr('fill', d => {
+                if (targetId && String(d.id) !== targetId) {
+                    return '#e0e0e0'; // 테스트 모드: 다른 국가는 옅은 회색
+                }
+                return countryPalette[colorAssignment.get(d.id) || 0];
+            })
             .attr('stroke', 'var(--map-stroke)')
             .attr('stroke-width', 1)
             .on('click', (event, d) => {
@@ -1724,6 +1732,8 @@ class WorldMapQuiz {
 
     // 테스트 모드 타임아웃 처리
     handleTestTimeout() {
+        this.stopTimer();
+
         this.combo = 0;
         this.results.push({
             country: this.targetCountry.name,
