@@ -163,6 +163,23 @@ body.game-active .game-back-btns {
     gap: 10px;
 }
 
+/* 4단계 실전 테스트 8지선다 (하단 중앙) */
+body.game-active .choices-container {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    max-width: 90%;
+    width: 700px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(5px);
+}
+
+[data-theme="dark"] body.game-active .choices-container {
+    background: rgba(33, 33, 39, 0.95);
+}
+
 body.game-active .game-back-btn {
     background: white;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -200,5 +217,55 @@ body.game-active .mountain-list {
 }
 
 [data-theme="dark"] body.game-active .mountain-list {
+    background: rgba(33, 33, 39, 0.95);
+}
+
+/* 4단계 테스트 모드 전용 스타일 */
+body.game-active .question-area.hidden {
+    display: none !important;
+}
+
+/* 테스트 모드에서 question-area 완전히 숨김 */
+body.game-active.test-mode .question-area {
+    display: none !important;
+}
+
+/* 4단계: 지도 높이 조정 (8지선다 공간 확보) */
+body.game-active.test-mode .map-container {
+    top: 0;
+    bottom: 180px;
+    height: calc(100% - 180px) !important;
+}
+
+/* 4단계: 8지선다를 더 잘 보이게 */
+body.game-active.test-mode .choices-container {
+    bottom: 10px;
+    padding: 15px 20px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* 4단계 테스트 모드: 피드백 기본 숨김 (빈 상태일 때 흰 바 방지) */
+body.game-active.test-mode .feedback {
+    background: transparent;
+    box-shadow: none;
+    min-width: 0;
+    padding: 0;
+}
+
+/* 4단계 테스트 모드: 피드백이 있을 때만 표시 */
+body.game-active.test-mode .feedback.correct,
+body.game-active.test-mode .feedback.incorrect,
+body.game-active.test-mode .feedback.timeout {
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    min-width: 200px;
+    padding: 12px 16px;
+    top: 20px;
+}
+
+[data-theme="dark"] body.game-active.test-mode .feedback.correct,
+[data-theme="dark"] body.game-active.test-mode .feedback.incorrect,
+[data-theme="dark"] body.game-active.test-mode .feedback.timeout {
     background: rgba(33, 33, 39, 0.95);
 }
