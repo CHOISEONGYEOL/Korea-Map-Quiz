@@ -34,6 +34,28 @@ class WorldMapQuiz {
         // 헤더 제목 요소
         this.headerTitleEl = null;
 
+        // 이름 표시 옵션
+        this.showLabels = true;
+
+        // 콤보 시스템
+        this.combo = 0;
+        this.maxComboAchieved = 0;
+
+        // 4단계 테스트 서브모드 (speed / survival)
+        this.testSubMode = 'speed';
+        this.maxLives = 3;
+        this.speedTimeLimit = 60000;  // 60초 총 시간
+        this.speedTimer = null;
+        this.speedTimeRemaining = 60000;
+        this.lives = 3;
+
+        // UI 요소 참조
+        this.comboEl = null;
+        this.choicesContainer = null;
+        this.choicesGrid = null;
+        this.labelToggleEl = null;
+        this.testModeSelectEl = null;
+
         this.init();
 
         // 창 크기 변경 시 지도 다시 그리기
@@ -57,10 +79,19 @@ class WorldMapQuiz {
         // 헤더 제목 요소 참조
         this.headerTitleEl = document.getElementById('header-title');
 
+        // UI 요소 참조
+        this.comboEl = document.getElementById('combo');
+        this.choicesContainer = document.getElementById('choices-container');
+        this.choicesGrid = document.getElementById('choices-grid');
+        this.labelToggleEl = document.getElementById('label-toggle');
+        this.testModeSelectEl = document.getElementById('test-mode-select');
+
         this.setupTheme();
         await this.loadMapData();
         this.setupScreen();
         this.setupEventListeners();
+        this.setupLabelToggle();
+        this.setupTestModeSelect();
     }
 
     setupTheme() {
@@ -276,6 +307,56 @@ class WorldMapQuiz {
         }
     }
 
+    // 이름 표시 옵션 설정
+    setupLabelToggle() {
+        if (!this.labelToggleEl) return;
+
+        // 1~3단계에서만 표시 (explore, practice, quiz)
+        if (this.currentMode && ['explore', 'practice', 'quiz'].includes(this.currentMode)) {
+            this.labelToggleEl.classList.remove('hidden');
+        } else {
+            this.labelToggleEl.classList.add('hidden');
+        }
+
+        // 라디오 버튼 이벤트 리스너
+        const radioButtons = this.labelToggleEl.querySelectorAll('input[name="showLabels"]');
+        radioButtons.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                this.showLabels = e.target.value === 'show';
+                // 선택 스타일 업데이트
+                this.labelToggleEl.querySelectorAll('.toggle-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                e.target.closest('.toggle-option').classList.add('selected');
+            });
+        });
+    }
+
+    // 4단계 테스트 모드 선택 설정
+    setupTestModeSelect() {
+        if (!this.testModeSelectEl) return;
+
+        // 4단계에서만 표시
+        if (this.currentMode === 'test') {
+            this.testModeSelectEl.classList.remove('hidden');
+        } else {
+            this.testModeSelectEl.classList.add('hidden');
+        }
+
+        // 라디오 버튼 이벤트 리스너
+        const radioButtons = this.testModeSelectEl.querySelectorAll('input[name="testSubMode"]');
+        radioButtons.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                this.testSubMode = e.target.value;
+                // 선택 스타일 업데이트
+                this.testModeSelectEl.querySelectorAll('.toggle-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                e.target.closest('.toggle-option').classList.add('selected');
+            });
+        });
+    }
+
     generateFilterOptions(container) {
         container.innerHTML = '';
 
@@ -340,6 +421,33 @@ class WorldMapQuiz {
 
     startGame() {
         document.body.classList.add('game-active');
+
+        // 콤보 초기화
+        this.combo = 0;
+        this.maxComboAchieved = 0;
+
+        // 4단계 테스트 모드 서브모드 읽기
+        if (this.currentMode === 'test') {
+            const testSubModeRadio = document.querySelector('#test-mode-select input[name="testSubMode"]:checked');
+            this.testSubMode = testSubModeRadio?.value || 'speed';
+            console.log('[테스트모드] 게임 시작 - 서브모드:', this.testSubMode);
+
+            // 서브모드별 초기화
+            if (this.testSubMode === 'speed') {
+                this.speedTimeRemaining = this.speedTimeLimit;
+                this.totalQuestions = 9999;  // 무제한 (시간 내 최대한 많이)
+            } else {
+                this.lives = this.maxLives;
+                this.totalQuestions = 9999;  // 무제한 (목숨 다 떨어질 때까지)
+            }
+
+            document.body.classList.add('test-mode');
+            this.choicesContainer?.classList.remove('hidden');
+        } else {
+            document.body.classList.remove('test-mode');
+            this.choicesContainer?.classList.add('hidden');
+        }
+
         if (this.currentContinent === 'world') {
             // 전 세계 모드 - 필터 적용
             this.countries = this.getFilteredCountries().length > 0
@@ -352,13 +460,22 @@ class WorldMapQuiz {
             this.currentSubregion = null;
             this.selectedContinent = null;
 
-            this.totalQuestions = Math.min(10, this.countries.length);
+            if (this.currentMode !== 'test') {
+                this.totalQuestions = Math.min(10, this.countries.length);
+            }
             this.shuffledCountries = [...this.countries].sort(() => Math.random() - 0.5);
 
             this.showScreen('game-screen');
             this.drawWorldMap();
 
-            if (this.currentMode !== 'explore') {
+            if (this.currentMode === 'test') {
+                // 4단계: 8지선다 시작
+                this.updateScore();
+                if (this.testSubMode === 'speed') {
+                    this.startSpeedTimer();
+                }
+                this.nextTestQuestion();
+            } else if (this.currentMode !== 'explore') {
                 this.updateScore();
                 this.nextQuestion();
             } else {
@@ -378,7 +495,9 @@ class WorldMapQuiz {
             this.results = [];
             this.currentSubregion = null;
 
-            this.totalQuestions = Math.min(10, this.countries.length);
+            if (this.currentMode !== 'test') {
+                this.totalQuestions = Math.min(10, this.countries.length);
+            }
             this.shuffledCountries = [...this.countries].sort(() => Math.random() - 0.5);
 
             this.showScreen('game-screen');
@@ -394,7 +513,14 @@ class WorldMapQuiz {
                 this.drawContinentMap();
             }
 
-            if (this.currentMode !== 'explore') {
+            if (this.currentMode === 'test') {
+                // 4단계: 8지선다 시작
+                this.updateScore();
+                if (this.testSubMode === 'speed') {
+                    this.startSpeedTimer();
+                }
+                this.nextTestQuestion();
+            } else if (this.currentMode !== 'explore') {
                 this.updateScore();
                 this.nextQuestion();
             } else {
@@ -552,8 +678,8 @@ class WorldMapQuiz {
                 });
         }
 
-        // 대륙 라벨
-        if (this.currentMode !== 'test') {
+        // 대륙 라벨 (showLabels 반영)
+        if (this.currentMode !== 'test' && this.showLabels) {
             this.drawContinentLabels(this.mapGroup);
         }
 
@@ -706,8 +832,8 @@ class WorldMapQuiz {
                 });
         }
 
-        // 하위지역 라벨 (explore 모드 또는 test가 아닌 경우)
-        if (this.currentMode !== 'test') {
+        // 하위지역 라벨 (explore 모드 또는 test가 아닌 경우, showLabels 반영)
+        if (this.currentMode !== 'test' && this.showLabels) {
             this.drawSubregionLabels(this.mapGroup, continent);
         }
 
@@ -1053,8 +1179,8 @@ class WorldMapQuiz {
                 d3.select(this).attr('stroke-width', 1).style('filter', 'none');
             });
 
-        // 국가 라벨 (test 모드 제외)
-        if (this.currentMode !== 'test') {
+        // 국가 라벨 (test 모드 제외, showLabels 옵션 반영)
+        if (this.currentMode !== 'test' && this.showLabels) {
             this.drawCountryLabels(this.mapGroup, countries.features.filter(d => subregionCountryIds.includes(d.id)));
         }
 
@@ -1313,11 +1439,17 @@ class WorldMapQuiz {
         this.stopTimer();
 
         if (isCorrect) {
-            this.score += 10;
-            this.results.push({ country: currentCountry.name, correct: true });
+            this.combo++;
+            if (this.combo > this.maxComboAchieved) {
+                this.maxComboAchieved = this.combo;
+            }
+            const earnedScore = 10 + (this.combo - 1) * 2;
+            this.score += earnedScore;
+            this.results.push({ country: currentCountry.name, correct: true, earnedScore: earnedScore });
             this.highlightCountry(countryId, 'correct');
-            this.showFeedback('정답입니다!', 'correct');
+            this.showFeedback(`정답! +${earnedScore}점 (콤보 ${this.combo})`, 'correct');
         } else {
+            this.combo = 0;
             this.results.push({
                 country: currentCountry.name,
                 correct: false,
@@ -1384,7 +1516,11 @@ class WorldMapQuiz {
             this.updateTimerDisplay();
 
             if (this.timeLeft <= 0) {
-                this.handleTimeout();
+                if (this.currentMode === 'test') {
+                    this.handleTestTimeout();
+                } else {
+                    this.handleTimeout();
+                }
             }
         }, 100);
     }
@@ -1394,6 +1530,208 @@ class WorldMapQuiz {
             clearInterval(this.timer);
             this.timer = null;
         }
+    }
+
+    // 스피드 모드 전용: 60초 전체 타이머
+    startSpeedTimer() {
+        this.speedTimeRemaining = this.speedTimeLimit;
+        this.updateSpeedTimerDisplay();
+
+        if (this.speedTimer) clearInterval(this.speedTimer);
+
+        this.speedTimer = setInterval(() => {
+            this.speedTimeRemaining -= 100;
+            this.updateSpeedTimerDisplay();
+
+            if (this.speedTimeRemaining <= 0) {
+                console.log('[스피드모드] 60초 종료!');
+                clearInterval(this.speedTimer);
+                this.speedTimer = null;
+                this.stopTimer();
+                this.endGame();
+            }
+        }, 100);
+    }
+
+    stopSpeedTimer() {
+        if (this.speedTimer) {
+            clearInterval(this.speedTimer);
+            this.speedTimer = null;
+        }
+    }
+
+    updateSpeedTimerDisplay() {
+        const seconds = Math.ceil(this.speedTimeRemaining / 1000);
+        document.getElementById('question-num').textContent = `⏱️${seconds}초 | ${this.currentQuestion}문제`;
+    }
+
+    updateSurvivalDisplay() {
+        const hearts = '❤️'.repeat(this.lives) + '🖤'.repeat(this.maxLives - this.lives);
+        document.getElementById('question-num').textContent = `${hearts} | ${this.currentQuestion}문제`;
+    }
+
+    // 4단계 실전 테스트: 다음 문제 (8지선다)
+    nextTestQuestion() {
+        if (this.currentQuestion >= this.shuffledCountries.length) {
+            // 문제가 부족하면 다시 셔플
+            this.shuffledCountries = [...this.countries].sort(() => Math.random() - 0.5);
+            this.currentQuestion = 0;
+        }
+
+        const targetCountry = this.shuffledCountries[this.currentQuestion];
+        this.targetCountry = targetCountry;
+
+        // 지도에서 해당 국가 하이라이트
+        this.highlightTargetCountry(targetCountry.id);
+
+        // 8지선다 생성
+        this.generateChoices(targetCountry);
+
+        // UI 업데이트
+        if (this.testSubMode === 'speed') {
+            this.updateSpeedTimerDisplay();
+        } else {
+            this.updateSurvivalDisplay();
+        }
+
+        // 문제별 5초 타이머 시작
+        this.startTimer();
+    }
+
+    // 정답 국가 하이라이트
+    highlightTargetCountry(countryId) {
+        // 기존 하이라이트 제거
+        this.svg?.selectAll('.country')
+            .classed('target-highlight', false)
+            .classed('correct', false)
+            .classed('incorrect', false);
+
+        // 새 타겟 하이라이트
+        this.svg?.selectAll('.country')
+            .filter(d => d.id === countryId)
+            .classed('target-highlight', true);
+    }
+
+    // 8지선다 보기 생성
+    generateChoices(correctCountry) {
+        if (!this.choicesGrid) return;
+
+        // 오답 후보들 (정답 제외)
+        const otherCountries = this.countries.filter(c => c.id !== correctCountry.id);
+        const shuffledOthers = [...otherCountries].sort(() => Math.random() - 0.5);
+        const wrongAnswers = shuffledOthers.slice(0, 7);
+
+        // 정답 + 오답 7개 = 8개 셔플
+        const choices = [correctCountry, ...wrongAnswers].sort(() => Math.random() - 0.5);
+
+        // 버튼 생성
+        this.choicesGrid.innerHTML = '';
+        choices.forEach(country => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.textContent = country.name;
+            btn.dataset.countryId = country.id;
+            btn.addEventListener('click', () => this.handleChoiceClick(country));
+            this.choicesGrid.appendChild(btn);
+        });
+    }
+
+    // 8지선다 보기 클릭 처리
+    handleChoiceClick(selectedCountry) {
+        this.stopTimer();
+
+        const isCorrect = selectedCountry.id === this.targetCountry.id;
+
+        // 버튼 스타일 업데이트
+        const buttons = this.choicesGrid.querySelectorAll('.choice-btn');
+        buttons.forEach(btn => {
+            btn.disabled = true;
+            if (btn.dataset.countryId === this.targetCountry.id) {
+                btn.classList.add('correct');
+            } else if (btn.dataset.countryId === selectedCountry.id && !isCorrect) {
+                btn.classList.add('incorrect');
+            }
+        });
+
+        if (isCorrect) {
+            this.combo++;
+            if (this.combo > this.maxComboAchieved) {
+                this.maxComboAchieved = this.combo;
+            }
+            const earnedScore = 10 + (this.combo - 1) * 2;  // 콤보 보너스
+            this.score += earnedScore;
+            this.results.push({
+                country: this.targetCountry.name,
+                correct: true,
+                earnedScore: earnedScore
+            });
+            this.showFeedback(`정답! +${earnedScore}점 (콤보 ${this.combo})`, 'correct');
+        } else {
+            this.combo = 0;
+            this.results.push({
+                country: this.targetCountry.name,
+                correct: false,
+                answer: selectedCountry.name
+            });
+            this.showFeedback(`오답! 정답은 ${this.targetCountry.name}`, 'incorrect');
+
+            if (this.testSubMode === 'survival') {
+                this.lives--;
+                if (this.lives <= 0) {
+                    setTimeout(() => this.endGame(), 1000);
+                    return;
+                }
+            }
+        }
+
+        this.updateScore();
+        this.currentQuestion++;
+
+        setTimeout(() => {
+            this.clearFeedback();
+            if (this.testSubMode === 'survival' && this.lives <= 0) {
+                return;  // 이미 게임 종료 처리됨
+            }
+            this.nextTestQuestion();
+        }, 1000);
+    }
+
+    // 테스트 모드 타임아웃 처리
+    handleTestTimeout() {
+        this.combo = 0;
+        this.results.push({
+            country: this.targetCountry.name,
+            correct: false,
+            timeout: true
+        });
+        this.showFeedback(`시간 초과! 정답은 ${this.targetCountry.name}`, 'timeout');
+
+        // 정답 버튼 표시
+        const buttons = this.choicesGrid?.querySelectorAll('.choice-btn');
+        buttons?.forEach(btn => {
+            btn.disabled = true;
+            if (btn.dataset.countryId === this.targetCountry.id) {
+                btn.classList.add('correct');
+            }
+        });
+
+        if (this.testSubMode === 'survival') {
+            this.lives--;
+            if (this.lives <= 0) {
+                setTimeout(() => this.endGame(), 1000);
+                return;
+            }
+        }
+
+        this.currentQuestion++;
+
+        setTimeout(() => {
+            this.clearFeedback();
+            if (this.testSubMode === 'survival' && this.lives <= 0) {
+                return;
+            }
+            this.nextTestQuestion();
+        }, 1000);
     }
 
     updateTimerDisplay() {
@@ -1412,6 +1750,7 @@ class WorldMapQuiz {
 
     handleTimeout() {
         this.stopTimer();
+        this.combo = 0;
 
         const currentCountry = this.shuffledCountries[this.currentQuestion];
         const countryInfo = getCountryById(currentCountry.id);
@@ -1447,6 +1786,9 @@ class WorldMapQuiz {
 
     updateScore() {
         document.getElementById('score').textContent = this.score;
+        if (this.comboEl) {
+            this.comboEl.textContent = this.combo;
+        }
     }
 
     showFeedback(message, type) {
@@ -1462,22 +1804,85 @@ class WorldMapQuiz {
     }
 
     endGame() {
+        this.stopTimer();
+        this.stopSpeedTimer();
+
+        document.body.classList.remove('test-mode');
+        this.choicesContainer?.classList.add('hidden');
+
         this.showScreen('result-screen');
         document.getElementById('final-score').textContent = this.score;
 
         const details = document.getElementById('result-details');
-        details.innerHTML = '<h3>결과 상세</h3>';
+        const correctCount = this.results.filter(r => r.correct).length;
+        const totalAnswered = this.results.length;
 
+        let html = '<div class="game-stats">';
+
+        // 4단계 테스트 모드: 서브모드별 다른 통계 표시
+        if (this.currentMode === 'test' && this.testSubMode === 'speed') {
+            html += `<div class="stat-summary">
+                <span class="stat-label">⚡ 스피드 모드</span>
+                <span class="stat-value">${totalAnswered}문제</span>
+            </div>`;
+            html += `<div class="stat-summary">
+                <span class="stat-label">정답</span>
+                <span class="stat-value">${correctCount}개</span>
+            </div>`;
+            html += `<div class="stat-summary">
+                <span class="stat-label">정답률</span>
+                <span class="stat-value">${totalAnswered > 0 ? (correctCount / totalAnswered * 100).toFixed(0) : 0}%</span>
+            </div>`;
+            html += `<div class="stat-summary">
+                <span class="stat-label">최대 콤보</span>
+                <span class="stat-value combo-highlight">${this.maxComboAchieved}</span>
+            </div>`;
+        } else if (this.currentMode === 'test' && this.testSubMode === 'survival') {
+            html += `<div class="stat-summary">
+                <span class="stat-label">❤️ 서바이벌 모드</span>
+                <span class="stat-value">${totalAnswered}문제</span>
+            </div>`;
+            html += `<div class="stat-summary">
+                <span class="stat-label">정답</span>
+                <span class="stat-value">${correctCount}개</span>
+            </div>`;
+            html += `<div class="stat-summary">
+                <span class="stat-label">최대 콤보</span>
+                <span class="stat-value combo-highlight">${this.maxComboAchieved}</span>
+            </div>`;
+        } else {
+            html += `<div class="stat-summary">
+                <span class="stat-label">정답</span>
+                <span class="stat-value">${correctCount}/${this.totalQuestions}</span>
+            </div>`;
+            html += `<div class="stat-summary">
+                <span class="stat-label">정답률</span>
+                <span class="stat-value">${(correctCount / this.totalQuestions * 100).toFixed(0)}%</span>
+            </div>`;
+            html += `<div class="stat-summary">
+                <span class="stat-label">최대 콤보</span>
+                <span class="stat-value combo-highlight">${this.maxComboAchieved}</span>
+            </div>`;
+        }
+        html += '</div>';
+
+        html += '<h3>문제별 결과</h3>';
         this.results.forEach((result, index) => {
             const resultClass = result.correct ? 'correct-result' : 'incorrect-result';
             let resultText = result.correct ? '정답' : (result.timeout ? '시간초과' : `오답 (${result.answer})`);
-            details.innerHTML += `
+            let scoreText = '';
+            if (result.earnedScore) {
+                scoreText = ` (+${result.earnedScore}점)`;
+            }
+            html += `
                 <div class="result-item ${resultClass}">
                     <span>${index + 1}. ${result.country}</span>
-                    <span>${resultText}</span>
+                    <span>${resultText}${scoreText}</span>
                 </div>
             `;
         });
+
+        details.innerHTML = html;
     }
 
     resetGame() {
@@ -1486,7 +1891,12 @@ class WorldMapQuiz {
         this.results = [];
         this.currentSubregion = null;
         this.mapView = 'continent';
+        this.combo = 0;
+        this.maxComboAchieved = 0;
+        this.lives = this.maxLives;
+        this.speedTimeRemaining = this.speedTimeLimit;
         this.stopTimer();
+        this.stopSpeedTimer();
     }
 }
 
