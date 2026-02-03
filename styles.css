@@ -2190,9 +2190,17 @@ header {
         border-radius: 8px;
     }
 
-    /* 뒤로가기 버튼 숨김 (테스트 중에는 불필요) */
+    /* 뒤로가기 버튼 - 스크롤해서 접근 가능 */
     body.test-mode .game-back-btns {
-        display: none;
+        display: flex;
+        margin-top: 12px;
+        padding: 8px 0;
+        gap: 8px;
+    }
+
+    body.test-mode .game-back-btns .btn-secondary {
+        padding: 8px 12px;
+        font-size: 0.8rem;
     }
 
     /* 모바일 4단계: 점수/콤보 칸 숨김 - 지도 공간 확보 */
