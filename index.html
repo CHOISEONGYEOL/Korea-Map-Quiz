@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>지도 퀴즈</title>
-    <link rel="stylesheet" href="styles.css?v=5">
+    <link rel="stylesheet" href="styles.css?v=35">
 </head>
 <body class="main-landing">
     <div class="container">
@@ -24,27 +24,44 @@
                 <div class="main-menu-buttons">
                     <a href="korea/" class="main-menu-btn korea-btn">
                         <img src="https://flagcdn.com/w160/kr.png" alt="대한민국" class="menu-flag">
-                        <span class="menu-title">대한민국 지도</span>
-                        <span class="menu-desc">17개 시도, 250개 시군구의 위치를 학습하세요</span>
+                        <div class="menu-text">
+                            <span class="menu-title">대한민국 지도</span>
+                            <span class="menu-desc">17개 시도, 250개 시군구의 위치를 학습하세요</span>
+                        </div>
                     </a>
                     <a href="world/" class="main-menu-btn world-btn">
                         <img src="https://em-content.zobj.net/source/twitter/408/globe-showing-americas_1f30e.png" alt="지구" class="menu-globe">
-                        <span class="menu-title">세계 지도</span>
-                        <span class="menu-desc">대륙별 국가의 위치를 학습하세요</span>
+                        <div class="menu-text">
+                            <span class="menu-title">세계 지도</span>
+                            <span class="menu-desc">대륙별 국가의 위치를 학습하세요</span>
+                        </div>
                     </a>
                     <a href="subway/" class="main-menu-btn subway-btn">
                         <span class="menu-subway-icon">🚇</span>
-                        <span class="menu-title">수도권 지하철</span>
-                        <span class="menu-desc">24개 노선, 750개 역의 위치를 학습하세요</span>
+                        <div class="menu-text">
+                            <span class="menu-title">수도권 지하철</span>
+                            <span class="menu-desc">24개 노선, 750개 역의 위치를 학습하세요</span>
+                        </div>
                     </a>
                     <a href="mountains/" class="main-menu-btn mountain-btn">
                         <span class="menu-mountain-icon">🏔️</span>
-                        <span class="menu-title">100대 명산</span>
-                        <span class="menu-desc">전국 100대 명산의 위치를 학습하세요</span>
+                        <div class="menu-text">
+                            <span class="menu-title">100대 명산</span>
+                            <span class="menu-desc">전국 100대 명산의 위치를 학습하세요</span>
+                        </div>
                     </a>
                 </div>
             </div>
         </main>
+
+        <footer class="main-footer">
+            <div class="visitor-count">
+                <span class="visitor-icon">👥</span>
+                <span class="visitor-label">Total Visitors</span>
+                <span id="visitor-count" class="visitor-number">-</span>
+            </div>
+            <p class="copyright">© 2026 infinite monkey. All rights reserved.</p>
+        </footer>
     </div>
 
     <script>
@@ -68,6 +85,27 @@
             }
             localStorage.setItem('theme', newTheme);
         });
+
+        // 방문자 수 카운터 (로컬 스토리지 기반)
+        (function() {
+            const visitorEl = document.getElementById('visitor-count');
+            if (!visitorEl) return;
+
+            // 세션 체크 - 같은 세션에서 중복 카운트 방지
+            const sessionKey = 'map-quiz-session';
+            const countKey = 'map-quiz-visitor-count';
+
+            let count = parseInt(localStorage.getItem(countKey)) || 0;
+
+            // 새 세션인 경우에만 카운트 증가
+            if (!sessionStorage.getItem(sessionKey)) {
+                count++;
+                localStorage.setItem(countKey, count);
+                sessionStorage.setItem(sessionKey, 'visited');
+            }
+
+            visitorEl.textContent = count.toLocaleString();
+        })();
     </script>
 </body>
 </html>

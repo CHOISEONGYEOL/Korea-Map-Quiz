@@ -217,6 +217,7 @@ class KoreaMapQuiz {
         this.selectedProvince = null;
         this.correctSubRegion = null;
         this.questions = [];
+        this.askedQuestions = new Set();  // 이미 출제된 문제 추적 (중복 방지)
         this.results = [];
 
         // 4단계 테스트 서브모드 (speed / survival)
@@ -820,6 +821,7 @@ class KoreaMapQuiz {
         this.currentQuestion = 0;
         this.results = [];
         this.practiceAttempts = 0;
+        this.askedQuestions.clear();  // 새 게임 시작 시 출제 이력 초기화
 
         // 이름 표시 옵션 적용 (explore, practice, quiz 모드)
         if (this.gameMode === 'explore' || this.gameMode === 'practice' || this.gameMode === 'quiz') {
@@ -910,16 +912,29 @@ class KoreaMapQuiz {
             }
         }
 
+        // 이미 출제된 문제 제외 (중복 방지)
+        let availableQuestions = filteredDistricts.filter(d =>
+            !this.askedQuestions.has(d.name)
+        );
+
+        // 남은 문제가 부족하면 이력 초기화하고 새 라운드 시작
+        const neededCount = Math.min(this.totalQuestions, filteredDistricts.length);
+        if (availableQuestions.length < neededCount) {
+            console.log(`[랜덤] 모든 문제 출제 완료 (${this.askedQuestions.size}개), 새 라운드 시작`);
+            this.askedQuestions.clear();
+            availableQuestions = [...filteredDistricts];
+        }
+
         // 매 게임마다 완전히 새로 셔플
-        this.shuffleArray(filteredDistricts);
+        this.shuffleArray(availableQuestions);
 
         // 필터된 지역이 10개 미만이면 그만큼만 출제
-        const questionCount = Math.min(this.totalQuestions, filteredDistricts.length);
-        this.questions = filteredDistricts.slice(0, questionCount);
+        const questionCount = Math.min(this.totalQuestions, availableQuestions.length);
+        this.questions = availableQuestions.slice(0, questionCount);
         this.totalQuestions = questionCount;
 
         // 디버깅: 생성된 문제 순서 확인
-        console.log(`[${this.selectedRegionFilter}] 생성된 문제 순서:`, this.questions.map(q => `${q.provinceName} ${q.name}`));
+        console.log(`[${this.selectedRegionFilter}] 생성된 문제 (${this.askedQuestions.size}개 출제됨):`, this.questions.map(q => `${q.provinceName} ${q.name}`));
     }
 
     showScreen(screen) {
@@ -1058,6 +1073,7 @@ class KoreaMapQuiz {
         }
 
         this.currentAnswer = this.questions[this.currentQuestion];
+        this.askedQuestions.add(this.currentAnswer.name);  // 출제 이력 기록
         this.currentQuestion++;
         this.updateUI();
 
