@@ -7,11 +7,8 @@
     <title>대한민국 지도 퀴즈</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/topojson-client@3"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="../styles.css?v=27">
+    <link rel="stylesheet" href="../styles.css?v=30">
     <link rel="stylesheet" href="../common-fullscreen.css?v=5">
-    <script src="../config.js"></script>
-    <script src="../services/leaderboard.js"></script>
 </head>
 
 <body>
@@ -50,11 +47,6 @@
             <div id="mode-screen" class="screen active">
                 <h2>대한민국 지도 퀴즈</h2>
                 <p>학습 단계를 선택하세요</p>
-                <!-- 명예의 전당 TOP 3 미리보기 -->
-                <div id="top3-preview" class="top3-preview hidden">
-                    <div class="top3-header">🏆 명예의 전당</div>
-                    <div id="top3-list" class="top3-list"></div>
-                </div>
                 <div id="loading" class="loading">지도 데이터 로딩 중...</div>
                 <div id="mode-buttons" class="mode-buttons hidden">
                     <a href="?mode=explore" class="mode-btn mode-explore">
@@ -212,43 +204,19 @@
                         <span id="final-score" class="score-value">0</span>
                     </div>
                     <div id="result-details" class="result-details"></div>
-                    <!-- 명예의 전당 -->
-                    <div id="hall-of-fame" class="hall-of-fame hidden">
-                        <h3>명예의 전당</h3>
-                        <div class="hall-of-fame-tabs">
-                            <button class="hall-tab active" data-mode="speed">스피드</button>
-                            <button class="hall-tab" data-mode="survival">서바이벌</button>
-                        </div>
-                        <div id="leaderboard-list" class="leaderboard-list"></div>
-                    </div>
                 </div>
                 <div class="result-buttons">
                     <button id="restart-btn" class="btn-primary">다시 하기</button>
-                    <button id="register-leaderboard-btn" class="btn-leaderboard hidden">🏆 명예의 전당 등록</button>
                 </div>
                 <div class="btn-row">
                     <a href="./" class="btn-secondary">모드 선택</a>
                     <a href="../" class="btn-secondary">메인</a>
                 </div>
             </div>
-
-            <!-- 닉네임 입력 모달 -->
-            <div id="nickname-modal" class="modal hidden">
-                <div class="modal-overlay"></div>
-                <div class="modal-content">
-                    <h3>TOP 100 진입!</h3>
-                    <p>닉네임을 입력하면 명예의 전당에 등록됩니다</p>
-                    <input type="text" id="nickname-input" maxlength="20" placeholder="닉네임 (최대 20자)">
-                    <div class="modal-buttons">
-                        <button id="submit-nickname" class="btn-primary">등록</button>
-                        <button id="skip-nickname" class="btn-secondary">건너뛰기</button>
-                    </div>
-                </div>
-            </div>
         </main>
     </div>
 
-    <script src="game.js?v=36"></script>
+    <script src="game.js?v=40"></script>
 </body>
 
 </html>
