@@ -416,6 +416,9 @@ class KoreaMapQuiz {
         filterOptions.forEach(radio => {
             radio.addEventListener('change', (e) => {
                 this.selectedRegionFilter = e.target.value;
+                // 지역 필터 변경 시 출제 이력 초기화 (새 지역이므로 새로 시작)
+                this.askedQuestions.clear();
+                console.log(`[필터 변경] ${e.target.value} - 출제 이력 초기화`);
                 // 선택 상태 UI 업데이트
                 document.querySelectorAll('#region-filter .filter-option').forEach(opt => {
                     opt.classList.remove('selected');
@@ -821,7 +824,8 @@ class KoreaMapQuiz {
         this.currentQuestion = 0;
         this.results = [];
         this.practiceAttempts = 0;
-        this.askedQuestions.clear();  // 새 게임 시작 시 출제 이력 초기화
+        // askedQuestions는 여기서 초기화하지 않음 - 다시하기 시에도 중복 방지 유지
+        // 지역 필터 변경 시에만 초기화됨 (initEventListeners에서 처리)
 
         // 이름 표시 옵션 적용 (explore, practice, quiz 모드)
         if (this.gameMode === 'explore' || this.gameMode === 'practice' || this.gameMode === 'quiz') {
