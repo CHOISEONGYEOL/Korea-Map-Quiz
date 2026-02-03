@@ -86,15 +86,6 @@ class WorldMapQuiz {
         this.labelToggleEl = document.getElementById('label-toggle');
         this.testModeSelectEl = document.getElementById('test-mode-select');
 
-        // 명예의 전당 요소
-        this.hallOfFameEl = document.getElementById('hall-of-fame');
-        this.leaderboardListEl = document.getElementById('leaderboard-list');
-        this.nicknameModal = document.getElementById('nickname-modal');
-        this.nicknameInput = document.getElementById('nickname-input');
-        this.submitNicknameBtn = document.getElementById('submit-nickname');
-        this.skipNicknameBtn = document.getElementById('skip-nickname');
-        this.hallTabs = document.querySelectorAll('.hall-tab');
-
         this.setupTheme();
         await this.loadMapData();
         this.setupScreen();
@@ -138,8 +129,6 @@ class WorldMapQuiz {
             document.getElementById('continent-buttons').classList.remove('hidden');
 
             this.updateCountryCounts();
-            // TOP 3 미리보기 로드
-            this.loadTop3Preview();
         } catch (error) {
             console.error('지도 데이터 로드 실패:', error);
             document.getElementById('loading').textContent = '지도 데이터 로드 실패';
@@ -303,21 +292,6 @@ class WorldMapQuiz {
 
         // 지역 필터 설정
         this.setupRegionFilter();
-
-        // 명예의 전당 이벤트
-        this.submitNicknameBtn?.addEventListener('click', () => this.submitNickname());
-        this.skipNicknameBtn?.addEventListener('click', () => this.hideNicknameModal());
-        this.nicknameInput?.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.submitNickname();
-        });
-        this.hallTabs?.forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                const mode = e.target.dataset.mode;
-                this.hallTabs.forEach(t => t.classList.remove('active'));
-                e.target.classList.add('active');
-                this.displayLeaderboard('world', mode);
-            });
-        });
     }
 
     // 지역 필터 UI 생성
@@ -1600,6 +1574,34 @@ class WorldMapQuiz {
         }
     }
 
+    // 스피드 모드 타이머 일시정지
+    pauseSpeedTimer() {
+        if (this.speedTimer) {
+            clearInterval(this.speedTimer);
+            this.speedTimer = null;
+            this.speedTimerPaused = true;
+        }
+    }
+
+    // 스피드 모드 타이머 재개
+    resumeSpeedTimer() {
+        if (this.speedTimerPaused && this.speedTimeRemaining > 0) {
+            this.speedTimerPaused = false;
+            this.speedTimer = setInterval(() => {
+                this.speedTimeRemaining -= 100;
+                this.updateSpeedTimerDisplay();
+
+                if (this.speedTimeRemaining <= 0) {
+                    console.log('[스피드모드] 60초 종료!');
+                    clearInterval(this.speedTimer);
+                    this.speedTimer = null;
+                    this.stopTimer();
+                    this.endGame();
+                }
+            }, 100);
+        }
+    }
+
     updateSpeedTimerDisplay() {
         const seconds = Math.ceil(this.speedTimeRemaining / 1000);
         document.getElementById('question-num').textContent = `⏱️${seconds}초 | ${this.currentQuestion}문제`;
@@ -1698,6 +1700,11 @@ class WorldMapQuiz {
     handleChoiceClick(selectedCountry) {
         this.stopTimer();
 
+        // 스피드 모드: 정답/오답 표시 동안 타이머 일시정지
+        if (this.testSubMode === 'speed') {
+            this.pauseSpeedTimer();
+        }
+
         const isCorrect = String(selectedCountry.id) === String(this.targetCountry.id);
 
         // 버튼 스타일 업데이트
@@ -1738,7 +1745,7 @@ class WorldMapQuiz {
             if (this.testSubMode === 'survival') {
                 this.lives--;
                 if (this.lives <= 0) {
-                    setTimeout(() => this.endGame(), 1000);
+                    setTimeout(() => this.endGame(), 2000);
                     return;
                 }
             }
@@ -1747,18 +1754,28 @@ class WorldMapQuiz {
         this.updateScore();
         this.currentQuestion++;
 
+        // 2초 후 다음 문제 (정답 충분히 확인)
         setTimeout(() => {
             this.clearFeedback();
             if (this.testSubMode === 'survival' && this.lives <= 0) {
                 return;  // 이미 게임 종료 처리됨
             }
+            // 스피드 모드: 타이머 재개
+            if (this.testSubMode === 'speed') {
+                this.resumeSpeedTimer();
+            }
             this.nextTestQuestion();
-        }, 1000);
+        }, 2000);
     }
 
     // 테스트 모드 타임아웃 처리
     handleTestTimeout() {
         this.stopTimer();
+
+        // 스피드 모드: 정답 표시 동안 타이머 일시정지
+        if (this.testSubMode === 'speed') {
+            this.pauseSpeedTimer();
+        }
 
         this.combo = 0;
         this.results.push({
@@ -1781,20 +1798,25 @@ class WorldMapQuiz {
         if (this.testSubMode === 'survival') {
             this.lives--;
             if (this.lives <= 0) {
-                setTimeout(() => this.endGame(), 1000);
+                setTimeout(() => this.endGame(), 2000);
                 return;
             }
         }
 
         this.currentQuestion++;
 
+        // 2초 후 다음 문제 (정답 충분히 확인)
         setTimeout(() => {
             this.clearFeedback();
             if (this.testSubMode === 'survival' && this.lives <= 0) {
                 return;
             }
+            // 스피드 모드: 타이머 재개
+            if (this.testSubMode === 'speed') {
+                this.resumeSpeedTimer();
+            }
             this.nextTestQuestion();
-        }, 1000);
+        }, 2000);
     }
 
     updateTimerDisplay() {
@@ -1864,167 +1886,6 @@ class WorldMapQuiz {
         const feedback = document.getElementById('feedback');
         feedback.textContent = '';
         feedback.className = 'feedback';
-    }
-
-    // ===== 명예의 전당 관련 메서드 =====
-
-    // 대륙 선택 화면에 TOP 3 미리보기 로드
-    async loadTop3Preview() {
-        const previewEl = document.getElementById('top3-preview');
-        const listEl = document.getElementById('top3-list');
-        if (!previewEl || !listEl || !leaderboardService?.isAvailable()) return;
-
-        try {
-            // 스피드 모드 TOP 3 가져오기
-            const entries = await leaderboardService.getLeaderboard('world', 'speed', 3);
-
-            if (entries.length === 0) {
-                listEl.innerHTML = '<div class="top3-empty">아직 기록이 없습니다</div>';
-            } else {
-                const medals = ['🥇', '🥈', '🥉'];
-                listEl.innerHTML = entries.map((entry, i) => `
-                    <div class="top3-item">
-                        <span class="top3-rank">${medals[i]}</span>
-                        <div class="top3-info">
-                            <span class="top3-nickname">${this.escapeHtml(entry.nickname)}</span>
-                            <span class="top3-score">${entry.score.toLocaleString()}점</span>
-                        </div>
-                    </div>
-                `).join('');
-            }
-            previewEl.classList.remove('hidden');
-        } catch (e) {
-            console.error('TOP 3 로드 실패:', e);
-        }
-    }
-
-    // 4단계 테스트 모드일 때 명예의 전당 등록 버튼 표시
-    showLeaderboardButton() {
-        const registerBtn = document.getElementById('register-leaderboard-btn');
-        if (!registerBtn) return;
-
-        if (this.currentMode === 'test' && leaderboardService?.isAvailable()) {
-            registerBtn.classList.remove('hidden');
-            // 버튼 클릭 이벤트 (한 번만 등록)
-            registerBtn.onclick = () => this.openLeaderboardRegistration();
-        } else {
-            registerBtn.classList.add('hidden');
-        }
-    }
-
-    // 명예의 전당 등록 버튼 클릭 시 호출
-    async openLeaderboardRegistration() {
-        const mode = this.testSubMode;
-        const rank = await leaderboardService.checkRank('world', mode, this.score);
-
-        // 닉네임 입력용 데이터 준비
-        this.pendingLeaderboardEntry = {
-            topic: 'world',
-            mode: mode,
-            score: this.score,
-            correctCount: this.results.filter(r => r.correct).length,
-            maxCombo: this.maxComboAchieved
-        };
-        this.showNicknameModal(rank);
-
-        // 명예의 전당 표시
-        this.showHallOfFame(mode);
-    }
-
-    showNicknameModal(rank) {
-        if (!this.nicknameModal) return;
-
-        const modalTitle = this.nicknameModal.querySelector('.modal-content h3');
-        const modalDesc = this.nicknameModal.querySelector('.modal-content p');
-
-        if (modalTitle && modalDesc) {
-            if (rank <= 10) {
-                modalTitle.textContent = `TOP ${rank} 진입!`;
-                modalDesc.textContent = '축하합니다! 닉네임을 입력하면 명예의 전당에 등록됩니다';
-            } else if (rank <= 100) {
-                modalTitle.textContent = `TOP 100 진입! (${rank}위)`;
-                modalDesc.textContent = '닉네임을 입력하면 명예의 전당에 등록됩니다';
-            } else {
-                modalTitle.textContent = '기록 등록';
-                modalDesc.textContent = `현재 ${rank}위입니다. 닉네임을 입력하면 명예의 전당에 등록됩니다`;
-            }
-        }
-
-        this.nicknameModal.classList.remove('hidden');
-        this.nicknameInput?.focus();
-    }
-
-    hideNicknameModal() {
-        this.nicknameModal?.classList.add('hidden');
-        if (this.nicknameInput) this.nicknameInput.value = '';
-        this.pendingLeaderboardEntry = null;
-    }
-
-    async submitNickname() {
-        const nickname = this.nicknameInput?.value.trim();
-        if (!nickname) {
-            this.nicknameInput?.focus();
-            return;
-        }
-
-        if (this.pendingLeaderboardEntry) {
-            this.pendingLeaderboardEntry.nickname = nickname;
-            const success = await leaderboardService.saveScore(this.pendingLeaderboardEntry);
-
-            if (success) {
-                // 저장 후 리더보드 갱신
-                this.displayLeaderboard('world', this.testSubMode);
-            }
-        }
-
-        this.hideNicknameModal();
-    }
-
-    showHallOfFame(activeMode) {
-        if (!this.hallOfFameEl) return;
-
-        // 탭 활성화
-        this.hallTabs?.forEach(tab => {
-            tab.classList.toggle('active', tab.dataset.mode === activeMode);
-        });
-
-        this.hallOfFameEl.classList.remove('hidden');
-        this.displayLeaderboard('world', activeMode);
-    }
-
-    async displayLeaderboard(topic, mode) {
-        if (!this.leaderboardListEl) return;
-
-        this.leaderboardListEl.innerHTML = '<div class="loading-leaderboard">불러오는 중...</div>';
-
-        const entries = await leaderboardService.getLeaderboard(topic, mode, 10);
-
-        if (entries.length === 0) {
-            this.leaderboardListEl.innerHTML = '<div class="no-entries">아직 기록이 없습니다</div>';
-            return;
-        }
-
-        const medals = ['gold', 'silver', 'bronze'];
-        let html = '';
-        entries.forEach((entry, index) => {
-            const rankClass = index < 3 ? `rank-${medals[index]}` : '';
-            const rankDisplay = index < 3
-                ? ['🥇', '🥈', '🥉'][index]
-                : `${index + 1}`;
-            const date = new Date(entry.date).toLocaleDateString('ko-KR');
-
-            html += `
-                <div class="leaderboard-entry ${rankClass}">
-                    <span class="entry-rank">${rankDisplay}</span>
-                    <span class="entry-nickname">${this.escapeHtml(entry.nickname)}</span>
-                    <span class="entry-score">${entry.score.toLocaleString()}점</span>
-                    <span class="entry-combo">x${entry.maxCombo}</span>
-                    <span class="entry-date">${date}</span>
-                </div>
-            `;
-        });
-
-        this.leaderboardListEl.innerHTML = html;
     }
 
     escapeHtml(text) {
@@ -2115,9 +1976,6 @@ class WorldMapQuiz {
         });
 
         details.innerHTML = html;
-
-        // 4단계 테스트 모드일 때 명예의 전당 등록 버튼 표시
-        this.showLeaderboardButton();
     }
 
     resetGame() {

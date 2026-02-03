@@ -1553,35 +1553,6 @@ header {
     border-top: 1px solid var(--border-subtle);
 }
 
-.visitor-count {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-bottom: 12px;
-    padding: 12px 24px;
-    background: var(--card-bg);
-    border-radius: 12px;
-    border: 1px solid var(--border-subtle);
-    display: inline-flex;
-}
-
-.visitor-icon {
-    font-size: 1.2rem;
-}
-
-.visitor-label {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    font-weight: 500;
-}
-
-.visitor-number {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--accent-primary);
-}
-
 .copyright {
     font-size: 0.75rem;
     color: var(--text-muted);

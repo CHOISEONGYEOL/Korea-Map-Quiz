@@ -55,11 +55,6 @@
         </main>
 
         <footer class="main-footer">
-            <div class="visitor-count">
-                <span class="visitor-icon">👥</span>
-                <span class="visitor-label">Total Visitors</span>
-                <span id="visitor-count" class="visitor-number">-</span>
-            </div>
             <p class="copyright">© 2026 infinite monkey. All rights reserved.</p>
         </footer>
     </div>
@@ -86,26 +81,6 @@
             localStorage.setItem('theme', newTheme);
         });
 
-        // 방문자 수 카운터 (로컬 스토리지 기반)
-        (function() {
-            const visitorEl = document.getElementById('visitor-count');
-            if (!visitorEl) return;
-
-            // 세션 체크 - 같은 세션에서 중복 카운트 방지
-            const sessionKey = 'map-quiz-session';
-            const countKey = 'map-quiz-visitor-count';
-
-            let count = parseInt(localStorage.getItem(countKey)) || 0;
-
-            // 새 세션인 경우에만 카운트 증가
-            if (!sessionStorage.getItem(sessionKey)) {
-                count++;
-                localStorage.setItem(countKey, count);
-                sessionStorage.setItem(sessionKey, 'visited');
-            }
-
-            visitorEl.textContent = count.toLocaleString();
-        })();
     </script>
 </body>
 </html>
