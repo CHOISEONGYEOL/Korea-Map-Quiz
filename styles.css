@@ -205,56 +205,65 @@ body.main-landing header h1 {
         margin-bottom: 16px;
     }
 
-    /* 메뉴 버튼들 세로 배치 - 폭 50% */
+    /* 메뉴 버튼들 세로 배치 - 가로형 카드 */
     body.main-landing .main-menu-buttons {
         display: flex;
         flex-direction: column;
-        align-items: center;
         gap: 10px;
         width: 100%;
     }
 
     body.main-landing .main-menu-btn {
-        width: 50%;
+        width: 100%;
         min-width: auto;
         max-width: none;
-        padding: 14px 10px;
-        flex-direction: column;
-        justify-content: center;
+        padding: 16px;
+        flex-direction: row;
         align-items: center;
-        gap: 6px;
-        border-radius: 12px;
+        gap: 14px;
+        border-radius: 14px;
     }
 
     body.main-landing .main-menu-btn .menu-flag,
     body.main-landing .main-menu-btn .menu-globe {
-        width: 32px;
-        height: 32px;
+        width: 48px;
+        height: 48px;
         object-fit: contain;
         margin-bottom: 0;
+        flex-shrink: 0;
+        border-radius: 10px;
     }
 
     body.main-landing .main-menu-btn .menu-subway-icon,
     body.main-landing .main-menu-btn .menu-mountain-icon {
-        font-size: 28px;
+        font-size: 36px;
         margin-bottom: 0;
+        flex-shrink: 0;
+        width: 48px;
+        text-align: center;
     }
 
     body.main-landing .main-menu-btn .menu-text {
         display: flex;
         flex-direction: column;
-        align-items: center;
-        text-align: center;
+        align-items: flex-start;
+        text-align: left;
+        min-width: 0;
+        flex: 1;
     }
 
     body.main-landing .main-menu-btn .menu-title {
-        font-size: 0.9rem;
+        font-size: 1rem;
+        font-weight: 700;
         margin-bottom: 2px;
     }
 
     body.main-landing .main-menu-btn .menu-desc {
-        font-size: 0.65rem;
-        line-height: 1.3;
+        font-size: 0.8rem;
+        line-height: 1.4;
+        word-break: keep-all;
+        overflow-wrap: break-word;
+        color: var(--text-muted);
     }
 
     /* Footer 스타일 */
@@ -590,12 +599,16 @@ body.main-landing header h1 {
 
 .question-area h2 {
     font-size: 1.4rem;
+    word-break: keep-all;
+    overflow-wrap: break-word;
 }
 
 .highlight {
     color: var(--accent-primary);
     font-size: 1.5rem;
     font-weight: 700;
+    word-break: keep-all;
+    overflow-wrap: break-word;
 }
 
 .step-indicator {
@@ -752,10 +765,12 @@ body.main-landing header h1 {
     transition: all 0.15s ease;
     text-align: center;
     word-break: keep-all;
+    overflow-wrap: break-word;
     min-height: 50px;
     display: flex;
     align-items: center;
     justify-content: center;
+    line-height: 1.3;
 }
 
 .choice-btn:hover {
@@ -1265,6 +1280,42 @@ body.main-landing header h1 {
     text-align: left;
 }
 
+/* 모드 버튼 모바일 최적화 */
+@media (max-width: 768px) {
+    .mode-buttons {
+        max-width: 400px;
+    }
+
+    .mode-btn {
+        padding: 14px;
+    }
+
+    .mode-title {
+        font-size: 0.95rem;
+    }
+
+    .mode-desc {
+        font-size: 0.75rem;
+        word-break: keep-all;
+        overflow-wrap: break-word;
+    }
+}
+
+@media (max-width: 380px) {
+    .mode-buttons {
+        grid-template-columns: 1fr;
+        max-width: 300px;
+    }
+
+    .mode-btn {
+        padding: 16px;
+    }
+
+    .mode-desc {
+        text-align: center;
+    }
+}
+
 /* 모드별 색상 - 토스 스타일 아이콘 색상 */
 .mode-explore .mode-step {
     background: rgba(49, 130, 246, 0.12);
@@ -1563,32 +1614,35 @@ header {
 @media (max-width: 768px) {
     .main-menu-buttons {
         flex-direction: column;
-        align-items: center;
+        align-items: stretch;
     }
 
     .main-menu-btn {
-        min-width: 280px;
-        padding: 40px 30px;
+        min-width: auto;
+        padding: 16px;
     }
 
     .menu-flag,
-    .menu-globe,
-    .menu-subway-icon {
-        width: 100px;
+    .menu-globe {
+        width: 48px;
+        height: 48px;
+        object-fit: contain;
     }
 
     .menu-subway-icon,
     .menu-mountain-icon {
-        font-size: 80px;
-        width: auto;
+        font-size: 36px;
+        width: 48px;
     }
 
     .menu-title {
-        font-size: 1.6rem;
+        font-size: 1rem;
     }
 
     .menu-desc {
-        font-size: 1rem;
+        font-size: 0.8rem;
+        word-break: keep-all;
+        overflow-wrap: break-word;
     }
 
     #main-landing h2 {
@@ -1652,6 +1706,9 @@ header {
     font-weight: 600;
     margin-bottom: 4px;
     color: var(--text-primary);
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    line-height: 1.3;
 }
 
 .continent-count {
@@ -1701,10 +1758,16 @@ header {
 @media (max-width: 768px) {
     .continent-buttons {
         grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
     }
 
     .world-all-btn {
         grid-column: span 3;
+    }
+
+    .continent-btn {
+        padding: 12px 6px;
+        min-height: 80px;
     }
 
     .continent-icon {
@@ -1718,15 +1781,53 @@ header {
     .continent-count {
         font-size: 0.6rem;
     }
+
+    .continent-desc {
+        font-size: 0.6rem;
+    }
 }
 
 @media (max-width: 480px) {
     .continent-buttons {
         grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
     }
 
     .world-all-btn {
         grid-column: span 2;
+    }
+
+    .continent-btn {
+        padding: 12px 8px;
+        min-height: 76px;
+    }
+
+    .continent-title {
+        font-size: 0.8rem;
+    }
+
+    .continent-count {
+        font-size: 0.65rem;
+    }
+}
+
+@media (max-width: 360px) {
+    .continent-buttons {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+
+    .continent-btn {
+        padding: 10px 6px;
+    }
+
+    .continent-icon {
+        font-size: 1.1rem;
+        margin-bottom: 4px;
+    }
+
+    .continent-title {
+        font-size: 0.7rem;
     }
 }
 
@@ -1812,12 +1913,17 @@ header {
     }
 
     .region-label.province-label {
-        font-size: 8px !important;
+        font-size: 9px !important;
         text-shadow: 1px 1px 1px var(--label-shadow);
     }
 
     .district-label {
-        font-size: 10px !important;
+        font-size: 11px !important;
+        text-shadow: 1px 1px 2px var(--label-shadow), -1px -1px 2px var(--label-shadow);
+    }
+
+    .country-label {
+        font-size: 11px !important;
         text-shadow: 1px 1px 2px var(--label-shadow), -1px -1px 2px var(--label-shadow);
     }
 
@@ -1825,6 +1931,48 @@ header {
     .map-container {
         max-height: 55vh;
         flex: none;
+    }
+
+    /* 피드백 텍스트 */
+    .feedback {
+        font-size: 0.85rem;
+        padding: 8px 12px;
+    }
+
+    /* 결과 화면 */
+    #result-screen {
+        padding: 16px;
+    }
+
+    #result-screen h2 {
+        font-size: 1.3rem;
+    }
+
+    .result-content {
+        padding: 16px;
+    }
+
+    .score-value {
+        font-size: 2.5rem;
+    }
+}
+
+/* 아주 작은 화면에서 지도 라벨 */
+@media (max-width: 380px) {
+    .region-label {
+        font-size: 12px !important;
+    }
+
+    .region-label.province-label {
+        font-size: 8px !important;
+    }
+
+    .district-label {
+        font-size: 9px !important;
+    }
+
+    .country-label {
+        font-size: 9px !important;
     }
 }
 
@@ -1871,6 +2019,7 @@ header {
     cursor: pointer;
     transition: all 0.2s ease;
     min-width: 70px;
+    min-height: 44px;
 }
 
 .filter-option:hover {
@@ -1891,6 +2040,8 @@ header {
     font-weight: 600;
     color: var(--text-primary);
     margin-bottom: 1px;
+    word-break: keep-all;
+    white-space: nowrap;
 }
 
 .filter-option.selected .filter-label {
@@ -1902,6 +2053,7 @@ header {
     color: var(--text-muted);
     text-align: center;
     line-height: 1.2;
+    word-break: keep-all;
 }
 
 .filter-option .filter-count {
@@ -1917,6 +2069,7 @@ header {
     .filter-option {
         padding: 6px 8px;
         min-width: 60px;
+        min-height: 40px;
     }
 
     .filter-option .filter-label {
@@ -1925,6 +2078,27 @@ header {
 
     .filter-option .filter-sub {
         font-size: 0.6rem;
+    }
+
+    /* 필터 영역이 많을 때 스크롤 가능 */
+    .region-filter {
+        max-height: 280px;
+        overflow-y: auto;
+    }
+}
+
+@media (max-width: 380px) {
+    .filter-option {
+        padding: 5px 6px;
+        min-width: 55px;
+    }
+
+    .filter-option .filter-label {
+        font-size: 0.7rem;
+    }
+
+    .filter-option .filter-sub {
+        font-size: 0.55rem;
     }
 }
 
@@ -1986,6 +2160,8 @@ header {
     font-weight: 600;
     color: var(--text-primary);
     margin-bottom: 4px;
+    word-break: keep-all;
+    white-space: nowrap;
 }
 
 .toggle-option.selected .toggle-label {
@@ -1996,16 +2172,22 @@ header {
     font-size: 0.75rem;
     color: var(--text-muted);
     text-align: center;
+    word-break: keep-all;
+    overflow-wrap: break-word;
 }
 
 @media (max-width: 768px) {
     .toggle-options {
         gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
     }
 
     .toggle-option {
         padding: 10px 14px;
         min-width: 100px;
+        flex: 1;
+        min-height: 44px;
     }
 
     .toggle-option .toggle-label {
@@ -2014,6 +2196,18 @@ header {
 
     .toggle-option .toggle-desc {
         font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 380px) {
+    .toggle-options {
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .toggle-option {
+        min-width: auto;
+        width: 100%;
     }
 }
 
@@ -2240,6 +2434,49 @@ header {
     body.test-mode .timer-bar {
         height: 4px;
         margin: 4px 0;
+    }
+}
+
+/* 아주 작은 화면 (폭 380px 미만) 추가 최적화 */
+@media (max-width: 380px) {
+    #mode-screen h2,
+    #continent-screen h2 {
+        font-size: 1.4rem;
+    }
+
+    #start-screen h2 {
+        font-size: 1.4rem;
+    }
+
+    .question-area h2 {
+        font-size: 1.1rem;
+    }
+
+    .highlight {
+        font-size: 1.2rem;
+    }
+
+    .btn-primary {
+        padding: 10px 20px;
+        font-size: 0.85rem;
+    }
+
+    .btn-secondary {
+        padding: 8px 14px;
+        font-size: 0.8rem;
+    }
+
+    .stat-item {
+        padding: 6px 10px;
+        min-width: 70px;
+    }
+
+    .stat-item .value {
+        font-size: 1.1rem;
+    }
+
+    .stat-item .label {
+        font-size: 0.65rem;
     }
 }
 
