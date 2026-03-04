@@ -1125,11 +1125,17 @@ class KoreaMapQuiz {
 
         // 인천의 섬 지역이 있으면 왼쪽에 인셋 박스 공간 확보
         const hasIncheonIslands = provinceName === '인천광역시' && islandDistricts.length > 0;
-        const leftMargin = hasIncheonIslands ? 170 : 20;
+        const isMobileMap = width < 600;
+        const leftMargin = hasIncheonIslands ? (isMobileMap ? 90 : 170) : 20;
+
+        // 모바일 + 경상북도(울릉도 있음): 지도 70%로 축소하여 울릉도 인셋 공간 확보
+        const hasUlleungdo = provinceName === '경상북도' && islandDistricts.length > 0;
+        const rightMargin = (isMobileMap && hasUlleungdo) ? width * 0.2 : 20;
+        const topMargin = (isMobileMap && hasUlleungdo) ? height * 0.08 : 20;
 
         // 투영 설정
         const featureCollection = { type: 'FeatureCollection', features: districts };
-        this.projection = d3.geoMercator().fitExtent([[leftMargin, 20], [width - 20, height - 20]], featureCollection);
+        this.projection = d3.geoMercator().fitExtent([[leftMargin, topMargin], [width - rightMargin, height - 20]], featureCollection);
         this.path = d3.geoPath().projection(this.projection);
 
         this.svg = d3.select(this.mapSvg)
@@ -1181,9 +1187,10 @@ class KoreaMapQuiz {
     }
 
     renderTestIslandInsets(islandDistricts, answerName, width, height) {
-        const insetSize = 140;
-        const padding = 20;
-        const gap = 15;
+        const isMobile = width < 600;
+        const insetSize = isMobile ? 70 : 140;
+        const padding = isMobile ? 10 : 20;
+        const gap = isMobile ? 8 : 15;
 
         const centerLeftIslands = islandDistricts.filter(island => {
             const cfg = ISLAND_INSET_CONFIG[island.properties.name];
@@ -1206,10 +1213,14 @@ class KoreaMapQuiz {
                 insetY = centerStartY + (centerLeftIndex * (insetSize + gap));
                 centerLeftIndex++;
             } else if (config.position === 'top-right') {
-                const isMobile = width < 600;
-                const rightOffset = isMobile ? 20 : 160;
-                insetX = width - insetSize - padding - rightOffset;
-                insetY = padding;
+                if (isMobile) {
+                    // 모바일: 울진 옆 (오른쪽 중간)
+                    insetX = width - insetSize - padding;
+                    insetY = height * 0.25;
+                } else {
+                    insetX = width - insetSize - padding - 160;
+                    insetY = padding;
+                }
             } else {
                 insetX = padding + (index * (insetSize + padding));
                 insetY = height - insetSize - padding - 30;
@@ -1225,18 +1236,19 @@ class KoreaMapQuiz {
                 .attr('fill', 'rgba(0, 0, 0, 0.3)')
                 .attr('stroke', isAnswer ? '#FF6B6B' : '#fff')
                 .attr('stroke-width', isAnswer ? 3 : 1)
-                .attr('rx', 5);
+                .attr('rx', isMobile ? 3 : 5);
 
             const islandCollection = { type: 'FeatureCollection', features: [island] };
+            const fitPadding = isMobile ? 8 : 20;
             const islandProjection = d3.geoMercator()
-                .fitSize([insetSize - 20, insetSize - 30], islandCollection);
+                .fitSize([insetSize - fitPadding, insetSize - fitPadding - 5], islandCollection);
             const islandPath = d3.geoPath().projection(islandProjection);
 
             insetGroup.append('path')
                 .datum(island)
                 .attr('class', `district ${isAnswer ? 'highlighted-answer' : ''}`)
                 .attr('d', islandPath)
-                .attr('transform', 'translate(10, 5)')
+                .attr('transform', `translate(${fitPadding/2}, ${fitPadding/2 - 2})`)
                 .attr('fill', isAnswer ? '#FF6B6B' : '#444')
                 .attr('stroke', '#666')
                 .attr('stroke-width', 0.5);

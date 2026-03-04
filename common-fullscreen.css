@@ -411,14 +411,14 @@ body.game-active.test-mode .feedback.timeout {
     }
 
     body.game-active .choices-container .choices-grid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 4px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
     }
 
     body.game-active .choices-container .choice-btn {
-        padding: 6px 4px;
-        font-size: 0.7rem;
-        min-height: 34px;
+        padding: 10px 8px;
+        font-size: 0.85rem;
+        min-height: 40px;
         word-break: keep-all;
     }
 
@@ -450,13 +450,15 @@ body.game-active.test-mode .feedback.timeout {
 
     /* 테스트 모드 모바일 */
     body.game-active.test-mode .map-container {
-        height: calc(100% - 180px) !important;
-        bottom: 180px;
+        height: calc(100% - 280px) !important;
+        bottom: 280px;
     }
 
     body.game-active.test-mode .choices-container {
         bottom: 50px;
-        padding: 8px 10px;
+        padding: 10px 12px;
+        max-width: calc(100vw - 20px);
+        width: calc(100vw - 20px);
     }
 
     body.game-active.test-mode .game-back-btns {
@@ -508,12 +510,14 @@ body.game-active.test-mode .feedback.timeout {
     }
 
     body.game-active.test-mode .map-container {
-        height: calc(100% - 160px) !important;
+        height: calc(100% - 250px) !important;
     }
 
     body.game-active.test-mode .choices-container {
         bottom: 44px;
-        padding: 6px 8px;
+        padding: 8px 10px;
+        width: calc(100vw - 20px);
+        max-width: calc(100vw - 20px);
     }
 
     body.game-active.test-mode .game-back-btns {
@@ -521,8 +525,8 @@ body.game-active.test-mode .feedback.timeout {
     }
 
     body.game-active .choices-container .choice-btn {
-        padding: 5px 3px;
-        font-size: 0.65rem;
-        min-height: 30px;
+        padding: 8px 6px;
+        font-size: 0.8rem;
+        min-height: 36px;
     }
 }
