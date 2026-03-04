@@ -404,6 +404,8 @@ class KoreaMapQuiz {
         this.testModeSelectEl = document.getElementById('test-mode-select');
         this.choicesContainer = document.getElementById('choices-container');
         this.choicesGrid = document.getElementById('choices-grid');
+        this.correctCounterEl = document.getElementById('correct-counter');
+        this.correctCountEl = document.getElementById('correct-count');
     }
 
     initEventListeners() {
@@ -884,6 +886,10 @@ class KoreaMapQuiz {
             document.body.classList.add('test-mode');
 
             this.choicesContainer?.classList.remove('hidden');
+            if (this.correctCounterEl) {
+                this.correctCounterEl.classList.remove('hidden');
+                this.correctCountEl.textContent = '0';
+            }
             console.log('[테스트모드] 8지선다 컨테이너 표시');
             this.updateUI();
 
@@ -1200,7 +1206,7 @@ class KoreaMapQuiz {
                 insetY = centerStartY + (centerLeftIndex * (insetSize + gap));
                 centerLeftIndex++;
             } else if (config.position === 'top-right') {
-                insetX = width - insetSize - padding;
+                insetX = width - insetSize - padding - 80;
                 insetY = padding;
             } else {
                 insetX = padding + (index * (insetSize + padding));
@@ -1322,6 +1328,11 @@ class KoreaMapQuiz {
             });
             const comboText = this.combo > 1 ? ` (${this.combo}콤보!)` : '';
             this.showFeedback(`정답! +${earnedScore}점${comboText}`, 'correct');
+            // 맞춘 문제 카운터 업데이트
+            if (this.correctCountEl) {
+                const correctCount = this.results.filter(r => r.correct).length;
+                this.correctCountEl.textContent = correctCount;
+            }
         } else {
             btnElement.classList.add('incorrect');
             // 오답 감점 (-20점, 0점 미만 방지)
@@ -2017,7 +2028,7 @@ class KoreaMapQuiz {
                 insetX = padding;
                 insetY = height - insetSize - padding - 30;
             } else if (config.position === 'top-right') {
-                insetX = width - insetSize - padding;
+                insetX = width - insetSize - padding - 80;
                 insetY = padding;
             } else if (config.position === 'center-left-top' || config.position === 'center-left-bottom') {
                 // 왼쪽 중앙에 세로로 나란히 배치 (화면 중앙 정렬)
@@ -2962,7 +2973,7 @@ class KoreaMapQuiz {
                 insetX = padding;
                 insetY = height - insetSize - padding - 30;
             } else if (config.position === 'top-right') {
-                insetX = width - insetSize - padding;
+                insetX = width - insetSize - padding - 80;
                 insetY = padding;
             } else if (config.position === 'center-left-top' || config.position === 'center-left-bottom') {
                 // 왼쪽 중앙에 세로로 나란히 배치 (화면 중앙 정렬)
@@ -3245,6 +3256,7 @@ class KoreaMapQuiz {
 
         // 4단계 test-mode 정리
         document.body.classList.remove('test-mode');
+        this.correctCounterEl?.classList.add('hidden');
         this.questionAreaEl?.classList.remove('hidden');
         if (this.questionAreaEl) {
             this.questionAreaEl.style.display = '';

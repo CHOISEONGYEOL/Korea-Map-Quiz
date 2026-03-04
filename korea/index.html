@@ -8,7 +8,7 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/topojson-client@3"></script>
     <link rel="stylesheet" href="../styles.css?v=37">
-    <link rel="stylesheet" href="../common-fullscreen.css?v=6">
+    <link rel="stylesheet" href="../common-fullscreen.css?v=7">
 </head>
 
 <body>
@@ -189,6 +189,10 @@
                     <a href="./" class="btn-secondary game-back-btn">모드 선택</a>
                     <a href="../" class="btn-secondary game-back-btn">메인</a>
                 </div>
+                <div id="correct-counter" class="correct-counter hidden">
+                    <span class="correct-counter-label">맞춘 문제</span>
+                    <span id="correct-count" class="correct-counter-value">0</span>
+                </div>
                 <!-- 4단계 실전 테스트용 8지선다 (맨 아래 배치) -->
                 <div id="choices-container" class="choices-container hidden">
                     <p class="choices-title">8개 보기 중 정답을 선택하세요!</p>
@@ -216,7 +220,7 @@
         </main>
     </div>
 
-    <script src="game.js?v=42"></script>
+    <script src="game.js?v=43"></script>
 </body>
 
 </html>
