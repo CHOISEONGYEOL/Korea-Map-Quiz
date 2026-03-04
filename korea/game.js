@@ -1206,7 +1206,7 @@ class KoreaMapQuiz {
                 insetY = centerStartY + (centerLeftIndex * (insetSize + gap));
                 centerLeftIndex++;
             } else if (config.position === 'top-right') {
-                insetX = width - insetSize - padding - 80;
+                insetX = width - insetSize - padding - 160;
                 insetY = padding;
             } else {
                 insetX = padding + (index * (insetSize + padding));
@@ -2028,7 +2028,7 @@ class KoreaMapQuiz {
                 insetX = padding;
                 insetY = height - insetSize - padding - 30;
             } else if (config.position === 'top-right') {
-                insetX = width - insetSize - padding - 80;
+                insetX = width - insetSize - padding - 160;
                 insetY = padding;
             } else if (config.position === 'center-left-top' || config.position === 'center-left-bottom') {
                 // 왼쪽 중앙에 세로로 나란히 배치 (화면 중앙 정렬)
@@ -2973,7 +2973,7 @@ class KoreaMapQuiz {
                 insetX = padding;
                 insetY = height - insetSize - padding - 30;
             } else if (config.position === 'top-right') {
-                insetX = width - insetSize - padding - 80;
+                insetX = width - insetSize - padding - 160;
                 insetY = padding;
             } else if (config.position === 'center-left-top' || config.position === 'center-left-bottom') {
                 // 왼쪽 중앙에 세로로 나란히 배치 (화면 중앙 정렬)

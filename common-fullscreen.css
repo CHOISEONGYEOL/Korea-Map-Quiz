@@ -170,12 +170,12 @@ body.game-active .correct-counter {
     left: 20px;
     z-index: 100;
     background: rgba(255, 255, 255, 0.9);
-    padding: 8px 16px;
-    border-radius: 12px;
+    padding: 16px 32px;
+    border-radius: 16px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     backdrop-filter: blur(4px);
     text-align: center;
-    min-width: 60px;
+    min-width: 100px;
 }
 
 [data-theme="dark"] body.game-active .correct-counter {
@@ -184,14 +184,14 @@ body.game-active .correct-counter {
 
 body.game-active .correct-counter-label {
     display: block;
-    font-size: 0.7rem;
+    font-size: 1rem;
     color: var(--text-muted);
-    margin-bottom: 2px;
+    margin-bottom: 4px;
 }
 
 body.game-active .correct-counter-value {
     display: block;
-    font-size: 1.5rem;
+    font-size: 3rem;
     font-weight: bold;
     color: #4CAF50;
 }
