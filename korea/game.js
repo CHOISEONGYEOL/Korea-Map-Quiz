@@ -1767,6 +1767,27 @@ class KoreaMapQuiz {
                     .attr('text-anchor', 'middle')
                     .text(islandName);
             }
+
+            // 인셋 박스 전체를 클릭 가능하게 하는 투명 오버레이
+            // (옹진군처럼 작은 섬이 많아 path 클릭이 어려운 경우 대비)
+            insetGroup.append('rect')
+                .attr('width', insetSize)
+                .attr('height', insetSize)
+                .attr('fill', 'transparent')
+                .style('cursor', 'pointer')
+                .on('click', () => {
+                    self.handleExploreProvinceClick(provinceName);
+                })
+                .on('mouseenter', () => {
+                    insetGroup.select('.district')
+                        .attr('stroke-width', '2px')
+                        .style('filter', 'brightness(1.2)');
+                })
+                .on('mouseleave', () => {
+                    insetGroup.select('.district')
+                        .attr('stroke-width', '0.5px')
+                        .style('filter', null);
+                });
         });
     }
 
@@ -2111,6 +2132,31 @@ class KoreaMapQuiz {
                     .attr('text-anchor', 'middle')
                     .text(islandName);
             }
+
+            // 인셋 박스 전체를 클릭 가능하게 하는 투명 오버레이
+            // (옹진군처럼 작은 섬이 많아 path 클릭이 어려운 경우 대비)
+            insetGroup.append('rect')
+                .attr('width', insetSize)
+                .attr('height', insetSize)
+                .attr('fill', 'transparent')
+                .style('cursor', 'pointer')
+                .on('click', () => {
+                    const pathEl = insetGroup.select('.district');
+                    self.feedbackEl.textContent = `${SHORT_NAMES[provinceName]} ${islandName}`;
+                    self.feedbackEl.className = 'feedback correct';
+                    d3.selectAll('.district').classed('selected', false);
+                    pathEl.classed('selected', true);
+                })
+                .on('mouseenter', () => {
+                    insetGroup.select('.district')
+                        .attr('stroke-width', '2px')
+                        .style('filter', 'brightness(1.2)');
+                })
+                .on('mouseleave', () => {
+                    insetGroup.select('.district')
+                        .attr('stroke-width', '0.5px')
+                        .style('filter', null);
+                });
         });
     }
 
@@ -3043,6 +3089,28 @@ class KoreaMapQuiz {
                 })
                 .on('mouseleave', function () {
                     d3.select(this)
+                        .attr('stroke-width', '0.5px')
+                        .style('filter', null);
+                });
+
+            // 인셋 박스 전체를 클릭 가능하게 하는 투명 오버레이
+            // (옹진군처럼 작은 섬이 많아 path 클릭이 어려운 경우 대비)
+            insetGroup.append('rect')
+                .attr('width', insetSize)
+                .attr('height', insetSize)
+                .attr('fill', 'transparent')
+                .style('cursor', 'pointer')
+                .on('click', () => {
+                    const pathEl = insetGroup.select('.district').node();
+                    this.handleDistrictClick(islandName, { target: pathEl });
+                })
+                .on('mouseenter', () => {
+                    insetGroup.select('.district')
+                        .attr('stroke-width', '2px')
+                        .style('filter', 'brightness(1.2)');
+                })
+                .on('mouseleave', () => {
+                    insetGroup.select('.district')
                         .attr('stroke-width', '0.5px')
                         .style('filter', null);
                 });
