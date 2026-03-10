@@ -1,6 +1,40 @@
 // 세계 지도 퀴즈 게임 - 완전한 드릴다운 구조
 // 전 세계 지도 → 대륙 클릭 → 하위지역 클릭 → 국가 클릭
 
+// 초소형 국가 인셋 설정 (지도에서 너무 작아 보이지 않는 25개국)
+const MICRO_COUNTRIES = {
+    // 유럽
+    '336': { coords: [12.453, 41.903], scale: 250000 },   // 바티칸 시국
+    '492': { coords: [7.419, 43.738], scale: 180000 },    // 모나코
+    '674': { coords: [12.458, 43.942], scale: 100000 },   // 산마리노
+    '438': { coords: [9.555, 47.160], scale: 60000 },     // 리히텐슈타인
+    '470': { coords: [14.375, 35.937], scale: 25000 },    // 몰타
+    '020': { coords: [1.522, 42.507], scale: 50000 },     // 안도라
+    // 오세아니아
+    '520': { coords: [166.931, -0.522], scale: 200000 },  // 나우루
+    '798': { coords: [179.200, -8.520], scale: 100000 },  // 투발루 (TopoJSON에 없음)
+    '584': { coords: [171.185, 7.131], scale: 15000 },    // 마셜제도
+    '585': { coords: [134.580, 7.515], scale: 30000 },    // 팔라우
+    '583': { coords: [158.215, 6.917], scale: 8000 },     // 미크로네시아 연방
+    '776': { coords: [-175.198, -21.179], scale: 20000 }, // 통가
+    '296': { coords: [173.000, 1.420], scale: 5000 },     // 키리바시
+    // 아시아
+    '462': { coords: [73.221, 3.203], scale: 8000 },      // 몰디브
+    '702': { coords: [103.820, 1.352], scale: 30000 },    // 싱가포르
+    '048': { coords: [50.550, 26.067], scale: 25000 },    // 바레인
+    // 아프리카
+    '690': { coords: [55.492, -4.679], scale: 40000 },    // 세이셸
+    '678': { coords: [6.613, 0.190], scale: 20000 },      // 상투메 프린시페
+    // 아메리카 (카리브해)
+    '659': { coords: [-62.783, 17.357], scale: 50000 },   // 세인트키츠 네비스
+    '308': { coords: [-61.679, 12.117], scale: 60000 },   // 그레나다
+    '670': { coords: [-61.203, 13.254], scale: 40000 },   // 세인트빈센트 그레나딘
+    '052': { coords: [-59.543, 13.194], scale: 50000 },   // 바베이도스
+    '028': { coords: [-61.796, 17.061], scale: 40000 },   // 앤티가 바부다
+    '662': { coords: [-60.969, 13.910], scale: 50000 },   // 세인트루시아
+    '212': { coords: [-61.371, 15.415], scale: 40000 },   // 도미니카 연방
+};
+
 class WorldMapQuiz {
     constructor() {
         this.currentContinent = null;
@@ -553,6 +587,14 @@ class WorldMapQuiz {
                 if (this.mapGroup) {
                     this.mapGroup.attr('transform', event.transform);
                 }
+                // 초소형 국가 연결선 좌표 업데이트
+                svg.selectAll('.micro-leader-line').each(function () {
+                    const line = d3.select(this);
+                    const ox = +line.attr('data-origin-x');
+                    const oy = +line.attr('data-origin-y');
+                    const t = event.transform;
+                    line.attr('x2', t.applyX(ox)).attr('y2', t.applyY(oy));
+                });
             });
 
         svg.call(this.zoom)
@@ -1192,6 +1234,9 @@ class WorldMapQuiz {
             this.drawCountryLabels(this.mapGroup, countries.features.filter(d => subregionCountryIds.includes(String(d.id))));
         }
 
+        // 초소형 국가 인셋 박스 (말풍선) 그리기
+        this.drawMicroCountryInsets(subregionKey);
+
         // 뒤로가기 버튼 (줌 그룹 밖)
         svg.append('rect')
             .attr('x', 10)
@@ -1391,6 +1436,211 @@ class WorldMapQuiz {
                     .attr('dy', '0.35em')
                     .text(country.name)
                     .style('pointer-events', 'none');
+            }
+        });
+    }
+
+    // 초소형 국가 인셋 박스 (말풍선) 그리기
+    drawMicroCountryInsets(subregionKey) {
+        const activeContinentKey = this.selectedContinent || this.currentContinent;
+        const subregion = WORLD_DATA[activeContinentKey].subregions[subregionKey];
+        const subregionCountryIds = subregion.countries.map(c => String(c.id));
+
+        // 현재 하위지역에 속한 초소형 국가 찾기
+        const microIds = subregionCountryIds.filter(id => MICRO_COUNTRIES[id]);
+        if (microIds.length === 0) return;
+
+        const container = document.getElementById('map-container');
+        const width = container.clientWidth;
+        const height = this.calculateMapHeight();
+        const countries = topojson.feature(this.topoData, this.topoData.objects.countries);
+
+        // 인셋 크기 (반응형)
+        const isMobile = width < 600;
+        const insetW = isMobile ? Math.min(90, width * 0.2) : Math.min(120, width * 0.18);
+        const insetH = insetW * 0.75;
+        const gap = 8;
+        const marginRight = 8;
+        const marginTop = 50;
+
+        // 세로 공간 기준 한 열에 들어갈 인셋 수
+        const maxPerCol = Math.max(1, Math.floor((height - marginTop - 20) / (insetH + gap + 16)));
+
+        // 테스트 모드의 타겟 국가
+        const targetId = this.currentMode === 'test' && this.targetCountry ? String(this.targetCountry.id) : null;
+
+        // 인셋 그룹 (SVG 루트에 추가, 줌 영향 없음)
+        const insetGroupRoot = this.svg.append('g').attr('class', 'micro-inset-group');
+
+        microIds.forEach((countryId, index) => {
+            const config = MICRO_COUNTRIES[countryId];
+            const countryInfo = getCountryById(countryId);
+
+            // 레이아웃: 우측에서 열 단위 배치
+            const col = Math.floor(index / maxPerCol);
+            const row = index % maxPerCol;
+            const x = width - marginRight - (col + 1) * (insetW + gap);
+            const y = marginTop + row * (insetH + gap + 18);
+
+            const isTarget = targetId === countryId;
+
+            // ── 1) 메인 지도 위 마커 (mapGroup 내부, 줌과 함께 이동) ──
+            const mainPos = this.projection(config.coords);
+            if (mainPos && !isNaN(mainPos[0])) {
+                const marker = this.mapGroup.append('g')
+                    .attr('class', `micro-marker micro-marker-${countryId}`);
+
+                // 외곽 고리 (빨간 원)
+                marker.append('circle')
+                    .attr('cx', mainPos[0])
+                    .attr('cy', mainPos[1])
+                    .attr('r', 8)
+                    .attr('fill', 'none')
+                    .attr('stroke', isTarget ? '#3b82f6' : '#e74c3c')
+                    .attr('stroke-width', 2)
+                    .attr('class', 'micro-marker-ring');
+
+                // 중심 점
+                marker.append('circle')
+                    .attr('cx', mainPos[0])
+                    .attr('cy', mainPos[1])
+                    .attr('r', 3)
+                    .attr('fill', isTarget ? '#3b82f6' : '#e74c3c');
+            }
+
+            // ── 2) 말풍선 연결선 (SVG 루트, 초기 위치 기준) ──
+            if (mainPos && !isNaN(mainPos[0])) {
+                const lineEndX = x + insetW / 2;
+                const lineEndY = y + insetH / 2;
+
+                insetGroupRoot.append('line')
+                    .attr('class', `micro-leader-line micro-leader-${countryId}`)
+                    .attr('x1', lineEndX)
+                    .attr('y1', lineEndY)
+                    .attr('x2', mainPos[0])
+                    .attr('y2', mainPos[1])
+                    .attr('stroke', isTarget ? '#3b82f6' : 'var(--text-secondary)')
+                    .attr('stroke-width', 1.2)
+                    .attr('stroke-dasharray', '5,3')
+                    .attr('opacity', 0.6)
+                    .attr('data-origin-x', mainPos[0])
+                    .attr('data-origin-y', mainPos[1]);
+            }
+
+            // ── 3) 인셋 박스 ──
+            const insetG = insetGroupRoot.append('g')
+                .attr('class', `micro-inset micro-inset-${countryId}`)
+                .attr('transform', `translate(${x}, ${y})`);
+
+            // 클리핑
+            const clipId = `micro-clip-${countryId}`;
+            insetG.append('clipPath')
+                .attr('id', clipId)
+                .append('rect')
+                .attr('width', insetW)
+                .attr('height', insetH)
+                .attr('rx', 6);
+
+            // 인셋 전용 프로젝션 (고배율)
+            const insetProjection = d3.geoMercator()
+                .center(config.coords)
+                .scale(config.scale * insetW / 120)
+                .translate([insetW / 2, insetH / 2]);
+            const insetPath = d3.geoPath().projection(insetProjection);
+
+            const content = insetG.append('g').attr('clip-path', `url(#${clipId})`);
+
+            // 바다 배경
+            content.append('rect')
+                .attr('width', insetW)
+                .attr('height', insetH)
+                .attr('fill', 'var(--bg-tertiary)');
+
+            // 주변 국가 (회색)
+            content.selectAll('.inset-bg-country')
+                .data(countries.features)
+                .enter()
+                .append('path')
+                .attr('d', insetPath)
+                .attr('fill', d => String(d.id) === countryId ? 'transparent' : '#ccc')
+                .attr('stroke', '#aaa')
+                .attr('stroke-width', 0.3);
+
+            // 대상 초소형 국가 (확대 강조)
+            const microFeature = countries.features.find(f => String(f.id) === countryId);
+            if (microFeature) {
+                content.append('path')
+                    .attr('class', `inset-micro-country${isTarget ? ' target-highlight' : ''}`)
+                    .attr('d', insetPath(microFeature))
+                    .attr('fill', isTarget ? '#3b82f6' : '#e74c3c')
+                    .attr('stroke', isTarget ? '#1d4ed8' : '#c0392b')
+                    .attr('stroke-width', 2.5)
+                    .attr('data-country-id', countryId);
+            } else {
+                // TopoJSON에 없는 국가 (투발루 등) → 원형 마커
+                const pos = insetProjection(config.coords);
+                if (pos) {
+                    content.append('circle')
+                        .attr('class', `inset-micro-country${isTarget ? ' target-highlight' : ''}`)
+                        .attr('cx', pos[0])
+                        .attr('cy', pos[1])
+                        .attr('r', 6)
+                        .attr('fill', isTarget ? '#3b82f6' : '#e74c3c')
+                        .attr('stroke', isTarget ? '#1d4ed8' : '#c0392b')
+                        .attr('stroke-width', 2)
+                        .attr('data-country-id', countryId);
+                }
+            }
+
+            // 인셋 테두리
+            insetG.append('rect')
+                .attr('width', insetW)
+                .attr('height', insetH)
+                .attr('rx', 6)
+                .attr('fill', 'none')
+                .attr('stroke', isTarget ? '#3b82f6' : 'var(--border-color)')
+                .attr('stroke-width', isTarget ? 2.5 : 1.5)
+                .attr('class', 'micro-inset-border');
+
+            // 클릭 가능한 투명 오버레이
+            insetG.append('rect')
+                .attr('width', insetW)
+                .attr('height', insetH)
+                .attr('rx', 6)
+                .attr('fill', 'transparent')
+                .attr('cursor', 'pointer')
+                .on('click', () => {
+                    if (this.currentMode === 'explore') {
+                        this.showFeedback(`${countryInfo.name} (${countryInfo.nameEn})`, 'info');
+                    } else if (this.currentMode !== 'test') {
+                        // 퀴즈/연습 모드: 국가 클릭 처리
+                        const feature = countries.features.find(f => String(f.id) === countryId);
+                        if (feature) this.handleCountryClick(feature);
+                    }
+                })
+                .on('mouseenter', function () {
+                    d3.select(this.parentNode).select('.micro-inset-border')
+                        .attr('stroke', 'var(--accent-primary)')
+                        .attr('stroke-width', 2.5);
+                })
+                .on('mouseleave', function () {
+                    const el = d3.select(this.parentNode);
+                    const isTgt = el.select('.inset-micro-country').classed('target-highlight');
+                    el.select('.micro-inset-border')
+                        .attr('stroke', isTgt ? '#3b82f6' : 'var(--border-color)')
+                        .attr('stroke-width', isTgt ? 2.5 : 1.5);
+                });
+
+            // 국가 이름 라벨 (test 모드에서는 숨김 → 정답 노출 방지)
+            if (this.currentMode !== 'test') {
+                insetG.append('text')
+                    .attr('x', insetW / 2)
+                    .attr('y', insetH + 13)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', isMobile ? '9px' : '10px')
+                    .attr('fill', 'var(--text-primary)')
+                    .attr('class', 'micro-inset-label')
+                    .text(countryInfo?.name || '');
             }
         });
     }
@@ -1669,6 +1919,44 @@ class WorldMapQuiz {
         this.svg?.selectAll('.country')
             .filter(d => String(d.id) === targetId)
             .classed('target-highlight', true);
+
+        // 초소형 국가 인셋 하이라이트
+        if (MICRO_COUNTRIES[targetId]) {
+            // 인셋 내 국가 강조
+            this.svg?.selectAll('.inset-micro-country')
+                .classed('target-highlight', false)
+                .attr('fill', '#e74c3c')
+                .attr('stroke', '#c0392b');
+            this.svg?.selectAll(`.inset-micro-country[data-country-id="${targetId}"]`)
+                .classed('target-highlight', true)
+                .attr('fill', '#3b82f6')
+                .attr('stroke', '#1d4ed8');
+
+            // 인셋 테두리 강조
+            this.svg?.selectAll('.micro-inset-border')
+                .attr('stroke', 'var(--border-color)')
+                .attr('stroke-width', 1.5);
+            this.svg?.select(`.micro-inset-${targetId} .micro-inset-border`)
+                .attr('stroke', '#3b82f6')
+                .attr('stroke-width', 2.5);
+
+            // 메인 맵 마커 강조
+            this.svg?.selectAll('.micro-marker-ring')
+                .attr('stroke', '#e74c3c');
+            this.svg?.select(`.micro-marker-${targetId} .micro-marker-ring`)
+                .attr('stroke', '#3b82f6');
+            this.svg?.select(`.micro-marker-${targetId} circle:last-child`)
+                .attr('fill', '#3b82f6');
+
+            // 연결선 강조
+            this.svg?.selectAll('.micro-leader-line')
+                .attr('stroke', 'var(--text-secondary)')
+                .attr('opacity', 0.4);
+            this.svg?.select(`.micro-leader-${targetId}`)
+                .attr('stroke', '#3b82f6')
+                .attr('opacity', 0.8)
+                .attr('stroke-width', 1.8);
+        }
     }
 
     // 8지선다 보기 생성

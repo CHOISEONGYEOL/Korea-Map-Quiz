@@ -1439,6 +1439,59 @@ body.main-landing header h1 {
     stroke-width: 2px;
 }
 
+/* 초소형 국가 인셋 박스 (세계 지도) */
+.micro-inset-group {
+    pointer-events: none;
+}
+
+.micro-inset {
+    pointer-events: all;
+    cursor: pointer;
+}
+
+.micro-inset-border {
+    transition: stroke 0.2s, stroke-width 0.2s;
+}
+
+.micro-inset-label {
+    font-weight: 500;
+    pointer-events: none;
+}
+
+.micro-leader-line {
+    pointer-events: none;
+    transition: stroke 0.3s, opacity 0.3s;
+}
+
+.micro-marker-ring {
+    animation: micro-marker-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes micro-marker-pulse {
+    0%, 100% {
+        r: 8;
+        opacity: 1;
+    }
+    50% {
+        r: 12;
+        opacity: 0.5;
+    }
+}
+
+.inset-micro-country.target-highlight {
+    animation: inset-target-pulse 0.8s ease-in-out infinite;
+    filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.7));
+}
+
+@keyframes inset-target-pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
 /* 테마 토글 버튼 */
 .theme-toggle {
     position: absolute;
@@ -1587,6 +1640,19 @@ header {
     font-size: 0.85rem;
     color: var(--text-muted);
     line-height: 1.5;
+}
+
+.dev-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #fff;
+    background: #f59e0b;
+    padding: 1px 7px;
+    border-radius: 9px;
+    vertical-align: middle;
+    margin-left: 4px;
+    letter-spacing: 0.02em;
 }
 
 /* 메인 메뉴 텍스트 wrapper (모바일 가로 레이아웃용) */
