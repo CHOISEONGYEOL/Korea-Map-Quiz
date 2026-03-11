@@ -151,6 +151,7 @@ body.game-active .feedback {
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     margin: 0;
+    pointer-events: none;
 }
 
 /* 뒤로가기 버튼들 (좌측 하단) */

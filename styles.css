@@ -702,6 +702,7 @@ body.main-landing header h1 {
     border-radius: 12px;
     min-height: 40px;
     flex-shrink: 0;
+    pointer-events: none;
 }
 
 .feedback.correct {
