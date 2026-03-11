@@ -22,6 +22,9 @@ class CanadaProvincesQuiz {
         // 헤더 제목 요소
         this.headerTitleEl = null;
 
+        // 클릭 처리 중 플래그
+        this.isProcessing = false;
+
         this.init();
     }
 
@@ -98,6 +101,9 @@ class CanadaProvincesQuiz {
         if (screenId === 'game-screen' && (this.currentMode === 'quiz' || this.currentMode === 'test')) {
             container.classList.add('show-stats');
             stats.classList.remove('timer-hidden');
+        } else if (screenId === 'game-screen' && this.currentMode === 'practice') {
+            stats.classList.add('timer-hidden');
+            container.classList.add('show-stats');
         } else {
             container.classList.remove('show-stats');
         }
@@ -228,17 +234,19 @@ class CanadaProvincesQuiz {
         this.currentQuestion = 0;
         this.score = 0;
         this.results = [];
+        this.isProcessing = false;
 
         this.totalQuestions = Math.min(10, this.provinces.length);
         this.shuffledProvinces = [...this.provinces].sort(() => Math.random() - 0.5);
 
         this.showScreen('game-screen');
-        this.drawMap();
 
         if (this.currentMode !== 'explore') {
+            // 퀴즈/연습 모드: nextQuestion이 지도를 그리므로 여기서는 그리지 않음
             this.updateScore();
             this.nextQuestion();
         } else {
+            this.drawMap();
             if (this.selectedRegionFilter !== 'all') {
                 document.getElementById('question-text').textContent = '주/준주를 클릭해서 탐색하세요';
             } else {
@@ -603,6 +611,8 @@ class CanadaProvincesQuiz {
     }
 
     handleProvinceClick(feature) {
+        if (this.isProcessing) return;
+
         const provinceId = this.getProvinceIdFromName(feature.properties.name);
         const provinceInfo = getProvinceById(provinceId);
 
@@ -618,8 +628,10 @@ class CanadaProvincesQuiz {
         if (this.currentQuestion >= this.totalQuestions) return;
 
         const currentProvince = this.shuffledProvinces[this.currentQuestion];
+        if (!currentProvince) return;
         const isCorrect = provinceId === currentProvince.id;
 
+        this.isProcessing = true;
         this.stopTimer();
 
         if (isCorrect) {
@@ -663,6 +675,8 @@ class CanadaProvincesQuiz {
     }
 
     nextQuestion() {
+        this.isProcessing = false;
+
         this.drawMap();
 
         this.svg.selectAll('.province')
@@ -717,6 +731,7 @@ class CanadaProvincesQuiz {
     }
 
     handleTimeout() {
+        this.isProcessing = true;
         this.stopTimer();
 
         const currentProvince = this.shuffledProvinces[this.currentQuestion];
@@ -745,12 +760,16 @@ class CanadaProvincesQuiz {
         const feedback = document.getElementById('feedback');
         feedback.textContent = message;
         feedback.className = `feedback ${type}`;
+        feedback.style.pointerEvents = 'none';
+        feedback.style.display = '';
     }
 
     clearFeedback() {
         const feedback = document.getElementById('feedback');
         feedback.textContent = '';
         feedback.className = 'feedback';
+        feedback.style.pointerEvents = 'none';
+        feedback.style.display = 'none';
     }
 
     endGame() {
@@ -776,6 +795,7 @@ class CanadaProvincesQuiz {
         this.currentQuestion = 0;
         this.score = 0;
         this.results = [];
+        this.isProcessing = false;
         this.stopTimer();
     }
 }

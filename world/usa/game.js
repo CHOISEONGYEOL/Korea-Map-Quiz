@@ -29,6 +29,9 @@ class USStatesQuiz {
         // 헤더 제목 요소
         this.headerTitleEl = null;
 
+        // 클릭 처리 중 플래그
+        this.isProcessing = false;
+
         this.init();
     }
 
@@ -104,6 +107,9 @@ class USStatesQuiz {
         if (screenId === 'game-screen' && (this.currentMode === 'quiz' || this.currentMode === 'test')) {
             container.classList.add('show-stats');
             stats.classList.remove('timer-hidden');
+        } else if (screenId === 'game-screen' && this.currentMode === 'practice') {
+            stats.classList.add('timer-hidden');
+            container.classList.add('show-stats');
         } else {
             container.classList.remove('show-stats');
         }
@@ -238,27 +244,33 @@ class USStatesQuiz {
         this.score = 0;
         this.results = [];
         this.currentRegion = null;
+        this.isProcessing = false;
 
         this.totalQuestions = Math.min(10, this.states.length);
         this.shuffledStates = [...this.states].sort(() => Math.random() - 0.5);
 
         this.showScreen('game-screen');
 
-        // 지역 필터가 선택되어 있으면 바로 해당 지역으로 드릴다운
-        if (this.selectedRegionFilter !== 'all') {
-            this.mapView = 'region';
-            this.currentRegion = this.selectedRegionFilter;
-            this.drawRegionMap(this.selectedRegionFilter);
-        } else {
-            // 전체 모드: 전국 지도부터 시작
-            this.mapView = 'country';
-            this.drawCountryMap();
-        }
-
         if (this.currentMode !== 'explore') {
+            // 퀴즈/연습 모드: nextQuestion이 지도를 그리므로 여기서는 그리지 않음
+            if (this.selectedRegionFilter !== 'all') {
+                this.mapView = 'region';
+                this.currentRegion = this.selectedRegionFilter;
+            } else {
+                this.mapView = 'country';
+            }
             this.updateScore();
             this.nextQuestion();
         } else {
+            // 탐색 모드: 지도 그리기
+            if (this.selectedRegionFilter !== 'all') {
+                this.mapView = 'region';
+                this.currentRegion = this.selectedRegionFilter;
+                this.drawRegionMap(this.selectedRegionFilter);
+            } else {
+                this.mapView = 'country';
+                this.drawCountryMap();
+            }
             if (this.selectedRegionFilter !== 'all') {
                 document.getElementById('question-text').textContent = '주를 클릭해서 탐색하세요';
             } else {
@@ -514,6 +526,8 @@ class USStatesQuiz {
     }
 
     handleCountryMapClick(feature) {
+        if (this.isProcessing) return;
+
         const stateId = String(feature.id).padStart(2, '0');
         const stateInfo = getStateById(stateId);
 
@@ -532,7 +546,9 @@ class USStatesQuiz {
 
         // 퀴즈 모드: 정답 주가 속한 지역인지 확인
         const targetState = this.shuffledStates[this.currentQuestion];
+        if (!targetState) return;
         const targetInfo = getStateById(targetState.id);
+        if (!targetInfo) return;
 
         if (targetInfo.region === regionKey) {
             // 정답 지역 선택!
@@ -1069,6 +1085,8 @@ class USStatesQuiz {
     }
 
     handleStateClick(feature) {
+        if (this.isProcessing) return;
+
         const stateId = String(feature.id).padStart(2, '0');
         const stateInfo = getStateById(stateId);
 
@@ -1084,8 +1102,10 @@ class USStatesQuiz {
         if (this.currentQuestion >= this.totalQuestions) return;
 
         const currentState = this.shuffledStates[this.currentQuestion];
+        if (!currentState) return;
         const isCorrect = stateId === currentState.id;
 
+        this.isProcessing = true;
         this.stopTimer();
 
         if (isCorrect) {
@@ -1123,6 +1143,8 @@ class USStatesQuiz {
     }
 
     nextQuestion() {
+        this.isProcessing = false;
+
         // 전체 지도로 돌아가기
         this.currentRegion = null;
         this.drawCountryMap();
@@ -1179,6 +1201,7 @@ class USStatesQuiz {
     }
 
     handleTimeout() {
+        this.isProcessing = true;
         this.stopTimer();
 
         const currentState = this.shuffledStates[this.currentQuestion];
@@ -1213,12 +1236,16 @@ class USStatesQuiz {
         const feedback = document.getElementById('feedback');
         feedback.textContent = message;
         feedback.className = `feedback ${type}`;
+        feedback.style.pointerEvents = 'none';
+        feedback.style.display = '';
     }
 
     clearFeedback() {
         const feedback = document.getElementById('feedback');
         feedback.textContent = '';
         feedback.className = 'feedback';
+        feedback.style.pointerEvents = 'none';
+        feedback.style.display = 'none';
     }
 
     endGame() {
@@ -1246,6 +1273,7 @@ class USStatesQuiz {
         this.results = [];
         this.currentRegion = null;
         this.mapView = 'country';
+        this.isProcessing = false;
         this.stopTimer();
     }
 }

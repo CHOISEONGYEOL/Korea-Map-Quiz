@@ -61,6 +61,7 @@ class WorldMapQuiz {
         // 퀴즈 상태
         this.targetCountry = null;
         this.shuffledCountries = [];
+        this.isProcessing = false; // 클릭 처리 중 중복 방지
 
         // 지역 필터
         this.selectedSubregionFilter = 'all';
@@ -216,6 +217,9 @@ class WorldMapQuiz {
         if (screenId === 'game-screen' && (this.currentMode === 'quiz' || this.currentMode === 'test')) {
             container.classList.add('show-stats');
             stats.classList.remove('timer-hidden');
+        } else if (screenId === 'game-screen' && this.currentMode === 'practice') {
+            container.classList.add('show-stats');
+            stats.classList.add('timer-hidden'); // 연습모드: 타이머 숨김
         } else {
             container.classList.remove('show-stats');
         }
@@ -482,6 +486,9 @@ class WorldMapQuiz {
             this.choicesContainer?.classList.add('hidden');
         }
 
+        // isProcessing 초기화
+        this.isProcessing = false;
+
         if (this.currentContinent === 'world') {
             // 전 세계 모드 - 필터 적용
             this.countries = this.getFilteredCountries().length > 0
@@ -500,19 +507,21 @@ class WorldMapQuiz {
             this.shuffledCountries = [...this.countries].sort(() => Math.random() - 0.5);
 
             this.showScreen('game-screen');
-            this.drawWorldMap();
 
             if (this.currentMode === 'test') {
                 // 4단계: 8지선다 시작
+                this.drawWorldMap();
                 this.updateScore();
                 if (this.testSubMode === 'speed') {
                     this.startSpeedTimer();
                 }
                 this.nextTestQuestion();
             } else if (this.currentMode !== 'explore') {
+                // practice/quiz: nextQuestion이 지도를 그리므로 중복 그리기 방지
                 this.updateScore();
                 this.nextQuestion();
             } else {
+                this.drawWorldMap();
                 document.getElementById('question-text').textContent = '대륙을 클릭해서 탐색하세요';
                 document.getElementById('step-indicator').textContent = '';
             }
@@ -536,31 +545,36 @@ class WorldMapQuiz {
 
             this.showScreen('game-screen');
 
-            // 지역 필터가 선택되어 있으면 바로 해당 지역으로 드릴다운
-            if (this.selectedSubregionFilter !== 'all') {
-                this.mapView = 'subregion';
-                this.currentSubregion = this.selectedSubregionFilter;
-                this.drawSubregionMap(this.selectedSubregionFilter);
-            } else {
-                // 전체 모드: 대륙 지도부터 시작
-                this.mapView = 'continent';
-                this.drawContinentMap();
-            }
-
             if (this.currentMode === 'test') {
                 // 4단계: 8지선다 시작
+                // 지역 필터가 선택되어 있으면 바로 해당 지역으로 드릴다운
+                if (this.selectedSubregionFilter !== 'all') {
+                    this.mapView = 'subregion';
+                    this.currentSubregion = this.selectedSubregionFilter;
+                    this.drawSubregionMap(this.selectedSubregionFilter);
+                } else {
+                    this.mapView = 'continent';
+                    this.drawContinentMap();
+                }
                 this.updateScore();
                 if (this.testSubMode === 'speed') {
                     this.startSpeedTimer();
                 }
                 this.nextTestQuestion();
             } else if (this.currentMode !== 'explore') {
+                // practice/quiz: nextQuestion이 지도를 그리므로 중복 그리기 방지
                 this.updateScore();
                 this.nextQuestion();
             } else {
+                // explore 모드: 지도 직접 그리기
                 if (this.selectedSubregionFilter !== 'all') {
+                    this.mapView = 'subregion';
+                    this.currentSubregion = this.selectedSubregionFilter;
+                    this.drawSubregionMap(this.selectedSubregionFilter);
                     document.getElementById('question-text').textContent = '국가를 클릭해서 탐색하세요';
                 } else {
+                    this.mapView = 'continent';
+                    this.drawContinentMap();
                     document.getElementById('question-text').textContent = '지역을 클릭해서 탐색하세요';
                 }
                 document.getElementById('step-indicator').textContent = '';
@@ -762,6 +776,8 @@ class WorldMapQuiz {
     }
 
     handleWorldMapClick(continentKey, feature) {
+        if (this.isProcessing) return;
+
         if (this.currentMode === 'explore') {
             // 탐색 모드: 해당 대륙으로 확대
             this.selectedContinent = continentKey;
@@ -775,7 +791,9 @@ class WorldMapQuiz {
 
         // 퀴즈 모드: 정답 국가가 속한 대륙인지 확인
         const targetCountry = this.shuffledCountries[this.currentQuestion];
+        if (!targetCountry) return;
         const targetInfo = getCountryById(targetCountry.id);
+        if (!targetInfo) return;
 
         if (targetInfo.continent === continentKey) {
             // 정답 대륙 선택!
@@ -1106,6 +1124,8 @@ class WorldMapQuiz {
     }
 
     handleContinentMapClick(subregionKey, feature) {
+        if (this.isProcessing) return;
+
         // 전 세계 모드에서는 selectedContinent 사용
         const activeContinentKey = this.selectedContinent || this.currentContinent;
 
@@ -1113,14 +1133,16 @@ class WorldMapQuiz {
             // 탐색 모드: 해당 하위지역으로 확대
             this.currentSubregion = subregionKey;
             this.drawSubregionMap(subregionKey);
-            const subregion = WORLD_DATA[activeContinentKey].subregions[subregionKey];
-            this.showFeedback(`${subregion.name} 지역으로 이동`, 'info');
+            const subregion = WORLD_DATA[activeContinentKey]?.subregions[subregionKey];
+            if (subregion) this.showFeedback(`${subregion.name} 지역으로 이동`, 'info');
             return;
         }
 
         // 퀴즈 모드: 정답 국가가 속한 지역인지 확인
         const targetCountry = this.shuffledCountries[this.currentQuestion];
+        if (!targetCountry) return;
         const targetInfo = getCountryById(targetCountry.id);
+        if (!targetInfo) return;
 
         if (targetInfo.subregion === subregionKey) {
             // 정답 지역 선택!
@@ -1677,14 +1699,17 @@ class WorldMapQuiz {
             return;
         }
 
-        // 미국 클릭시 미국 주 퀴즈로 이동
-        if (countryId === '840') {
+        // 미국/중국/캐나다 클릭시 - explore에서만 하위 퀴즈로 이동
+        if (countryId === '840' || countryId === '156' || countryId === '124') {
             if (this.currentMode === 'explore') {
-                if (confirm('미국 50개 주 퀴즈로 이동하시겠습니까?')) {
-                    window.location.href = 'usa/';
+                const quizLinks = { '840': 'usa/', '156': 'china/', '124': 'canada/' };
+                const names = { '840': '미국 50개 주', '156': '중국 34개 행정구역', '124': '캐나다 13개 주/준주' };
+                if (confirm(`${names[countryId]} 퀴즈로 이동하시겠습니까?`)) {
+                    window.location.href = quizLinks[countryId];
                 }
+                return;
             }
-            return;
+            // practice/quiz 모드에서는 일반 국가처럼 오답 처리 (해당 국가는 퀴즈 대상이 아님)
         }
 
         if (this.currentMode === 'explore') {
@@ -1694,9 +1719,17 @@ class WorldMapQuiz {
             return;
         }
 
+        // 클릭 처리 중이면 무시
+        if (this.isProcessing) return;
         if (this.currentQuestion >= this.totalQuestions) return;
 
+        this.isProcessing = true;
+
         const currentCountry = this.shuffledCountries[this.currentQuestion];
+        if (!currentCountry) {
+            this.isProcessing = false;
+            return;
+        }
         const isCorrect = countryId === String(currentCountry.id);
 
         this.stopTimer();
@@ -1743,15 +1776,23 @@ class WorldMapQuiz {
     }
 
     nextQuestion() {
+        // 클릭 처리 완료
+        this.isProcessing = false;
+
         // 지도 초기화
-        this.currentSubregion = null;
         this.selectedContinent = null;
 
         if (this.currentContinent === 'world') {
             // 전 세계 모드: 전체 세계 지도로 돌아가기
+            this.currentSubregion = null;
             this.drawWorldMap();
+        } else if (this.selectedSubregionFilter !== 'all') {
+            // 특정 지역 필터 모드: 해당 지역 지도 유지
+            this.currentSubregion = this.selectedSubregionFilter;
+            this.drawSubregionMap(this.selectedSubregionFilter);
         } else {
             // 특정 대륙 모드: 대륙 지도로 돌아가기
+            this.currentSubregion = null;
             this.drawContinentMap();
         }
 
@@ -1763,6 +1804,11 @@ class WorldMapQuiz {
         const country = this.shuffledCountries[this.currentQuestion];
         document.getElementById('question-text').textContent = country.name;
         document.getElementById('question-num').textContent = `${this.currentQuestion + 1}/${this.totalQuestions}`;
+
+        // 지역 필터가 선택된 경우 바로 국가 선택 단계
+        if (this.selectedSubregionFilter !== 'all' && this.currentContinent !== 'world') {
+            document.getElementById('step-indicator').textContent = '국가를 선택하세요';
+        }
 
         this.clearFeedback();
 
@@ -2123,10 +2169,13 @@ class WorldMapQuiz {
 
     handleTimeout() {
         this.stopTimer();
+        this.isProcessing = true;
         this.combo = 0;
 
         const currentCountry = this.shuffledCountries[this.currentQuestion];
+        if (!currentCountry) return;
         const countryInfo = getCountryById(currentCountry.id);
+        if (!countryInfo) return;
 
         this.results.push({ country: currentCountry.name, correct: false, timeout: true });
 
@@ -2168,12 +2217,16 @@ class WorldMapQuiz {
         const feedback = document.getElementById('feedback');
         feedback.textContent = message;
         feedback.className = `feedback ${type}`;
+        feedback.style.pointerEvents = 'none';
+        feedback.style.display = '';
     }
 
     clearFeedback() {
         const feedback = document.getElementById('feedback');
         feedback.textContent = '';
         feedback.className = 'feedback';
+        feedback.style.pointerEvents = 'none';
+        feedback.style.display = 'none';
     }
 
     escapeHtml(text) {
@@ -2187,6 +2240,7 @@ class WorldMapQuiz {
     endGame() {
         this.stopTimer();
         this.stopSpeedTimer();
+        this.isProcessing = false;
 
         document.body.classList.remove('test-mode');
         this.choicesContainer?.classList.add('hidden');
@@ -2274,6 +2328,7 @@ class WorldMapQuiz {
         this.mapView = 'continent';
         this.combo = 0;
         this.maxComboAchieved = 0;
+        this.isProcessing = false;
         this.lives = this.maxLives;
         this.speedTimeRemaining = this.speedTimeLimit;
         this.stopTimer();
