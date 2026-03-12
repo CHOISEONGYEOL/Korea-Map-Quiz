@@ -226,6 +226,7 @@ class KoreaMapQuiz {
         this.speedTimeLimit = 60000;  // 60초 총 시간
         this.speedTimer = null;
         this.speedTimeRemaining = 60000;
+        this.isProcessingAnswer = false;  // 답변 처리 중 중복 클릭 방지
         // 서바이벌 모드용
         this.lives = 3;
         this.maxLives = 3;
@@ -356,6 +357,14 @@ class KoreaMapQuiz {
 
     // 현재 상태에 맞게 지도 다시 렌더링
     rerenderCurrentMap() {
+        // 4단계 실전 테스트 모드: 현재 문제의 시도 지도만 다시 렌더링
+        if (this.gameMode === 'test') {
+            if (this.currentAnswer) {
+                this.renderTestMap();
+            }
+            return;
+        }
+
         if (this.state === GameState.SELECT_PROVINCE || this.state === GameState.IDLE) {
             if (this.selectedGroup) {
                 // 지역 필터로 선택된 권역인지 확인
@@ -1067,6 +1076,7 @@ class KoreaMapQuiz {
     // ===== 4단계 실전 테스트 (8지선다) 전용 함수들 =====
 
     nextTestQuestion() {
+        this.isProcessingAnswer = false;
         // 문제를 다 풀었는지 확인
         if (this.currentQuestion >= this.questions.length) {
             // 스피드/서바이벌 모드: 문제 다 풀면 다시 셔플해서 계속
@@ -1305,6 +1315,10 @@ class KoreaMapQuiz {
     }
 
     handleTestChoice(selectedAnswer, btnElement) {
+        // 답변 처리 중 중복 클릭 방지
+        if (this.isProcessingAnswer) return;
+        this.isProcessingAnswer = true;
+
         this.stopTimer();
 
         const correctAnswer = this.currentAnswer.name;
@@ -1319,8 +1333,8 @@ class KoreaMapQuiz {
             }
         });
 
-        // 스피드 모드: 정답/오답 표시 동안 타이머 일시정지
-        if (this.testSubMode === 'speed') {
+        // 스피드 모드: 정답일 때만 타이머 일시정지 (오답 시 타이머 계속 흘러감 → 찍기 방지)
+        if (this.testSubMode === 'speed' && isCorrect) {
             this.pauseSpeedTimer();
         }
 
@@ -1372,6 +1386,7 @@ class KoreaMapQuiz {
 
             // 서바이벌 모드: 목숨이 0이면 게임 종료
             if (this.testSubMode === 'survival' && this.lives <= 0) {
+                this.isProcessingAnswer = false;
                 setTimeout(() => this.endGame(), 500);
                 return;
             }
@@ -1379,8 +1394,9 @@ class KoreaMapQuiz {
 
         // 2초 후 다음 문제 (정답 충분히 확인)
         setTimeout(() => {
-            // 스피드 모드: 타이머 재개
-            if (this.testSubMode === 'speed') {
+            this.isProcessingAnswer = false;
+            // 스피드 모드: 정답이었으면 타이머 재개
+            if (this.testSubMode === 'speed' && isCorrect) {
                 this.resumeSpeedTimer();
             }
             this.nextTestQuestion();
@@ -1389,13 +1405,11 @@ class KoreaMapQuiz {
 
     handleTestTimeout() {
         console.log('[테스트모드] 타임아웃 발생!');
+        this.isProcessingAnswer = true;
         // 타임아웃 시 오답 처리
         const correctAnswer = this.currentAnswer.name;
 
-        // 스피드 모드: 정답 표시 동안 타이머 일시정지
-        if (this.testSubMode === 'speed') {
-            this.pauseSpeedTimer();
-        }
+        // 스피드 모드: 타임아웃은 오답이므로 타이머 일시정지 안 함 (찍기 방지)
 
         // 모든 버튼 비활성화 및 정답 표시
         const allBtns = this.choicesGrid.querySelectorAll('.choice-btn');
@@ -1430,16 +1444,14 @@ class KoreaMapQuiz {
 
         // 서바이벌 모드: 목숨이 0이면 게임 종료
         if (this.testSubMode === 'survival' && this.lives <= 0) {
+            this.isProcessingAnswer = false;
             setTimeout(() => this.endGame(), 500);
             return;
         }
 
         // 2초 후 다음 문제 (정답 충분히 확인)
         setTimeout(() => {
-            // 스피드 모드: 타이머 재개
-            if (this.testSubMode === 'speed') {
-                this.resumeSpeedTimer();
-            }
+            this.isProcessingAnswer = false;
             this.nextTestQuestion();
         }, 2000);
     }
