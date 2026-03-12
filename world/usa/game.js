@@ -23,8 +23,8 @@ class USStatesQuiz {
         this.zoom = null;
         this.mapGroup = null;
 
-        // 지역 필터
-        this.selectedRegionFilter = 'all';
+        // 지역 필터 (다중 선택)
+        this.selectedRegionFilters = new Set();
 
         // 헤더 제목 요소
         this.headerTitleEl = null;
@@ -198,19 +198,20 @@ class USStatesQuiz {
         const allLabel = document.createElement('label');
         allLabel.className = 'filter-option selected';
         allLabel.innerHTML = `
-            <input type="radio" name="region" value="all" checked>
+            <input type="checkbox" name="region" value="전체" checked>
             <span class="filter-label">전체</span>
             <span class="filter-sub">50개 주</span>
         `;
         container.appendChild(allLabel);
 
         // 4개 지역 옵션
+        const regionKeys = Object.keys(US_STATES_DATA.regions);
         for (const [regionKey, region] of Object.entries(US_STATES_DATA.regions)) {
             const stateCount = getRegionStateCount(regionKey);
             const label = document.createElement('label');
             label.className = 'filter-option';
             label.innerHTML = `
-                <input type="radio" name="region" value="${regionKey}">
+                <input type="checkbox" name="region" value="${regionKey}">
                 <span class="filter-label">${region.name}</span>
                 <span class="filter-sub">${stateCount}개 주</span>
             `;
@@ -218,23 +219,71 @@ class USStatesQuiz {
         }
 
         // 이벤트 리스너 추가
-        container.querySelectorAll('input[name="region"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                this.selectedRegionFilter = e.target.value;
+        const self = this;
+        container.querySelectorAll('input[name="region"]').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const value = e.target.value;
+
+                if (value === '전체') {
+                    // "전체" 클릭: set 비우고, 개별 체크 해제, "전체" 체크
+                    self.selectedRegionFilters.clear();
+                    container.querySelectorAll('input[name="region"]').forEach(cb => {
+                        cb.checked = (cb.value === '전체');
+                    });
+                } else {
+                    // 개별 지역 클릭
+                    if (e.target.checked) {
+                        self.selectedRegionFilters.add(value);
+                    } else {
+                        self.selectedRegionFilters.delete(value);
+                    }
+
+                    // 모든 개별 지역이 선택됨 → 전체로 자동 전환
+                    if (self.selectedRegionFilters.size === regionKeys.length) {
+                        self.selectedRegionFilters.clear();
+                        container.querySelectorAll('input[name="region"]').forEach(cb => {
+                            cb.checked = (cb.value === '전체');
+                        });
+                    }
+                    // 아무것도 선택 안 됨 → 전체로 자동 전환
+                    else if (self.selectedRegionFilters.size === 0) {
+                        container.querySelector('input[value="전체"]').checked = true;
+                    }
+                    // 일부 선택됨 → "전체" 체크 해제
+                    else {
+                        container.querySelector('input[value="전체"]').checked = false;
+                    }
+                }
+
+                // .selected 클래스 업데이트
                 container.querySelectorAll('.filter-option').forEach(opt => {
-                    opt.classList.remove('selected');
+                    const cb = opt.querySelector('input[name="region"]');
+                    if (cb.checked) {
+                        opt.classList.add('selected');
+                    } else {
+                        opt.classList.remove('selected');
+                    }
                 });
-                e.target.closest('.filter-option').classList.add('selected');
             });
         });
     }
 
+    // 지역 필터가 활성화되어 있는지 확인
+    isRegionFilterActive() {
+        return this.selectedRegionFilters.size > 0;
+    }
+
     // 필터가 적용된 주 목록 반환
     getFilteredStates() {
-        if (this.selectedRegionFilter === 'all') {
+        if (!this.isRegionFilterActive()) {
             return getAllStates();
         }
-        return getStatesInRegion(this.selectedRegionFilter);
+        // 선택된 모든 지역의 주를 합침
+        let states = [];
+        for (const regionKey of this.selectedRegionFilters) {
+            states = states.concat(getStatesInRegion(regionKey));
+        }
+        return states;
     }
 
     startGame() {
@@ -253,9 +302,13 @@ class USStatesQuiz {
 
         if (this.currentMode !== 'explore') {
             // 퀴즈/연습 모드: nextQuestion이 지도를 그리므로 여기서는 그리지 않음
-            if (this.selectedRegionFilter !== 'all') {
-                this.mapView = 'region';
-                this.currentRegion = this.selectedRegionFilter;
+            if (this.isRegionFilterActive()) {
+                if (this.selectedRegionFilters.size === 1) {
+                    this.mapView = 'region';
+                    this.currentRegion = [...this.selectedRegionFilters][0];
+                } else {
+                    this.mapView = 'country';
+                }
             } else {
                 this.mapView = 'country';
             }
@@ -263,15 +316,21 @@ class USStatesQuiz {
             this.nextQuestion();
         } else {
             // 탐색 모드: 지도 그리기
-            if (this.selectedRegionFilter !== 'all') {
-                this.mapView = 'region';
-                this.currentRegion = this.selectedRegionFilter;
-                this.drawRegionMap(this.selectedRegionFilter);
+            if (this.isRegionFilterActive()) {
+                if (this.selectedRegionFilters.size === 1) {
+                    const regionKey = [...this.selectedRegionFilters][0];
+                    this.mapView = 'region';
+                    this.currentRegion = regionKey;
+                    this.drawRegionMap(regionKey);
+                } else {
+                    this.mapView = 'country';
+                    this.drawCountryMap();
+                }
             } else {
                 this.mapView = 'country';
                 this.drawCountryMap();
             }
-            if (this.selectedRegionFilter !== 'all') {
+            if (this.isRegionFilterActive()) {
                 document.getElementById('question-text').textContent = '주를 클릭해서 탐색하세요';
             } else {
                 document.getElementById('question-text').textContent = '지역을 클릭해서 탐색하세요';

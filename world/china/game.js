@@ -6,7 +6,7 @@ class ChinaQuiz {
         this.currentMode = null;
         this.currentRegion = null;
         this.mapView = 'country'; // 'country', 'region'
-        this.selectedRegionFilter = 'all';
+        this.selectedRegionFilters = new Set();
 
         this.provinces = [];
         this.currentQuestion = 0;
@@ -203,7 +203,7 @@ class ChinaQuiz {
         const allOption = document.createElement('label');
         allOption.className = 'filter-option selected';
         allOption.innerHTML = `
-            <input type="radio" name="region" value="all" checked>
+            <input type="checkbox" name="region" value="전체" checked>
             <span class="filter-label">전체</span>
             <span class="filter-sub">34개 행정구역</span>
         `;
@@ -214,30 +214,84 @@ class ChinaQuiz {
             const option = document.createElement('label');
             option.className = 'filter-option';
             option.innerHTML = `
-                <input type="radio" name="region" value="${regionKey}">
+                <input type="checkbox" name="region" value="${regionKey}">
                 <span class="filter-label">${region.name}</span>
                 <span class="filter-sub">${region.provinces.length}개 지역</span>
             `;
             container.appendChild(option);
         }
 
+        const allLabels = container.querySelectorAll('.filter-option');
+        const allCheckbox = container.querySelector('input[value="전체"]');
+        const totalRegionCount = Object.keys(CHINA_DATA.regions).length;
+
         // 이벤트 리스너 추가
         container.querySelectorAll('.filter-option').forEach(option => {
-            option.addEventListener('click', () => {
-                container.querySelectorAll('.filter-option').forEach(o => o.classList.remove('selected'));
-                option.classList.add('selected');
-                const radio = option.querySelector('input[type="radio"]');
-                radio.checked = true;
-                this.selectedRegionFilter = radio.value;
+            option.addEventListener('click', (e) => {
+                // Prevent the default label behavior so we control checkbox state manually
+                e.preventDefault();
+                const checkbox = option.querySelector('input[type="checkbox"]');
+                const value = checkbox.value;
+
+                if (value === '전체') {
+                    // "전체" clicked: clear set, uncheck all individual, check "전체"
+                    this.selectedRegionFilters.clear();
+                    allLabels.forEach(o => {
+                        o.classList.remove('selected');
+                        o.querySelector('input').checked = false;
+                    });
+                    checkbox.checked = true;
+                    option.classList.add('selected');
+                } else {
+                    // Individual region clicked: toggle in set
+                    if (this.selectedRegionFilters.has(value)) {
+                        this.selectedRegionFilters.delete(value);
+                        checkbox.checked = false;
+                        option.classList.remove('selected');
+                    } else {
+                        this.selectedRegionFilters.add(value);
+                        checkbox.checked = true;
+                        option.classList.add('selected');
+                    }
+
+                    // If all regions selected → auto-switch to 전체
+                    if (this.selectedRegionFilters.size === totalRegionCount) {
+                        this.selectedRegionFilters.clear();
+                        allLabels.forEach(o => {
+                            o.classList.remove('selected');
+                            o.querySelector('input').checked = false;
+                        });
+                        allCheckbox.checked = true;
+                        allCheckbox.closest('.filter-option').classList.add('selected');
+                    }
+                    // If none selected → auto-switch to 전체
+                    else if (this.selectedRegionFilters.size === 0) {
+                        allCheckbox.checked = true;
+                        allCheckbox.closest('.filter-option').classList.add('selected');
+                    }
+                    // Otherwise uncheck 전체
+                    else {
+                        allCheckbox.checked = false;
+                        allCheckbox.closest('.filter-option').classList.remove('selected');
+                    }
+                }
             });
         });
     }
 
+    isRegionFilterActive() {
+        return this.selectedRegionFilters.size > 0;
+    }
+
     getFilteredProvinces() {
-        if (this.selectedRegionFilter === 'all') {
+        if (!this.isRegionFilterActive()) {
             return getAllProvinces();
         }
-        return getProvincesInRegion(this.selectedRegionFilter);
+        const provinces = [];
+        for (const regionKey of this.selectedRegionFilters) {
+            provinces.push(...getProvincesInRegion(regionKey));
+        }
+        return provinces;
     }
 
     startGame() {
@@ -263,9 +317,9 @@ class ChinaQuiz {
 
         if (this.currentMode !== 'explore') {
             // 퀴즈/연습 모드: nextQuestion이 지도를 그리므로 여기서는 그리지 않음
-            if (this.selectedRegionFilter !== 'all') {
+            if (this.isRegionFilterActive() && this.selectedRegionFilters.size === 1) {
                 this.mapView = 'region';
-                this.currentRegion = this.selectedRegionFilter;
+                this.currentRegion = [...this.selectedRegionFilters][0];
             } else {
                 this.mapView = 'country';
             }
@@ -273,15 +327,16 @@ class ChinaQuiz {
             this.nextQuestion();
         } else {
             // 탐색 모드: 지도 그리기
-            if (this.selectedRegionFilter !== 'all') {
+            if (this.isRegionFilterActive() && this.selectedRegionFilters.size === 1) {
+                const singleRegion = [...this.selectedRegionFilters][0];
                 this.mapView = 'region';
-                this.currentRegion = this.selectedRegionFilter;
-                this.drawRegionMap(this.selectedRegionFilter);
+                this.currentRegion = singleRegion;
+                this.drawRegionMap(singleRegion);
             } else {
                 this.mapView = 'country';
                 this.drawCountryMap();
             }
-            if (this.selectedRegionFilter !== 'all') {
+            if (this.isRegionFilterActive()) {
                 document.getElementById('question-text').textContent = '성/시를 클릭해서 탐색하세요';
             } else {
                 document.getElementById('question-text').textContent = '지역을 클릭해서 탐색하세요';

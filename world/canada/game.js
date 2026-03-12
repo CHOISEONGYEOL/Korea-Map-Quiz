@@ -3,7 +3,7 @@
 class CanadaProvincesQuiz {
     constructor() {
         this.currentMode = null;
-        this.selectedRegionFilter = 'all';
+        this.selectedRegionFilters = new Set();
         this.provinces = [];
         this.currentQuestion = 0;
         this.score = 0;
@@ -187,11 +187,13 @@ class CanadaProvincesQuiz {
     generateFilterOptions(container) {
         container.innerHTML = '';
 
+        const allRegionKeys = Object.keys(CANADA_DATA.regions);
+
         // 전체 옵션
         const allOption = document.createElement('label');
         allOption.className = 'filter-option selected';
         allOption.innerHTML = `
-            <input type="radio" name="region" value="all" checked>
+            <input type="checkbox" name="region" value="전체" checked>
             <span class="filter-label">전체</span>
             <span class="filter-sub">13개 지역</span>
         `;
@@ -202,7 +204,7 @@ class CanadaProvincesQuiz {
             const option = document.createElement('label');
             option.className = 'filter-option';
             option.innerHTML = `
-                <input type="radio" name="region" value="${regionKey}">
+                <input type="checkbox" name="region" value="${regionKey}">
                 <span class="filter-label">${region.name}</span>
                 <span class="filter-sub">${region.provinces.length}개 지역</span>
             `;
@@ -210,22 +212,75 @@ class CanadaProvincesQuiz {
         }
 
         // 이벤트 리스너 추가
-        container.querySelectorAll('.filter-option').forEach(option => {
-            option.addEventListener('click', () => {
-                container.querySelectorAll('.filter-option').forEach(o => o.classList.remove('selected'));
-                option.classList.add('selected');
-                const radio = option.querySelector('input[type="radio"]');
-                radio.checked = true;
-                this.selectedRegionFilter = radio.value;
+        const filterCheckboxes = container.querySelectorAll('input[name="region"]');
+        const allCheckbox = container.querySelector('input[value="전체"]');
+
+        filterCheckboxes.forEach(cb => {
+            cb.addEventListener('change', (e) => {
+                if (e.target.value === '전체') {
+                    // 전체 클릭: 모든 개별 해제, 전체만 체크
+                    this.selectedRegionFilters.clear();
+                    filterCheckboxes.forEach(c => {
+                        if (c.value !== '전체') {
+                            c.checked = false;
+                            c.closest('.filter-option').classList.remove('selected');
+                        }
+                    });
+                    allCheckbox.checked = true;
+                    allCheckbox.closest('.filter-option').classList.add('selected');
+                } else {
+                    // 개별 지역 클릭
+                    if (e.target.checked) {
+                        this.selectedRegionFilters.add(e.target.value);
+                    } else {
+                        this.selectedRegionFilters.delete(e.target.value);
+                    }
+
+                    // 모든 지역 선택 시 → 전체로 전환
+                    if (this.selectedRegionFilters.size === allRegionKeys.length) {
+                        this.selectedRegionFilters.clear();
+                        filterCheckboxes.forEach(c => {
+                            if (c.value !== '전체') {
+                                c.checked = false;
+                                c.closest('.filter-option').classList.remove('selected');
+                            }
+                        });
+                        allCheckbox.checked = true;
+                        allCheckbox.closest('.filter-option').classList.add('selected');
+                    } else if (this.selectedRegionFilters.size === 0) {
+                        // 아무것도 선택 안 됨 → 전체 체크
+                        allCheckbox.checked = true;
+                        allCheckbox.closest('.filter-option').classList.add('selected');
+                    } else {
+                        // 개별 선택 있음 → 전체 해제
+                        allCheckbox.checked = false;
+                        allCheckbox.closest('.filter-option').classList.remove('selected');
+                    }
+
+                    // 현재 클릭된 체크박스의 label 상태 업데이트
+                    if (e.target.checked) {
+                        e.target.closest('.filter-option').classList.add('selected');
+                    } else {
+                        e.target.closest('.filter-option').classList.remove('selected');
+                    }
+                }
             });
         });
     }
 
+    isRegionFilterActive() {
+        return this.selectedRegionFilters.size > 0;
+    }
+
     getFilteredProvinces() {
-        if (this.selectedRegionFilter === 'all') {
+        if (!this.isRegionFilterActive()) {
             return getAllProvinces();
         }
-        return getProvincesInRegion(this.selectedRegionFilter);
+        const provinces = [];
+        for (const regionKey of this.selectedRegionFilters) {
+            provinces.push(...getProvincesInRegion(regionKey));
+        }
+        return provinces;
     }
 
     startGame() {
@@ -247,7 +302,7 @@ class CanadaProvincesQuiz {
             this.nextQuestion();
         } else {
             this.drawMap();
-            if (this.selectedRegionFilter !== 'all') {
+            if (this.isRegionFilterActive()) {
                 document.getElementById('question-text').textContent = '주/준주를 클릭해서 탐색하세요';
             } else {
                 document.getElementById('question-text').textContent = '지도를 클릭해서 탐색하세요';

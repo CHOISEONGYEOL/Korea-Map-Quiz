@@ -237,8 +237,8 @@ class KoreaMapQuiz {
         this.zoom = null;
         this.mapGroup = null;
 
-        // 지역 필터 설정
-        this.selectedRegionFilter = 'all';
+        // 지역 필터 설정 (복수 선택 지원)
+        this.selectedRegionFilters = new Set();  // 비어있으면 전국
 
         // 모드 설정
         this.gameMode = this.parseGameMode();
@@ -368,8 +368,8 @@ class KoreaMapQuiz {
         if (this.state === GameState.SELECT_PROVINCE || this.state === GameState.IDLE) {
             if (this.selectedGroup) {
                 // 지역 필터로 선택된 권역인지 확인
-                if (QUIZ_FILTER_REGIONS[this.selectedGroup]) {
-                    this.renderExploreFilteredRegionMap(this.selectedGroup);
+                if (this.selectedGroup === '__multi_filter__' && this.isRegionFilterActive()) {
+                    this.renderExploreFilteredRegionMap();
                 } else {
                     this.renderExploreGroupProvinceSelection(this.selectedGroup);
                 }
@@ -422,19 +422,65 @@ class KoreaMapQuiz {
         this.restartBtn.addEventListener('click', () => this.startGame());
         this.themeToggleBtn?.addEventListener('click', () => this.toggleTheme());
 
-        // 지역 필터 이벤트
-        const filterOptions = document.querySelectorAll('#region-filter input[name="region"]');
-        filterOptions.forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                this.selectedRegionFilter = e.target.value;
-                // 지역 필터 변경 시 출제 이력 초기화 (새 지역이므로 새로 시작)
-                this.askedQuestions.clear();
-                console.log(`[필터 변경] ${e.target.value} - 출제 이력 초기화`);
-                // 선택 상태 UI 업데이트
-                document.querySelectorAll('#region-filter .filter-option').forEach(opt => {
-                    opt.classList.remove('selected');
+        // 지역 필터 이벤트 (복수 선택)
+        const ALL_REGION_KEYS = ['수도권', '충청권', '전라권', '경상권', '강원권', '제주권'];
+        const filterContainer = document.getElementById('region-filter');
+        const filterCheckboxes = filterContainer?.querySelectorAll('input[name="region"]');
+        const allCheckbox = filterContainer?.querySelector('input[value="전국"]');
+
+        filterCheckboxes?.forEach(cb => {
+            cb.addEventListener('change', (e) => {
+                if (e.target.value === '전국') {
+                    // 전국 클릭: 모든 개별 해제, 전국만 체크
+                    this.selectedRegionFilters.clear();
+                    filterCheckboxes.forEach(c => {
+                        if (c.value !== '전국') {
+                            c.checked = false;
+                            c.closest('.filter-option').classList.remove('selected');
+                        }
+                    });
+                    allCheckbox.checked = true;
+                    allCheckbox.closest('.filter-option').classList.add('selected');
+                } else {
+                    // 개별 지역 클릭
+                    if (e.target.checked) {
+                        this.selectedRegionFilters.add(e.target.value);
+                    } else {
+                        this.selectedRegionFilters.delete(e.target.value);
+                    }
+
+                    // 6개 모두 선택 시 → 전국으로 전환
+                    if (this.selectedRegionFilters.size === ALL_REGION_KEYS.length) {
+                        this.selectedRegionFilters.clear();
+                        filterCheckboxes.forEach(c => {
+                            if (c.value !== '전국') {
+                                c.checked = false;
+                                c.closest('.filter-option').classList.remove('selected');
+                            }
+                        });
+                        allCheckbox.checked = true;
+                        allCheckbox.closest('.filter-option').classList.add('selected');
+                    } else if (this.selectedRegionFilters.size === 0) {
+                        // 아무것도 선택 안 됨 → 전국 체크
+                        allCheckbox.checked = true;
+                        allCheckbox.closest('.filter-option').classList.add('selected');
+                    } else {
+                        // 개별 선택 있음 → 전국 해제
+                        allCheckbox.checked = false;
+                        allCheckbox.closest('.filter-option').classList.remove('selected');
+                    }
+                }
+
+                // UI 업데이트: 개별 체크박스 selected 클래스
+                filterCheckboxes.forEach(c => {
+                    if (c.value !== '전국') {
+                        c.closest('.filter-option').classList.toggle('selected', c.checked);
+                    }
                 });
-                e.target.closest('.filter-option').classList.add('selected');
+
+                // 출제 이력 초기화
+                this.askedQuestions.clear();
+                console.log(`[필터 변경] ${this.selectedRegionFilters.size === 0 ? '전국' : [...this.selectedRegionFilters].join(', ')} - 출제 이력 초기화`);
             });
         });
 
@@ -860,9 +906,9 @@ class KoreaMapQuiz {
             this.state = GameState.SELECT_PROVINCE;
 
             // 지역 필터가 선택되어 있으면 해당 권역으로 드릴다운
-            if (this.selectedRegionFilter !== 'all') {
-                this.selectedGroup = this.selectedRegionFilter;
-                this.renderExploreFilteredRegionMap(this.selectedRegionFilter);
+            if (this.isRegionFilterActive()) {
+                this.selectedGroup = '__multi_filter__';
+                this.renderExploreFilteredRegionMap();
             } else {
                 this.renderExploreProvinceMap();
             }
@@ -918,17 +964,31 @@ class KoreaMapQuiz {
         }
     }
 
+    // 선택된 필터 기반으로 허용 시도 목록 반환 (전국이면 null)
+    getFilterAllowedProvinces() {
+        if (this.selectedRegionFilters.size === 0) return null;  // 전국
+        const provinces = [];
+        for (const region of this.selectedRegionFilters) {
+            const regionProvinces = QUIZ_FILTER_REGIONS[region];
+            if (regionProvinces) provinces.push(...regionProvinces);
+        }
+        return provinces;
+    }
+
+    // 필터가 활성화되어 있는지 (전국이 아닌지)
+    isRegionFilterActive() {
+        return this.selectedRegionFilters.size > 0;
+    }
+
     generateQuestions() {
         // 지역 필터 적용
         let filteredDistricts = [...this.allDistricts];
 
-        if (this.selectedRegionFilter !== 'all') {
-            const allowedProvinces = QUIZ_FILTER_REGIONS[this.selectedRegionFilter];
-            if (allowedProvinces) {
-                filteredDistricts = this.allDistricts.filter(d =>
-                    allowedProvinces.includes(d.provinceName)
-                );
-            }
+        const allowedProvinces = this.getFilterAllowedProvinces();
+        if (allowedProvinces) {
+            filteredDistricts = this.allDistricts.filter(d =>
+                allowedProvinces.includes(d.provinceName)
+            );
         }
 
         // 이미 출제된 문제 제외 (중복 방지)
@@ -953,7 +1013,8 @@ class KoreaMapQuiz {
         this.totalQuestions = questionCount;
 
         // 디버깅: 생성된 문제 순서 확인
-        console.log(`[${this.selectedRegionFilter}] 생성된 문제 (${this.askedQuestions.size}개 출제됨):`, this.questions.map(q => `${q.provinceName} ${q.name}`));
+        const filterLabel = this.isRegionFilterActive() ? [...this.selectedRegionFilters].join('+') : '전국';
+        console.log(`[${filterLabel}] 생성된 문제 (${this.askedQuestions.size}개 출제됨):`, this.questions.map(q => `${q.provinceName} ${q.name}`));
     }
 
     showScreen(screen) {
@@ -1055,11 +1116,11 @@ class KoreaMapQuiz {
         this.feedbackEl.className = 'feedback';
 
         // 지역 필터가 선택되어 있으면 바로 해당 권역으로 드릴다운
-        if (this.selectedRegionFilter !== 'all') {
-            this.selectedGroup = this.selectedRegionFilter;
+        if (this.isRegionFilterActive()) {
+            this.selectedGroup = '__multi_filter__';
             this.state = GameState.SELECT_PROVINCE;
             this.updateStepIndicator();
-            this.renderFilteredRegionMap(this.selectedRegionFilter);
+            this.renderFilteredRegionMap();
         } else {
             // 전국 모드: 지역 그룹 선택부터 시작
             this.state = GameState.SELECT_REGION_GROUP;
@@ -1615,14 +1676,14 @@ class KoreaMapQuiz {
     }
 
     // Explore 모드: 지역 필터 선택 시 해당 권역 지도 표시
-    renderExploreFilteredRegionMap(regionFilter) {
+    renderExploreFilteredRegionMap() {
         d3.select(this.mapSvg).selectAll('*').remove();
 
         const width = this.mapContainer.clientWidth - 40;
         const height = this.mapContainer.clientHeight - 20;
 
-        const allowedProvinces = QUIZ_FILTER_REGIONS[regionFilter];
-        if (!allowedProvinces) {
+        const allowedProvinces = this.getFilterAllowedProvinces();
+        if (!allowedProvinces || allowedProvinces.length === 0) {
             this.renderExploreProvinceMap();
             return;
         }
@@ -2507,16 +2568,16 @@ class KoreaMapQuiz {
     }
 
     // 필터 선택된 권역 지도 렌더링 (QUIZ_FILTER_REGIONS 사용)
-    renderFilteredRegionMap(filterName) {
+    renderFilteredRegionMap() {
         d3.select(this.mapSvg).selectAll('*').remove();
 
         const width = this.mapContainer.clientWidth - 40;
         const height = this.mapContainer.clientHeight - 20;
 
-        // QUIZ_FILTER_REGIONS에서 해당 권역의 시도들 가져오기
-        const filterProvinces = QUIZ_FILTER_REGIONS[filterName];
-        if (!filterProvinces) {
-            console.error('Invalid filter:', filterName);
+        // 선택된 필터들의 시도 합치기
+        const filterProvinces = this.getFilterAllowedProvinces();
+        if (!filterProvinces || filterProvinces.length === 0) {
+            console.error('No filter provinces');
             return;
         }
 
@@ -2911,12 +2972,12 @@ class KoreaMapQuiz {
                 this.state = GameState.SELECT_SUBREGION;
                 this.updateStepIndicator();
                 this.renderSubRegionSelection(provinceName);
-            } else if (this.selectedRegionFilter && this.selectedRegionFilter !== 'all') {
+            } else if (this.isRegionFilterActive()) {
                 // 필터 선택된 권역이면 필터 지도로 돌아가기
                 this.state = GameState.SELECT_PROVINCE;
                 this.selectedProvince = null;
                 this.updateStepIndicator();
-                this.renderFilteredRegionMap(this.selectedRegionFilter);
+                this.renderFilteredRegionMap();
             } else if (this.selectedGroup) {
                 // 그룹에 속한 지역이면 그룹 선택 화면으로
                 this.state = GameState.SELECT_PROVINCE;
