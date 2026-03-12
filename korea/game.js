@@ -356,6 +356,14 @@ class KoreaMapQuiz {
 
     // 현재 상태에 맞게 지도 다시 렌더링
     rerenderCurrentMap() {
+        // 4단계 실전 테스트 모드: 현재 문제의 시도 지도만 다시 렌더링
+        if (this.gameMode === 'test') {
+            if (this.currentAnswer) {
+                this.renderTestMap();
+            }
+            return;
+        }
+
         if (this.state === GameState.SELECT_PROVINCE || this.state === GameState.IDLE) {
             if (this.selectedGroup) {
                 // 지역 필터로 선택된 권역인지 확인
