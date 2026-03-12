@@ -63,8 +63,8 @@ class WorldMapQuiz {
         this.shuffledCountries = [];
         this.isProcessing = false; // 클릭 처리 중 중복 방지
 
-        // 지역 필터
-        this.selectedSubregionFilter = 'all';
+        // 지역 필터 (복수 선택 지원)
+        this.selectedSubregionFilters = new Set();  // 비어있으면 전체
 
         // 헤더 제목 요소
         this.headerTitleEl = null;
@@ -397,10 +397,13 @@ class WorldMapQuiz {
 
     generateFilterOptions(container) {
         container.innerHTML = '';
+        this.selectedSubregionFilters.clear();
 
         // 대륙별로 다른 필터 옵션 생성
         const continentData = WORLD_DATA[this.currentContinent];
         if (!continentData) return;
+
+        const subregionKeys = continentData.subregions ? Object.keys(continentData.subregions) : [];
 
         // 전체 옵션
         const allLabel = document.createElement('label');
@@ -409,7 +412,7 @@ class WorldMapQuiz {
             ? getAllWorldCountries().length
             : Object.values(continentData.subregions).reduce((sum, sr) => sum + sr.countries.length, 0);
         allLabel.innerHTML = `
-            <input type="radio" name="subregion" value="all" checked>
+            <input type="checkbox" name="subregion" value="all" checked>
             <span class="filter-label">전체</span>
             <span class="filter-sub">${totalCount}개국</span>
         `;
@@ -421,7 +424,7 @@ class WorldMapQuiz {
                 const label = document.createElement('label');
                 label.className = 'filter-option';
                 label.innerHTML = `
-                    <input type="radio" name="subregion" value="${subregionKey}">
+                    <input type="checkbox" name="subregion" value="${subregionKey}">
                     <span class="filter-label">${subregion.name}</span>
                     <span class="filter-sub">${subregion.countries.length}개국</span>
                 `;
@@ -429,16 +432,63 @@ class WorldMapQuiz {
             }
         }
 
-        // 이벤트 리스너 추가
-        container.querySelectorAll('input[name="subregion"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                this.selectedSubregionFilter = e.target.value;
-                container.querySelectorAll('.filter-option').forEach(opt => {
-                    opt.classList.remove('selected');
+        // 이벤트 리스너 추가 (복수 선택)
+        const allCheckbox = container.querySelector('input[value="all"]');
+        const checkboxes = container.querySelectorAll('input[name="subregion"]');
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', (e) => {
+                if (e.target.value === 'all') {
+                    // 전체 클릭: 모든 개별 해제
+                    this.selectedSubregionFilters.clear();
+                    checkboxes.forEach(c => {
+                        if (c.value !== 'all') {
+                            c.checked = false;
+                            c.closest('.filter-option').classList.remove('selected');
+                        }
+                    });
+                    allCheckbox.checked = true;
+                    allCheckbox.closest('.filter-option').classList.add('selected');
+                } else {
+                    if (e.target.checked) {
+                        this.selectedSubregionFilters.add(e.target.value);
+                    } else {
+                        this.selectedSubregionFilters.delete(e.target.value);
+                    }
+
+                    // 모두 선택 시 → 전체로 전환
+                    if (this.selectedSubregionFilters.size === subregionKeys.length) {
+                        this.selectedSubregionFilters.clear();
+                        checkboxes.forEach(c => {
+                            if (c.value !== 'all') {
+                                c.checked = false;
+                                c.closest('.filter-option').classList.remove('selected');
+                            }
+                        });
+                        allCheckbox.checked = true;
+                        allCheckbox.closest('.filter-option').classList.add('selected');
+                    } else if (this.selectedSubregionFilters.size === 0) {
+                        allCheckbox.checked = true;
+                        allCheckbox.closest('.filter-option').classList.add('selected');
+                    } else {
+                        allCheckbox.checked = false;
+                        allCheckbox.closest('.filter-option').classList.remove('selected');
+                    }
+                }
+
+                // UI 업데이트
+                checkboxes.forEach(c => {
+                    if (c.value !== 'all') {
+                        c.closest('.filter-option').classList.toggle('selected', c.checked);
+                    }
                 });
-                e.target.closest('.filter-option').classList.add('selected');
             });
         });
+    }
+
+    // 필터가 활성화되어 있는지 (전체가 아닌지)
+    isSubregionFilterActive() {
+        return this.selectedSubregionFilters.size > 0;
     }
 
     // 필터가 적용된 국가 목록 반환
@@ -446,15 +496,20 @@ class WorldMapQuiz {
         const continentData = WORLD_DATA[this.currentContinent];
         if (!continentData) return [];
 
-        if (this.selectedSubregionFilter === 'all') {
+        if (!this.isSubregionFilterActive()) {
             if (this.currentContinent === 'world') {
                 return getAllWorldCountries();
             }
             return Object.values(continentData.subregions).flatMap(sr => sr.countries);
         }
 
-        const subregion = continentData.subregions[this.selectedSubregionFilter];
-        return subregion ? subregion.countries : [];
+        // 복수 선택된 지역의 국가 합치기
+        const countries = [];
+        for (const key of this.selectedSubregionFilters) {
+            const subregion = continentData.subregions[key];
+            if (subregion) countries.push(...subregion.countries);
+        }
+        return countries;
     }
 
     startGame() {
@@ -547,11 +602,12 @@ class WorldMapQuiz {
 
             if (this.currentMode === 'test') {
                 // 4단계: 8지선다 시작
-                // 지역 필터가 선택되어 있으면 바로 해당 지역으로 드릴다운
-                if (this.selectedSubregionFilter !== 'all') {
+                // 지역 필터가 1개만 선택되어 있으면 해당 지역으로 드릴다운
+                if (this.selectedSubregionFilters.size === 1) {
+                    const subKey = [...this.selectedSubregionFilters][0];
                     this.mapView = 'subregion';
-                    this.currentSubregion = this.selectedSubregionFilter;
-                    this.drawSubregionMap(this.selectedSubregionFilter);
+                    this.currentSubregion = subKey;
+                    this.drawSubregionMap(subKey);
                 } else {
                     this.mapView = 'continent';
                     this.drawContinentMap();
@@ -567,15 +623,16 @@ class WorldMapQuiz {
                 this.nextQuestion();
             } else {
                 // explore 모드: 지도 직접 그리기
-                if (this.selectedSubregionFilter !== 'all') {
+                if (this.selectedSubregionFilters.size === 1) {
+                    const subKey = [...this.selectedSubregionFilters][0];
                     this.mapView = 'subregion';
-                    this.currentSubregion = this.selectedSubregionFilter;
-                    this.drawSubregionMap(this.selectedSubregionFilter);
+                    this.currentSubregion = subKey;
+                    this.drawSubregionMap(subKey);
                     document.getElementById('question-text').textContent = '국가를 클릭해서 탐색하세요';
                 } else {
                     this.mapView = 'continent';
                     this.drawContinentMap();
-                    document.getElementById('question-text').textContent = '지역을 클릭해서 탐색하세요';
+                    document.getElementById('question-text').textContent = this.isSubregionFilterActive() ? '국가를 클릭해서 탐색하세요' : '지역을 클릭해서 탐색하세요';
                 }
                 document.getElementById('step-indicator').textContent = '';
             }
@@ -1786,10 +1843,11 @@ class WorldMapQuiz {
             // 전 세계 모드: 전체 세계 지도로 돌아가기
             this.currentSubregion = null;
             this.drawWorldMap();
-        } else if (this.selectedSubregionFilter !== 'all') {
-            // 특정 지역 필터 모드: 해당 지역 지도 유지
-            this.currentSubregion = this.selectedSubregionFilter;
-            this.drawSubregionMap(this.selectedSubregionFilter);
+        } else if (this.selectedSubregionFilters.size === 1) {
+            // 1개 지역 필터 모드: 해당 지역 지도 유지
+            const subKey = [...this.selectedSubregionFilters][0];
+            this.currentSubregion = subKey;
+            this.drawSubregionMap(subKey);
         } else {
             // 특정 대륙 모드: 대륙 지도로 돌아가기
             this.currentSubregion = null;
@@ -1806,7 +1864,7 @@ class WorldMapQuiz {
         document.getElementById('question-num').textContent = `${this.currentQuestion + 1}/${this.totalQuestions}`;
 
         // 지역 필터가 선택된 경우 바로 국가 선택 단계
-        if (this.selectedSubregionFilter !== 'all' && this.currentContinent !== 'world') {
+        if (this.isSubregionFilterActive() && this.currentContinent !== 'world') {
             document.getElementById('step-indicator').textContent = '국가를 선택하세요';
         }
 
