@@ -634,6 +634,7 @@ body.main-landing header h1 {
 .map-container svg {
     max-width: 100%;
     height: 100%;
+    touch-action: none;
 }
 
 .map-container svg path,

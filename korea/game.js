@@ -3241,6 +3241,12 @@ class KoreaMapQuiz {
     setupZoom(svg, width, height) {
         this.zoom = d3.zoom()
             .scaleExtent([0.5, 8])  // 축소(0.5배)부터 확대(8배)까지 가능
+            .filter((event) => {
+                // Apple Pencil(pen) 단일 터치는 zoom이 가로채지 않고 click으로 전파
+                if (event.pointerType === 'pen' && !event.ctrlKey) return false;
+                // 기본 D3 zoom 필터 로직 유지
+                return (!event.ctrlKey || event.type === 'wheel') && !event.button;
+            })
             .on('zoom', (event) => {
                 if (this.mapGroup) {
                     this.mapGroup.attr('transform', event.transform);
