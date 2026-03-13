@@ -363,6 +363,10 @@ class SubwayQuiz {
         this.currentZoomScale = 1;
         const zoom = d3.zoom()
             .scaleExtent([0.5, 10])
+            .filter((event) => {
+                if (event.pointerType === 'pen' && !event.ctrlKey) return false;
+                return (!event.ctrlKey || event.type === 'wheel') && !event.button;
+            })
             .on('zoom', (event) => {
                 this.mapGroup.attr('transform', event.transform);
                 this.currentZoomScale = event.transform.k;
@@ -1205,6 +1209,10 @@ class SubwayQuiz {
         // 줌 설정
         const zoom = d3.zoom()
             .scaleExtent([0.5, 10])
+            .filter((event) => {
+                if (event.pointerType === 'pen' && !event.ctrlKey) return false;
+                return (!event.ctrlKey || event.type === 'wheel') && !event.button;
+            })
             .on('zoom', (event) => {
                 this.mapGroup.attr('transform', event.transform);
             });
