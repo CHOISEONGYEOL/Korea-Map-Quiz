@@ -367,6 +367,9 @@ class ChinaQuiz {
         svg.call(this.zoom)
             .on('dblclick.zoom', null);
 
+        // 새 맵 렌더링 시 zoom transform을 초기 상태로 리셋
+        svg.call(this.zoom.transform, d3.zoomIdentity);
+
         this.addZoomResetButton(svg, width);
     }
 
