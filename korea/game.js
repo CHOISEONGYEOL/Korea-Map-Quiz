@@ -1170,6 +1170,9 @@ class KoreaMapQuiz {
         // 8지선다 생성
         this.generateTestChoices();
 
+        // 문제 출제 시각 기록 (광클 감지용)
+        this.questionStartTime = Date.now();
+
         // 타이머 시작
         console.log('[테스트모드] 타이머 시작 호출');
         this.startTimer();
@@ -1430,6 +1433,15 @@ class KoreaMapQuiz {
             this.combo = 0;
             this.updateScore();
 
+            // 스피드 모드: 1초 미만 오답 = 광클 → 추가 -2초 페널티
+            const reactionTime = Date.now() - (this.questionStartTime || 0);
+            const isSpamClick = this.testSubMode === 'speed' && reactionTime < 1000;
+            if (isSpamClick) {
+                this.speedTimeRemaining = Math.max(0, this.speedTimeRemaining - 2000);
+                this.updateSpeedTimerDisplay();
+                console.log(`[스피드모드] 광클 감지 (${reactionTime}ms) → -2초 페널티`);
+            }
+
             // 서바이벌 모드: 목숨 감소
             if (this.testSubMode === 'survival') {
                 this.lives--;
@@ -1443,7 +1455,8 @@ class KoreaMapQuiz {
                 penalty: this.wrongPenalty
             });
             const displayName = DISPLAY_NAME_MAP[correctAnswer] || correctAnswer;
-            this.showFeedback(`오답! -${this.wrongPenalty}점 정답: ${displayName}`, 'incorrect');
+            const spamText = isSpamClick ? ' ⚡광클 -2초!' : '';
+            this.showFeedback(`오답! -${this.wrongPenalty}점${spamText} 정답: ${displayName}`, 'incorrect');
 
             // 서바이벌 모드: 목숨이 0이면 게임 종료
             if (this.testSubMode === 'survival' && this.lives <= 0) {
@@ -1453,15 +1466,17 @@ class KoreaMapQuiz {
             }
         }
 
-        // 2초 후 다음 문제 (정답 충분히 확인)
+        // 스피드 모드: 피드백 표시 후 빠르게 다음 문제로 전환
+        // 일반 모드: 2초 대기 (정답 충분히 확인)
+        const delay = this.testSubMode === 'speed' ? 800 : 2000;
         setTimeout(() => {
-            this.isProcessingAnswer = false;
             // 스피드 모드: 정답이었으면 타이머 재개
             if (this.testSubMode === 'speed' && isCorrect) {
                 this.resumeSpeedTimer();
             }
+            // nextTestQuestion 내부에서 isProcessingAnswer = false 처리
             this.nextTestQuestion();
-        }, 2000);
+        }, delay);
     }
 
     handleTestTimeout() {
@@ -1510,11 +1525,11 @@ class KoreaMapQuiz {
             return;
         }
 
-        // 2초 후 다음 문제 (정답 충분히 확인)
+        // 스피드 모드: 피드백 표시 후 빠르게 다음 문제로 전환
+        const delay = this.testSubMode === 'speed' ? 800 : 2000;
         setTimeout(() => {
-            this.isProcessingAnswer = false;
             this.nextTestQuestion();
-        }, 2000);
+        }, delay);
     }
 
     // ===== EXPLORE 모드 전용 함수들 =====
