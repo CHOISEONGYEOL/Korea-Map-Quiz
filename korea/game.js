@@ -1094,7 +1094,7 @@ class KoreaMapQuiz {
 
     nextQuestion() {
         // 뒤로가기 버튼 제거
-        const backBtn = this.mapContainer.querySelector('.back-btn');
+        const backBtn = this.gameScreen.querySelector('.back-btn');
         if (backBtn) backBtn.remove();
 
         if (this.currentQuestion >= this.totalQuestions) {
@@ -2382,7 +2382,7 @@ class KoreaMapQuiz {
         }
 
         this.state = GameState.SHOWING_RESULT;
-        const backBtn = this.mapContainer.querySelector('.back-btn');
+        const backBtn = this.gameScreen.querySelector('.back-btn');
         if (backBtn) backBtn.remove();
 
         // 오답 감점 (-20점, 0점 미만 방지)
@@ -3201,7 +3201,7 @@ class KoreaMapQuiz {
     }
 
     addBackButton(onClick) {
-        let existingBtn = this.mapContainer.querySelector('.back-btn');
+        let existingBtn = this.gameScreen.querySelector('.back-btn');
         if (existingBtn) existingBtn.remove();
 
         const backBtn = document.createElement('button');
@@ -3211,7 +3211,7 @@ class KoreaMapQuiz {
             backBtn.remove();
             onClick();
         };
-        this.mapContainer.insertBefore(backBtn, this.mapSvg);
+        this.gameScreen.appendChild(backBtn);
     }
 
     // 줌 기능 설정
@@ -3226,6 +3226,10 @@ class KoreaMapQuiz {
 
         svg.call(this.zoom)
             .on('dblclick.zoom', null);
+
+        // 새 맵 렌더링 시 zoom transform을 초기 상태로 리셋
+        // (이전 맵의 transform이 남아있으면 첫 터치 시 화면이 튕기는 버그 발생)
+        svg.call(this.zoom.transform, d3.zoomIdentity);
 
         this.addZoomResetButton(svg, width);
     }
@@ -3276,7 +3280,7 @@ class KoreaMapQuiz {
 
         if (isCorrect) {
             clearInterval(this.timer);
-            const backBtn = this.mapContainer.querySelector('.back-btn');
+            const backBtn = this.gameScreen.querySelector('.back-btn');
             if (backBtn) backBtn.remove();
 
             d3.select(event.target).classed('correct', true);
@@ -3325,7 +3329,7 @@ class KoreaMapQuiz {
             } else {
                 // 퀴즈/테스트 모드: 감점 및 콤보 초기화
                 clearInterval(this.timer);
-                const backBtn = this.mapContainer.querySelector('.back-btn');
+                const backBtn = this.gameScreen.querySelector('.back-btn');
                 if (backBtn) backBtn.remove();
 
                 // 오답 감점 (-20점, 0점 미만 방지)
@@ -3376,7 +3380,7 @@ class KoreaMapQuiz {
         } else {
             // 퀴즈/테스트 모드: 감점 및 콤보 초기화
             clearInterval(this.timer);
-            const backBtn = this.mapContainer.querySelector('.back-btn');
+            const backBtn = this.gameScreen.querySelector('.back-btn');
             if (backBtn) backBtn.remove();
 
             // 오답 감점 (-20점, 0점 미만 방지)

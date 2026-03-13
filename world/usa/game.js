@@ -363,6 +363,9 @@ class USStatesQuiz {
         svg.call(this.zoom)
             .on('dblclick.zoom', null);  // 더블클릭 줌 비활성화
 
+        // 새 맵 렌더링 시 zoom transform을 초기 상태로 리셋
+        svg.call(this.zoom.transform, d3.zoomIdentity);
+
         // 줌 리셋 버튼 추가
         this.addZoomResetButton(svg, width);
     }
