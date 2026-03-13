@@ -418,9 +418,9 @@ body.game-active.test-mode .feedback.timeout {
         border-radius: 6px;
     }
 
-    /* 맞춘 문제 카운터 - 모바일 */
+    /* 맞춘 문제 카운터 - 모바일 (뒤로 버튼 아래로 배치) */
     body.game-active .correct-counter {
-        top: 10px;
+        top: 50px;
         left: 10px;
         padding: 4px 10px;
         border-radius: 8px;

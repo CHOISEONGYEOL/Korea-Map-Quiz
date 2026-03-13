@@ -2484,7 +2484,10 @@ class KoreaMapQuiz {
                 setTimeout(() => this.renderGroupProvinceSelection(clickedGroup), 300);
             } else {
                 // 틀린 그룹 클릭 (정답이 다른 그룹이거나 독립 지역)
-                this.handleWrongAnswer(event.target, `틀렸습니다! ${correctHint}을 선택하세요.`);
+                const clickedHint = clickedGroup
+                    ? GROUP_SHORT_NAMES[clickedGroup]
+                    : (SHORT_NAMES[provinceName] || provinceName);
+                this.handleWrongAnswer(event.target, `틀렸습니다! (${clickedHint}) ${correctHint}을 선택하세요.`);
             }
         } else {
             // 그룹에 속하지 않은 독립 지역 (충북, 전북, 강원)
@@ -2504,7 +2507,8 @@ class KoreaMapQuiz {
                 }
             } else {
                 // 틀린 독립 지역
-                this.handleWrongAnswer(event.target, `틀렸습니다! ${correctHint}을 선택하세요.`);
+                const clickedName = SHORT_NAMES[provinceName] || provinceName;
+                this.handleWrongAnswer(event.target, `틀렸습니다! (${clickedName}) ${correctHint}을 선택하세요.`);
             }
         }
     }
@@ -2668,7 +2672,8 @@ class KoreaMapQuiz {
                 setTimeout(() => this.renderDistrictMap(provinceName), 300);
             }
         } else {
-            this.handleWrongAnswer(event.target, `틀렸습니다! ${SHORT_NAMES[correctProvince]}을(를) 선택하세요.`);
+            const clickedShortName = SHORT_NAMES[provinceName] || provinceName;
+            this.handleWrongAnswer(event.target, `틀렸습니다! (${clickedShortName}) ${SHORT_NAMES[correctProvince]}을(를) 선택하세요.`);
         }
     }
 
@@ -2712,7 +2717,8 @@ class KoreaMapQuiz {
                 setTimeout(() => this.renderDistrictMap(provinceName), 300);
             }
         } else {
-            this.handleWrongAnswer(event.target, `틀렸습니다! ${SHORT_NAMES[correctProvince]}가 정답입니다.`);
+            const clickedShortName = SHORT_NAMES[provinceName] || provinceName;
+            this.handleWrongAnswer(event.target, `틀렸습니다! (${clickedShortName}) ${SHORT_NAMES[correctProvince]}을(를) 선택하세요.`);
         }
     }
 
@@ -2803,7 +2809,8 @@ class KoreaMapQuiz {
                 setTimeout(() => this.renderDistrictMap(provinceName), 300);
             }
         } else {
-            this.handleWrongAnswer(event.target, `틀렸습니다! ${SHORT_NAMES[correctProvince]}가 정답입니다.`);
+            const clickedShortName = SHORT_NAMES[provinceName] || provinceName;
+            this.handleWrongAnswer(event.target, `틀렸습니다! (${clickedShortName}) ${SHORT_NAMES[correctProvince]}을(를) 선택하세요.`);
         }
     }
 
@@ -2909,8 +2916,9 @@ class KoreaMapQuiz {
             this.updateStepIndicator();
             setTimeout(() => this.renderDistrictMap(this.selectedProvince, region), 300);
         } else {
+            const clickedName = region === 'north' ? '북부' : '남부';
             const correctName = this.correctSubRegion === 'north' ? '북부' : '남부';
-            this.handleWrongAnswer(event.target, `틀렸습니다! ${correctName}가 정답입니다.`);
+            this.handleWrongAnswer(event.target, `틀렸습니다! (${clickedName}) ${correctName}을(를) 선택하세요.`);
         }
     }
 
@@ -3323,7 +3331,8 @@ class KoreaMapQuiz {
             if (isPracticeMode) {
                 // 연습 모드: 틀려도 계속 클릭 가능, 감점 없음
                 this.practiceAttempts = (this.practiceAttempts || 0) + 1;
-                this.feedbackEl.textContent = `틀렸습니다! 다시 찾아보세요.`;
+                const clickedDisplayName = DISPLAY_NAME_MAP[districtName] || districtName;
+                this.feedbackEl.textContent = `틀렸습니다! (${clickedDisplayName}) 다시 찾아보세요.`;
                 this.feedbackEl.className = 'feedback incorrect';
                 // state를 유지하여 계속 클릭 가능
             } else {
