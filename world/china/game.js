@@ -358,6 +358,10 @@ class ChinaQuiz {
         this.zoom = d3.zoom()
             .scaleExtent([0.5, 8])
             .translateExtent([[0, 0], [width, height]])
+            .filter((event) => {
+                if (event.pointerType === 'pen' && !event.ctrlKey) return false;
+                return (!event.ctrlKey || event.type === 'wheel') && !event.button;
+            })
             .on('zoom', (event) => {
                 if (this.mapGroup) {
                     this.mapGroup.attr('transform', event.transform);
