@@ -1304,7 +1304,8 @@ class KoreaMapQuiz {
                 insetY = height - insetSize - padding - 30;
             }
 
-            const insetGroup = this.mapGroup.append('g')
+            const parentGroup = this.insetLayer || this.mapGroup;
+            const insetGroup = parentGroup.append('g')
                 .attr('class', 'island-inset')
                 .attr('transform', `translate(${insetX}, ${insetY})`);
 
@@ -1554,6 +1555,12 @@ class KoreaMapQuiz {
         // 지도 그룹 생성 (줌 적용 대상)
         this.mapGroup = this.svg.append('g').attr('class', 'map-group');
 
+        // 뒤로가기 버튼 (시작 화면으로)
+        this.addBackButton(() => {
+            this.feedbackEl.textContent = '';
+            this.showScreen('start');
+        });
+
         // 모든 시도 포함 (제주도 포함)
         const allProvinces = this.provincesGeo.features;
 
@@ -1747,7 +1754,8 @@ class KoreaMapQuiz {
         this.addBackButton(() => {
             this.selectedGroup = null;
             this.feedbackEl.textContent = '';
-            this.renderExploreProvinceMap();
+            // 필터 지도는 startGame()에서 바로 호출되므로, 뒤로 가면 시작 화면으로
+            this.showScreen('start');
         });
 
         // 시군구를 시도별 색상으로 렌더링 (본토만)
@@ -1954,8 +1962,10 @@ class KoreaMapQuiz {
         this.addBackButton(() => {
             this.selectedProvince = null;
             this.feedbackEl.textContent = '';
-            // 그룹에 속한 지역이면 그룹 선택 화면으로, 아니면 전국 지도로
-            if (this.selectedGroup) {
+            // 필터 모드면 필터 지도로, 그룹이면 그룹 선택 화면으로, 아니면 전국 지도로
+            if (this.selectedGroup === '__multi_filter__' && this.isRegionFilterActive()) {
+                this.renderExploreFilteredRegionMap();
+            } else if (this.selectedGroup) {
                 this.renderExploreGroupProvinceSelection(this.selectedGroup);
             } else {
                 this.renderExploreProvinceMap();
@@ -2053,6 +2063,11 @@ class KoreaMapQuiz {
         this.addBackButton(() => {
             if (LARGE_PROVINCES.includes(provinceName) && subRegion) {
                 this.renderExploreSubRegion(provinceName);
+            } else if (this.selectedGroup === '__multi_filter__' && this.isRegionFilterActive()) {
+                // 필터 모드면 필터 지도로
+                this.selectedProvince = null;
+                this.feedbackEl.textContent = '';
+                this.renderExploreFilteredRegionMap();
             } else if (this.selectedGroup) {
                 // 그룹에 속한 지역이면 그룹 선택 화면으로
                 this.selectedProvince = null;
@@ -2915,8 +2930,12 @@ class KoreaMapQuiz {
         // 뒤로가기 버튼
         this.addBackButton(() => {
             this.selectedProvince = null;
-            // 그룹에 속한 지역이면 그룹 선택 화면으로, 아니면 전국 지도로
-            if (this.selectedGroup) {
+            // 필터 모드면 필터 지도로, 그룹이면 그룹 선택 화면으로, 아니면 전국 지도로
+            if (this.selectedGroup === '__multi_filter__' && this.isRegionFilterActive()) {
+                this.state = GameState.SELECT_PROVINCE;
+                this.updateStepIndicator();
+                this.renderFilteredRegionMap();
+            } else if (this.selectedGroup) {
                 this.state = GameState.SELECT_PROVINCE;
                 this.updateStepIndicator();
                 this.renderGroupProvinceSelection(this.selectedGroup);
@@ -3286,7 +3305,7 @@ class KoreaMapQuiz {
 
         const backBtn = document.createElement('button');
         backBtn.className = 'back-btn';
-        backBtn.textContent = '← 뒤로';
+        backBtn.textContent = '← 지도 범위 선택';
         backBtn.onclick = () => {
             backBtn.remove();
             onClick();
