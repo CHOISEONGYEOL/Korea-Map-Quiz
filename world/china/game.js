@@ -382,6 +382,8 @@ class ChinaQuiz {
                         .attr('font-size', `${baseLabelSize / k}px`);
                     this.mapGroup.selectAll('.district, .province')
                         .attr('stroke-width', `${0.5 / k}px`);
+                    this.mapGroup.selectAll('.leader-line')
+                        .attr('stroke-width', `${1 / k}px`);
                 }
             });
 

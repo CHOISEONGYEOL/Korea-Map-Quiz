@@ -670,6 +670,8 @@ class WorldMapQuiz {
                         .attr('font-size', `${baseLabelSize / k}px`);
                     this.mapGroup.selectAll('.district, .country, .subregion-path')
                         .attr('stroke-width', `${0.5 / k}px`);
+                    this.mapGroup.selectAll('.leader-line')
+                        .attr('stroke-width', `${1 / k}px`);
                 }
                 // 초소형 국가 연결선 좌표 업데이트
                 svg.selectAll('.micro-leader-line').each(function () {
