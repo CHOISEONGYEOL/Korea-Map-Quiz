@@ -107,6 +107,12 @@ class ChinaQuiz {
         });
         document.getElementById(screenId).classList.add('active');
 
+        // 게임 화면이 아닐 때 game-active 클래스 제거
+        if (screenId !== 'game-screen') {
+            document.body.classList.remove('game-active');
+            document.body.classList.remove('test-mode');
+        }
+
         // quiz, test 모드에서만 stats 표시
         const container = document.querySelector('.container');
         const stats = document.querySelector('.stats');
@@ -295,6 +301,8 @@ class ChinaQuiz {
     }
 
     startGame() {
+        document.body.classList.add('game-active');
+
         // 지도 데이터 로드 확인
         if (!this.topoData) {
             console.error('지도 데이터가 아직 로드되지 않았습니다');
@@ -365,6 +373,15 @@ class ChinaQuiz {
             .on('zoom', (event) => {
                 if (this.mapGroup) {
                     this.mapGroup.attr('transform', event.transform);
+
+                    // 줌 배율에 반비례하여 라벨 크기 보정
+                    const k = event.transform.k;
+                    const isMobile = width < 600;
+                    const baseLabelSize = isMobile ? 10 : 18;
+                    this.mapGroup.selectAll('.district-label')
+                        .attr('font-size', `${baseLabelSize / k}px`);
+                    this.mapGroup.selectAll('.district, .province')
+                        .attr('stroke-width', `${0.5 / k}px`);
                 }
             });
 
@@ -729,16 +746,18 @@ class ChinaQuiz {
 
     drawProvinceLabels(mapGroup, features) {
         // 스마트 리더 라인 시스템: 필요한 경우에만 자동 생성
-        const DIRECTIONS = [
-            { name: 'E',  dx: 70,  dy: 0 },
-            { name: 'W',  dx: -70, dy: 0 },
-            { name: 'SE', dx: 50,  dy: 50 },
-            { name: 'SW', dx: -50, dy: 50 },
-            { name: 'NE', dx: 50,  dy: -50 },
-            { name: 'NW', dx: -50, dy: -50 },
-            { name: 'S',  dx: 0,   dy: 70 },
-            { name: 'N',  dx: 0,   dy: -70 },
+        const DIRECTION_UNITS = [
+            { name: 'E',  ux: 1,    uy: 0 },
+            { name: 'W',  ux: -1,   uy: 0 },
+            { name: 'SE', ux: 0.71, uy: 0.71 },
+            { name: 'SW', ux: -0.71, uy: 0.71 },
+            { name: 'NE', ux: 0.71, uy: -0.71 },
+            { name: 'NW', ux: -0.71, uy: -0.71 },
+            { name: 'S',  ux: 0,    uy: 1 },
+            { name: 'N',  ux: 0,    uy: -1 },
         ];
+        const BASE_DISTANCE = 70;
+        const DISTANCE_STEPS = [1.0, 1.5, 2.0, 2.5];
 
         // 선호 방향 힌트 (겹침 방지 최적화)
         const preferredDirection = {
@@ -818,32 +837,39 @@ class ChinaQuiz {
             return false;
         };
 
-        // 최적 방향 찾기
+        // 최적 방향 찾기 (점진적 거리 확장)
         const findBestDirection = (centroid, preferredDir, labelWidth, labelHeight) => {
-            const sortedDirs = [...DIRECTIONS].sort((a, b) => {
+            const sortedDirs = [...DIRECTION_UNITS].sort((a, b) => {
                 if (a.name === preferredDir) return -1;
                 if (b.name === preferredDir) return 1;
                 return 0;
             });
 
-            for (const dir of sortedDirs) {
-                const labelX = centroid[0] + dir.dx;
-                const labelY = centroid[1] + dir.dy;
-                const labelRect = { x: labelX - labelWidth/2, y: labelY - labelHeight/2, width: labelWidth, height: labelHeight };
-                const newLine = { x1: centroid[0], y1: centroid[1], x2: labelX, y2: labelY };
+            for (const distMult of DISTANCE_STEPS) {
+                const dist = BASE_DISTANCE * distMult;
+                for (const dir of sortedDirs) {
+                    const dx = dir.ux * dist;
+                    const dy = dir.uy * dist;
+                    const labelX = centroid[0] + dx;
+                    const labelY = centroid[1] + dy;
+                    const labelRect = { x: labelX - labelWidth/2, y: labelY - labelHeight/2, width: labelWidth, height: labelHeight };
+                    const newLine = { x1: centroid[0], y1: centroid[1], x2: labelX, y2: labelY };
 
-                let hasConflict = false;
-                for (const placed of placedLabels) {
-                    if (labelsOverlap(labelRect, placed)) { hasConflict = true; break; }
-                }
-                if (!hasConflict) {
-                    for (const placed of placedLines) {
-                        if (linesIntersect(newLine, placed)) { hasConflict = true; break; }
+                    let hasConflict = false;
+                    for (const placed of placedLabels) {
+                        if (labelsOverlap(labelRect, placed)) { hasConflict = true; break; }
                     }
+                    if (!hasConflict) {
+                        for (const placed of placedLines) {
+                            if (linesIntersect(newLine, placed)) { hasConflict = true; break; }
+                        }
+                    }
+                    if (!hasConflict) return { dx, dy, name: dir.name };
                 }
-                if (!hasConflict) return dir;
             }
-            return sortedDirs[0];
+            // 폴백: 최대 거리에서 선호 방향 사용
+            const fallbackDist = BASE_DISTANCE * DISTANCE_STEPS[DISTANCE_STEPS.length - 1];
+            return { dx: sortedDirs[0].ux * fallbackDist, dy: sortedDirs[0].uy * fallbackDist, name: sortedDirs[0].name };
         };
 
         // 크기순 정렬 (큰 지역부터 처리)
