@@ -1197,19 +1197,22 @@ class KoreaMapQuiz {
         const districts = allDistricts.filter(f => !ISLAND_DISTRICTS.includes(f.properties.name));
         const islandDistricts = allDistricts.filter(f => ISLAND_DISTRICTS.includes(f.properties.name));
 
-        // 인천의 섬 지역이 있으면 왼쪽에 인셋 박스 공간 확보
+        // 인셋 박스 공간 확보
         const hasIncheonIslands = provinceName === '인천광역시' && islandDistricts.length > 0;
         const isMobileMap = width < 600;
-        const leftMargin = hasIncheonIslands ? (isMobileMap ? 90 : 170) : 20;
+        // 모바일: 인셋을 하단에 배치하므로 좌측 마진 불필요, 대신 하단 여백 확보
+        const leftMargin = hasIncheonIslands ? (isMobileMap ? 20 : 170) : 20;
 
-        // 모바일 + 경상북도(울릉도 있음): 지도 70%로 축소하여 울릉도 인셋 공간 확보
+        // 모바일 + 경상북도(울릉도 있음): 하단 배치
         const hasUlleungdo = provinceName === '경상북도' && islandDistricts.length > 0;
-        const rightMargin = (isMobileMap && hasUlleungdo) ? width * 0.2 : 20;
-        const topMargin = (isMobileMap && hasUlleungdo) ? height * 0.08 : 20;
+        const rightMargin = (isMobileMap && hasUlleungdo) ? 20 : 20;
+        const topMargin = 20;
+        const hasAnyIslands = hasIncheonIslands || hasUlleungdo;
+        const bottomMargin = (isMobileMap && hasAnyIslands) ? 100 : 20;
 
         // 투영 설정
         const featureCollection = { type: 'FeatureCollection', features: districts };
-        this.projection = d3.geoMercator().fitExtent([[leftMargin, topMargin], [width - rightMargin, height - 20]], featureCollection);
+        this.projection = d3.geoMercator().fitExtent([[leftMargin, topMargin], [width - rightMargin, height - bottomMargin]], featureCollection);
         this.path = d3.geoPath().projection(this.projection);
 
         this.svg = d3.select(this.mapSvg)
@@ -1266,6 +1269,12 @@ class KoreaMapQuiz {
         const padding = isMobile ? 10 : 20;
         const gap = isMobile ? 8 : 15;
 
+        // 모바일: 하단 가로 배치 계산
+        const totalBottomWidth = islandDistricts.length * insetSize + (islandDistricts.length - 1) * gap;
+        const bottomStartX = (width - totalBottomWidth) / 2;
+        let bottomIndex = 0;
+
+        // 데스크톱: 좌측 세로 배치 계산
         const centerLeftIslands = islandDistricts.filter(island => {
             const cfg = ISLAND_INSET_CONFIG[island.properties.name];
             return cfg && (cfg.position === 'center-left-top' || cfg.position === 'center-left-bottom');
@@ -1282,19 +1291,18 @@ class KoreaMapQuiz {
             const isAnswer = islandName === answerName;
 
             let insetX, insetY;
-            if (config.position === 'center-left-top' || config.position === 'center-left-bottom') {
+            if (isMobile) {
+                // 모바일: 하단에 가로로 나란히 배치
+                insetX = bottomStartX + (bottomIndex * (insetSize + gap));
+                insetY = height - insetSize - padding;
+                bottomIndex++;
+            } else if (config.position === 'center-left-top' || config.position === 'center-left-bottom') {
                 insetX = padding;
                 insetY = centerStartY + (centerLeftIndex * (insetSize + gap));
                 centerLeftIndex++;
             } else if (config.position === 'top-right') {
-                if (isMobile) {
-                    // 모바일: 울진 옆 (오른쪽 중간)
-                    insetX = width - insetSize - padding;
-                    insetY = height * 0.25;
-                } else {
-                    insetX = width - insetSize - padding - 160;
-                    insetY = padding;
-                }
+                insetX = width - insetSize - padding - 160;
+                insetY = padding;
             } else {
                 insetX = padding + (index * (insetSize + padding));
                 insetY = height - insetSize - padding - 30;
@@ -1620,9 +1628,11 @@ class KoreaMapQuiz {
         // 본토 기준으로 projection 설정
         const hasIslands = islandDistricts.length > 0;
         const isMobile = width < 600;
-        const leftMargin = hasIslands ? (isMobile ? 90 : 170) : 20;
+        // 모바일: 인셋을 하단에 배치하므로 좌측 마진 불필요, 대신 하단 여백 확보
+        const leftMargin = hasIslands ? (isMobile ? 20 : 170) : 20;
+        const bottomMargin = (hasIslands && isMobile) ? 100 : 20;
         const mainlandCollection = { type: 'FeatureCollection', features: mainlandDistricts };
-        this.projection = d3.geoMercator().fitExtent([[leftMargin, 20], [width - 20, height - 20]], mainlandCollection);
+        this.projection = d3.geoMercator().fitExtent([[leftMargin, 20], [width - 20, height - bottomMargin]], mainlandCollection);
         this.path = d3.geoPath().projection(this.projection);
 
         this.svg = d3.select(this.mapSvg)
@@ -1716,9 +1726,11 @@ class KoreaMapQuiz {
 
         // 본토 기준으로 projection 설정 (섬 제외)
         const isMobile = width < 600;
-        const rightReserve = isMobile ? 100 : 220;
+        // 모바일: 인셋을 하단에 배치하므로 우측 여백 불필요, 대신 하단 여백 확보
+        const rightReserve = isMobile ? 20 : 220;
+        const bottomMargin = isMobile ? 100 : 20;
         const mainlandCollection = { type: 'FeatureCollection', features: mainlandDistricts };
-        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - rightReserve, height - 20]], mainlandCollection);
+        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - rightReserve, height - bottomMargin]], mainlandCollection);
         this.path = d3.geoPath().projection(this.projection);
 
         this.svg = d3.select(this.mapSvg)
@@ -1797,17 +1809,25 @@ class KoreaMapQuiz {
         const padding = isMobile ? 10 : 20;
         const gap = isMobile ? 8 : 15;
 
-        // 중앙 정렬 계산
+        // 모바일: 하단 가로 배치, 데스크톱: 좌측 세로 배치
         const totalHeight = islandDistricts.length * insetSize + (islandDistricts.length - 1) * gap;
         const startY = (height - totalHeight) / 2;
+        const totalWidth = islandDistricts.length * insetSize + (islandDistricts.length - 1) * gap;
+        const startX = (width - totalWidth) / 2;
 
         islandDistricts.forEach((island, index) => {
             const islandName = island.properties.name;
             const provinceName = CODE_TO_PROVINCE[island.properties.code.substring(0, 2)];
             const color = getProvinceColors()[provinceName] || '#666';
 
-            const insetX = padding;
-            const insetY = startY + (index * (insetSize + gap));
+            let insetX, insetY;
+            if (isMobile) {
+                insetX = startX + (index * (insetSize + gap));
+                insetY = height - insetSize - padding;
+            } else {
+                insetX = padding;
+                insetY = startY + (index * (insetSize + gap));
+            }
 
             const insetGroup = this.mapGroup.append('g')
                 .attr('class', 'island-inset')
@@ -2011,13 +2031,15 @@ class KoreaMapQuiz {
             }
         }
 
-        // 인천의 섬 지역이 있으면 왼쪽에 인셋 박스 공간 확보
+        // 인천의 섬 지역이 있으면 인셋 박스 공간 확보
         const hasIncheonIslands = provinceName === '인천광역시' && islandDistricts.length > 0;
         const isMobile = width < 600;
-        const leftMargin = hasIncheonIslands ? (isMobile ? 90 : 170) : 20;
+        // 모바일: 인셋을 하단에 배치하므로 좌측 마진 불필요, 대신 하단 여백 확보
+        const leftMargin = hasIncheonIslands ? (isMobile ? 20 : 170) : 20;
+        const bottomMargin = (hasIncheonIslands && isMobile) ? 100 : 20;
 
         const featureCollection = { type: 'FeatureCollection', features: districts };
-        this.projection = d3.geoMercator().fitExtent([[leftMargin, 20], [width - 20, height - 20]], featureCollection);
+        this.projection = d3.geoMercator().fitExtent([[leftMargin, 20], [width - 20, height - bottomMargin]], featureCollection);
         this.path = d3.geoPath().projection(this.projection);
 
         this.svg = d3.select(this.mapSvg)
@@ -2136,7 +2158,12 @@ class KoreaMapQuiz {
         const padding = isMobile ? 10 : 20;
         const gap = isMobile ? 8 : 15;
 
-        // 인천 섬 지역(center-left) 개수로 전체 높이 계산하여 중앙 정렬
+        // 모바일: 하단 가로 배치 계산
+        const totalBottomWidth = islandDistricts.length * insetSize + (islandDistricts.length - 1) * gap;
+        const bottomStartX = (width - totalBottomWidth) / 2;
+        let bottomIndex = 0;
+
+        // 데스크톱: 좌측 세로 배치 계산
         const centerLeftIslands = islandDistricts.filter(island => {
             const cfg = ISLAND_INSET_CONFIG[island.properties.name];
             return cfg && (cfg.position === 'center-left-top' || cfg.position === 'center-left-bottom');
@@ -2151,18 +2178,21 @@ class KoreaMapQuiz {
             if (!config) return;
 
             let insetX, insetY;
-            if (config.position === 'top-left') {
+            if (isMobile) {
+                // 모바일: 하단에 가로로 나란히 배치
+                insetX = bottomStartX + (bottomIndex * (insetSize + gap));
+                insetY = height - insetSize - padding;
+                bottomIndex++;
+            } else if (config.position === 'top-left') {
                 insetX = padding;
                 insetY = padding;
             } else if (config.position === 'bottom-left') {
                 insetX = padding;
                 insetY = height - insetSize - padding - 30;
             } else if (config.position === 'top-right') {
-                const rightOffset = isMobile ? 20 : 160;
-                insetX = width - insetSize - padding - rightOffset;
+                insetX = width - insetSize - padding - 160;
                 insetY = padding;
             } else if (config.position === 'center-left-top' || config.position === 'center-left-bottom') {
-                // 왼쪽 중앙에 세로로 나란히 배치 (화면 중앙 정렬)
                 insetX = padding;
                 insetY = centerStartY + (centerLeftIndex * (insetSize + gap));
                 centerLeftIndex++;
@@ -2977,14 +3007,16 @@ class KoreaMapQuiz {
             }
         }
 
-        // 인천의 섬 지역이 있으면 왼쪽에 인셋 박스 공간 확보
+        // 인천의 섬 지역이 있으면 인셋 박스 공간 확보
         const hasIncheonIslands = provinceName === '인천광역시' && islandDistricts.length > 0;
         const isMobile = width < 600;
-        const leftMargin = hasIncheonIslands ? (isMobile ? 90 : 170) : 20;
+        // 모바일: 인셋을 하단에 배치하므로 좌측 마진 불필요, 대신 하단 여백 확보
+        const leftMargin = hasIncheonIslands ? (isMobile ? 20 : 170) : 20;
+        const bottomMargin = (hasIncheonIslands && isMobile) ? 100 : 20;
 
         // 투영 설정 (본토 기준)
         const featureCollection = { type: 'FeatureCollection', features: districts };
-        this.projection = d3.geoMercator().fitExtent([[leftMargin, 20], [width - 20, height - 20]], featureCollection);
+        this.projection = d3.geoMercator().fitExtent([[leftMargin, 20], [width - 20, height - bottomMargin]], featureCollection);
         this.path = d3.geoPath().projection(this.projection);
 
         this.svg = d3.select(this.mapSvg)
@@ -3117,7 +3149,12 @@ class KoreaMapQuiz {
         const padding = isMobile ? 10 : 20;
         const gap = isMobile ? 8 : 15;
 
-        // 인천 섬 지역(center-left) 개수로 전체 높이 계산하여 중앙 정렬
+        // 모바일: 하단 가로 배치 계산
+        const totalBottomWidth = islandDistricts.length * insetSize + (islandDistricts.length - 1) * gap;
+        const bottomStartX = (width - totalBottomWidth) / 2;
+        let bottomIndex = 0;
+
+        // 데스크톱: 좌측 세로 배치 계산
         const centerLeftIslands = islandDistricts.filter(island => {
             const cfg = ISLAND_INSET_CONFIG[island.properties.name];
             return cfg && (cfg.position === 'center-left-top' || cfg.position === 'center-left-bottom');
@@ -3133,18 +3170,21 @@ class KoreaMapQuiz {
 
             // 인셋 위치 결정
             let insetX, insetY;
-            if (config.position === 'top-left') {
+            if (isMobile) {
+                // 모바일: 하단에 가로로 나란히 배치
+                insetX = bottomStartX + (bottomIndex * (insetSize + gap));
+                insetY = height - insetSize - padding;
+                bottomIndex++;
+            } else if (config.position === 'top-left') {
                 insetX = padding;
                 insetY = padding;
             } else if (config.position === 'bottom-left') {
                 insetX = padding;
                 insetY = height - insetSize - padding - 30;
             } else if (config.position === 'top-right') {
-                const rightOffset = isMobile ? 20 : 160;
-                insetX = width - insetSize - padding - rightOffset;
+                insetX = width - insetSize - padding - 160;
                 insetY = padding;
             } else if (config.position === 'center-left-top' || config.position === 'center-left-bottom') {
-                // 왼쪽 중앙에 세로로 나란히 배치 (화면 중앙 정렬)
                 insetX = padding;
                 insetY = centerStartY + (centerLeftIndex * (insetSize + gap));
                 centerLeftIndex++;
