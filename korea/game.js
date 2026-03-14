@@ -1619,7 +1619,8 @@ class KoreaMapQuiz {
 
         // 본토 기준으로 projection 설정
         const hasIslands = islandDistricts.length > 0;
-        const leftMargin = hasIslands ? 170 : 20;
+        const isMobile = width < 600;
+        const leftMargin = hasIslands ? (isMobile ? 90 : 170) : 20;
         const mainlandCollection = { type: 'FeatureCollection', features: mainlandDistricts };
         this.projection = d3.geoMercator().fitExtent([[leftMargin, 20], [width - 20, height - 20]], mainlandCollection);
         this.path = d3.geoPath().projection(this.projection);
@@ -1714,8 +1715,10 @@ class KoreaMapQuiz {
         const islandDistricts = allDistricts.filter(f => ISLAND_DISTRICTS.includes(f.properties.name));
 
         // 본토 기준으로 projection 설정 (섬 제외)
+        const isMobile = width < 600;
+        const rightReserve = isMobile ? 100 : 220;
         const mainlandCollection = { type: 'FeatureCollection', features: mainlandDistricts };
-        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - 220, height - 20]], mainlandCollection);
+        this.projection = d3.geoMercator().fitExtent([[20, 20], [width - rightReserve, height - 20]], mainlandCollection);
         this.path = d3.geoPath().projection(this.projection);
 
         this.svg = d3.select(this.mapSvg)
@@ -1789,9 +1792,10 @@ class KoreaMapQuiz {
 
     // 권역 지도용 섬 인셋 박스 렌더링
     renderFilteredRegionIslandInsets(islandDistricts, width, height) {
-        const insetSize = 140;
-        const padding = 20;
-        const gap = 15;
+        const isMobile = width < 600;
+        const insetSize = isMobile ? 70 : 140;
+        const padding = isMobile ? 10 : 20;
+        const gap = isMobile ? 8 : 15;
 
         // 중앙 정렬 계산
         const totalHeight = islandDistricts.length * insetSize + (islandDistricts.length - 1) * gap;
@@ -1815,11 +1819,12 @@ class KoreaMapQuiz {
                 .attr('fill', 'rgba(0, 0, 0, 0.3)')
                 .attr('stroke', '#fff')
                 .attr('stroke-width', 1)
-                .attr('rx', 5);
+                .attr('rx', isMobile ? 3 : 5);
 
             const islandCollection = { type: 'FeatureCollection', features: [island] };
+            const fitPadding = isMobile ? 8 : 20;
             const islandProjection = d3.geoMercator()
-                .fitSize([insetSize - 30, insetSize - 40], islandCollection);
+                .fitSize([insetSize - fitPadding, insetSize - fitPadding - 5], islandCollection);
             const islandPath = d3.geoPath().projection(islandProjection);
 
             const self = this;
@@ -1827,7 +1832,7 @@ class KoreaMapQuiz {
                 .datum(island)
                 .attr('class', 'district')
                 .attr('d', islandPath)
-                .attr('transform', 'translate(15, 10)')
+                .attr('transform', isMobile ? 'translate(4, 3)' : 'translate(15, 10)')
                 .attr('fill', color)
                 .attr('stroke', '#fff')
                 .attr('stroke-width', 0.5)
@@ -2008,7 +2013,8 @@ class KoreaMapQuiz {
 
         // 인천의 섬 지역이 있으면 왼쪽에 인셋 박스 공간 확보
         const hasIncheonIslands = provinceName === '인천광역시' && islandDistricts.length > 0;
-        const leftMargin = hasIncheonIslands ? 170 : 20; // 인셋 박스 140px + 여백
+        const isMobile = width < 600;
+        const leftMargin = hasIncheonIslands ? (isMobile ? 90 : 170) : 20;
 
         const featureCollection = { type: 'FeatureCollection', features: districts };
         this.projection = d3.geoMercator().fitExtent([[leftMargin, 20], [width - 20, height - 20]], featureCollection);
@@ -2125,9 +2131,10 @@ class KoreaMapQuiz {
 
     // Explore 모드용 섬 지역 인셋 박스 렌더링
     renderExploreIslandInsets(islandDistricts, cityColorMap, width, height, provinceName) {
-        const insetSize = 140; // 인셋 박스 크기
-        const padding = 20;
-        const gap = 15; // 인셋 박스 간 간격
+        const isMobile = width < 600;
+        const insetSize = isMobile ? 70 : 140;
+        const padding = isMobile ? 10 : 20;
+        const gap = isMobile ? 8 : 15;
 
         // 인천 섬 지역(center-left) 개수로 전체 높이 계산하여 중앙 정렬
         const centerLeftIslands = islandDistricts.filter(island => {
@@ -2151,7 +2158,6 @@ class KoreaMapQuiz {
                 insetX = padding;
                 insetY = height - insetSize - padding - 30;
             } else if (config.position === 'top-right') {
-                const isMobile = width < 600;
                 const rightOffset = isMobile ? 20 : 160;
                 insetX = width - insetSize - padding - rightOffset;
                 insetY = padding;
@@ -2175,11 +2181,12 @@ class KoreaMapQuiz {
                 .attr('fill', 'rgba(0, 0, 0, 0.3)')
                 .attr('stroke', '#fff')
                 .attr('stroke-width', 1)
-                .attr('rx', 5);
+                .attr('rx', isMobile ? 3 : 5);
 
             const islandCollection = { type: 'FeatureCollection', features: [island] };
+            const fitPadding = isMobile ? 8 : 20;
             const islandProjection = d3.geoMercator()
-                .fitSize([insetSize - 20, insetSize - 30], islandCollection);
+                .fitSize([insetSize - fitPadding, insetSize - fitPadding - 5], islandCollection);
             const islandPath = d3.geoPath().projection(islandProjection);
 
             const color = cityColorMap.get(islandName) || '#666';
@@ -2188,7 +2195,7 @@ class KoreaMapQuiz {
                 .datum(island)
                 .attr('class', 'district')
                 .attr('d', islandPath)
-                .attr('transform', 'translate(10, 5)')
+                .attr('transform', isMobile ? 'translate(4, 3)' : 'translate(10, 5)')
                 .attr('fill', color)
                 .attr('stroke', '#fff')
                 .attr('stroke-width', 0.5)
@@ -2972,7 +2979,8 @@ class KoreaMapQuiz {
 
         // 인천의 섬 지역이 있으면 왼쪽에 인셋 박스 공간 확보
         const hasIncheonIslands = provinceName === '인천광역시' && islandDistricts.length > 0;
-        const leftMargin = hasIncheonIslands ? 170 : 20;
+        const isMobile = width < 600;
+        const leftMargin = hasIncheonIslands ? (isMobile ? 90 : 170) : 20;
 
         // 투영 설정 (본토 기준)
         const featureCollection = { type: 'FeatureCollection', features: districts };
@@ -3104,9 +3112,10 @@ class KoreaMapQuiz {
 
     // 섬 지역 인셋 박스 렌더링
     renderIslandInsets(islandDistricts, cityColorMap, width, height) {
-        const insetSize = 140; // 인셋 박스 크기
-        const padding = 20;
-        const gap = 15; // 인셋 박스 간 간격
+        const isMobile = width < 600;
+        const insetSize = isMobile ? 70 : 140;
+        const padding = isMobile ? 10 : 20;
+        const gap = isMobile ? 8 : 15;
 
         // 인천 섬 지역(center-left) 개수로 전체 높이 계산하여 중앙 정렬
         const centerLeftIslands = islandDistricts.filter(island => {
@@ -3131,7 +3140,6 @@ class KoreaMapQuiz {
                 insetX = padding;
                 insetY = height - insetSize - padding - 30;
             } else if (config.position === 'top-right') {
-                const isMobile = width < 600;
                 const rightOffset = isMobile ? 20 : 160;
                 insetX = width - insetSize - padding - rightOffset;
                 insetY = padding;
@@ -3157,12 +3165,13 @@ class KoreaMapQuiz {
                 .attr('fill', 'rgba(0, 0, 0, 0.3)')
                 .attr('stroke', '#fff')
                 .attr('stroke-width', 1)
-                .attr('rx', 5);
+                .attr('rx', isMobile ? 3 : 5);
 
             // 섬 지역용 투영 설정
             const islandCollection = { type: 'FeatureCollection', features: [island] };
+            const fitPadding = isMobile ? 8 : 20;
             const islandProjection = d3.geoMercator()
-                .fitSize([insetSize - 20, insetSize - 30], islandCollection);
+                .fitSize([insetSize - fitPadding, insetSize - fitPadding - 5], islandCollection);
             const islandPath = d3.geoPath().projection(islandProjection);
 
             // 섬 지역 그리기
@@ -3171,7 +3180,7 @@ class KoreaMapQuiz {
                 .datum(island)
                 .attr('class', 'district')
                 .attr('d', islandPath)
-                .attr('transform', 'translate(10, 5)')
+                .attr('transform', isMobile ? 'translate(4, 3)' : 'translate(10, 5)')
                 .attr('fill', color)
                 .attr('stroke', '#fff')
                 .attr('stroke-width', 0.5)
