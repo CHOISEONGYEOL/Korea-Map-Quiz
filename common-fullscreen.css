@@ -185,6 +185,8 @@ body.game-active .game-back-btns {
     z-index: 100;
     display: flex;
     gap: 10px;
+    pointer-events: auto;
+    touch-action: manipulation;
 }
 
 /* 맞춘 문제 카운터 (좌측 상단) */
@@ -247,6 +249,8 @@ body.game-active .game-back-btn {
     color: var(--text-secondary);
     text-decoration: none;
     font-size: 0.9rem;
+    pointer-events: auto;
+    touch-action: manipulation;
 }
 
 [data-theme="dark"] body.game-active .game-back-btn {

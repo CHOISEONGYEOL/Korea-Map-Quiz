@@ -393,6 +393,9 @@ body.main-landing header h1 {
 #result-screen {
     text-align: center;
     padding: 24px;
+    padding-bottom: env(safe-area-inset-bottom, 24px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
     justify-content: center;
     align-items: center;
 }
@@ -415,7 +418,9 @@ body.main-landing header h1 {
 /* 시작 화면 - 토스 스타일 */
 #start-screen {
     padding: 12px 24px;
+    padding-bottom: env(safe-area-inset-bottom, 12px);
     overflow: auto;
+    -webkit-overflow-scrolling: touch;
     justify-content: center;
     align-items: center;
 }
@@ -1357,6 +1362,8 @@ body.main-landing header h1 {
     transition: all 0.2s ease;
     background: var(--card-bg);
     font-weight: 500;
+    touch-action: manipulation;
+    pointer-events: auto;
 }
 
 .btn-secondary:hover {
@@ -1397,6 +1404,8 @@ body.main-landing header h1 {
     max-width: 360px;
     margin-left: auto;
     margin-right: auto;
+    position: relative;
+    z-index: 10;
 }
 
 .btn-row .btn-secondary {
@@ -1417,6 +1426,8 @@ body.main-landing header h1 {
     max-width: 300px;
     margin-left: auto;
     margin-right: auto;
+    position: relative;
+    z-index: 10;
 }
 
 .game-back-btns .btn-secondary {

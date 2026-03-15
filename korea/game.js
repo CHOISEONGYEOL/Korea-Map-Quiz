@@ -142,7 +142,7 @@ const ISLAND_DISTRICTS = ['강화군', '옹진군', '울릉군'];
 const ISLAND_INSET_CONFIG = {
     '강화군': { province: '인천광역시', position: 'center-left-top' },
     '옹진군': { province: '인천광역시', position: 'center-left-bottom' },
-    '울릉군': { province: '경상북도', position: 'top-right' }
+    '울릉군': { province: '경상북도', position: 'top-left' }
 };
 
 // 클릭 편의를 위한 지역 그룹 (첫 클릭 시 묶어서 표시)
@@ -1202,14 +1202,15 @@ class KoreaMapQuiz {
         const isMobileMap = width < 600;
         const leftMargin = hasIncheonIslands ? (isMobileMap ? 90 : 170) : 20;
 
-        // 모바일 + 경상북도(울릉도 있음): 지도 70%로 축소하여 울릉도 인셋 공간 확보
+        // 경상북도(울릉도 있음): 왼쪽에 울릉도 인셋 공간 확보
         const hasUlleungdo = provinceName === '경상북도' && islandDistricts.length > 0;
-        const rightMargin = (isMobileMap && hasUlleungdo) ? width * 0.2 : 20;
-        const topMargin = (isMobileMap && hasUlleungdo) ? height * 0.08 : 20;
+        if (hasUlleungdo && !hasIncheonIslands) {
+            leftMargin = isMobileMap ? 80 : 160;
+        }
 
         // 투영 설정
         const featureCollection = { type: 'FeatureCollection', features: districts };
-        this.projection = d3.geoMercator().fitExtent([[leftMargin, topMargin], [width - rightMargin, height - 20]], featureCollection);
+        this.projection = d3.geoMercator().fitExtent([[leftMargin, 20], [width - 20, height - 20]], featureCollection);
         this.path = d3.geoPath().projection(this.projection);
 
         this.svg = d3.select(this.mapSvg)
@@ -1256,26 +1257,26 @@ class KoreaMapQuiz {
         });
 
         if (shouldShowInsets.length > 0) {
-            this.renderTestIslandInsets(shouldShowInsets, answerName, width, height, leftMargin, rightMargin);
+            this.renderTestIslandInsets(shouldShowInsets, answerName, width, height, leftMargin);
         }
     }
 
-    renderTestIslandInsets(islandDistricts, answerName, width, height, leftMargin, rightMargin) {
+    renderTestIslandInsets(islandDistricts, answerName, width, height, leftMargin) {
         const isMobile = width < 600;
         const padding = isMobile ? 10 : 15;
-        // 왼쪽 인셋: leftMargin 안에 맞추기 (겹침 방지)
+        // 모든 인셋은 왼쪽에 배치
         const leftInsetSize = Math.max(leftMargin - padding * 2, isMobile ? 40 : 60);
-        // 오른쪽 인셋(울릉군): rightMargin 기반 또는 기본 크기
-        const rightInsetSize = rightMargin > padding * 3 ? rightMargin - padding * 2 : (isMobile ? 70 : 140);
         const gap = isMobile ? 8 : 15;
 
-        const centerLeftIslands = islandDistricts.filter(island => {
+        // 모든 왼쪽 인셋 개수로 전체 높이 계산하여 중앙 정렬
+        const allLeftIslands = islandDistricts.filter(island => {
             const cfg = ISLAND_INSET_CONFIG[island.properties.name];
-            return cfg && (cfg.position === 'center-left-top' || cfg.position === 'center-left-bottom');
+            return cfg && (cfg.position === 'center-left-top' || cfg.position === 'center-left-bottom'
+                || cfg.position === 'top-left' || cfg.position === 'bottom-left');
         });
-        const totalCenterHeight = centerLeftIslands.length * leftInsetSize + (centerLeftIslands.length - 1) * gap;
+        const totalCenterHeight = allLeftIslands.length * leftInsetSize + (allLeftIslands.length - 1) * gap;
         const centerStartY = (height - totalCenterHeight) / 2;
-        let centerLeftIndex = 0;
+        let leftIndex = 0;
 
         islandDistricts.forEach((island, index) => {
             const islandName = island.properties.name;
@@ -1283,22 +1284,20 @@ class KoreaMapQuiz {
             if (!config) return;
 
             const isAnswer = islandName === answerName;
-            const isLeftInset = config.position === 'center-left-top' || config.position === 'center-left-bottom';
-            const insetSize = isLeftInset ? leftInsetSize : rightInsetSize;
+            const insetSize = leftInsetSize;
 
             let insetX, insetY;
-            if (isLeftInset) {
+            if (config.position === 'top-left') {
                 insetX = padding;
-                insetY = centerStartY + (centerLeftIndex * (insetSize + gap));
-                centerLeftIndex++;
-            } else if (config.position === 'top-right') {
-                if (isMobile) {
-                    insetX = width - insetSize - padding;
-                    insetY = height * 0.25;
-                } else {
-                    insetX = width - insetSize - padding - 160;
-                    insetY = padding;
-                }
+                insetY = centerStartY + (leftIndex * (insetSize + gap));
+                leftIndex++;
+            } else if (config.position === 'center-left-top' || config.position === 'center-left-bottom') {
+                insetX = padding;
+                insetY = centerStartY + (leftIndex * (insetSize + gap));
+                leftIndex++;
+            } else if (config.position === 'bottom-left') {
+                insetX = padding;
+                insetY = height - insetSize - padding - 30;
             } else {
                 insetX = padding + (index * (insetSize + padding));
                 insetY = height - insetSize - padding - 30;
@@ -1730,15 +1729,21 @@ class KoreaMapQuiz {
 
         // 본토 기준으로 projection 설정 (섬 제외)
         const isMobile = width < 600;
-        // 인천 섬 지역(강화군/옹진군)이 있으면 왼쪽에 인셋 공간 확보
+        // 섬 인셋 공간 확보 (모두 왼쪽에 배치)
         const hasIncheonIslands = islandDistricts.some(f =>
             f.properties.name === '강화군' || f.properties.name === '옹진군'
         );
-        const leftMargin = hasIncheonIslands ? (isMobile ? 90 : 170) : 20;
         const hasUlleungdo = islandDistricts.some(f => f.properties.name === '울릉군');
-        const rightReserve = hasUlleungdo ? (isMobile ? 100 : 220) : 20;
+        let leftMargin = 20;
+        if (hasIncheonIslands && hasUlleungdo) {
+            leftMargin = isMobile ? 90 : 170;
+        } else if (hasIncheonIslands) {
+            leftMargin = isMobile ? 90 : 170;
+        } else if (hasUlleungdo) {
+            leftMargin = isMobile ? 80 : 160;
+        }
         const mainlandCollection = { type: 'FeatureCollection', features: mainlandDistricts };
-        this.projection = d3.geoMercator().fitExtent([[leftMargin, 20], [width - rightReserve, height - 20]], mainlandCollection);
+        this.projection = d3.geoMercator().fitExtent([[leftMargin, 20], [width - 20, height - 20]], mainlandCollection);
         this.path = d3.geoPath().projection(this.projection);
 
         this.svg = d3.select(this.mapSvg)
@@ -2041,10 +2046,16 @@ class KoreaMapQuiz {
             }
         }
 
-        // 인천의 섬 지역이 있으면 왼쪽에 인셋 박스 공간 확보
+        // 섬 지역이 있으면 왼쪽에 인셋 박스 공간 확보
         const hasIncheonIslands = provinceName === '인천광역시' && islandDistricts.length > 0;
+        const hasUlleungdo = provinceName === '경상북도' && islandDistricts.length > 0;
         const isMobile = width < 600;
-        const leftMargin = hasIncheonIslands ? (isMobile ? 90 : 170) : 20;
+        let leftMargin = 20;
+        if (hasIncheonIslands) {
+            leftMargin = isMobile ? 90 : 170;
+        } else if (hasUlleungdo) {
+            leftMargin = isMobile ? 80 : 160;
+        }
 
         const featureCollection = { type: 'FeatureCollection', features: districts };
         this.projection = d3.geoMercator().fitExtent([[leftMargin, 20], [width - 20, height - 20]], featureCollection);
@@ -2173,7 +2184,7 @@ class KoreaMapQuiz {
         const padding = isMobile ? 10 : 15;
         // 왼쪽 인셋: leftMargin 안에 맞추기 (겹침 방지)
         const leftInsetSize = Math.max(leftMargin - padding * 2, isMobile ? 40 : 60);
-        // 오른쪽 인셋(울릉군): 지도 위 오버레이로 표시
+        // 울릉군 인셋: 왼쪽 상단에 배치
         const rightInsetSize = isMobile ? 70 : 140;
         const gap = isMobile ? 8 : 15;
 
@@ -3030,10 +3041,16 @@ class KoreaMapQuiz {
             }
         }
 
-        // 인천의 섬 지역이 있으면 왼쪽에 인셋 박스 공간 확보
+        // 섬 지역이 있으면 왼쪽에 인셋 박스 공간 확보
         const hasIncheonIslands = provinceName === '인천광역시' && islandDistricts.length > 0;
+        const hasUlleungdo = provinceName === '경상북도' && islandDistricts.length > 0;
         const isMobile = width < 600;
-        const leftMargin = hasIncheonIslands ? (isMobile ? 90 : 170) : 20;
+        let leftMargin = 20;
+        if (hasIncheonIslands) {
+            leftMargin = isMobile ? 90 : 170;
+        } else if (hasUlleungdo) {
+            leftMargin = isMobile ? 80 : 160;
+        }
 
         // 투영 설정 (본토 기준)
         const featureCollection = { type: 'FeatureCollection', features: districts };
@@ -3172,7 +3189,7 @@ class KoreaMapQuiz {
         const padding = isMobile ? 10 : 15;
         // 왼쪽 인셋: leftMargin 안에 맞추기 (겹침 방지)
         const leftInsetSize = Math.max(leftMargin - padding * 2, isMobile ? 40 : 60);
-        // 오른쪽 인셋(울릉군): 지도 위 오버레이로 표시
+        // 울릉군 인셋: 왼쪽 상단에 배치
         const rightInsetSize = isMobile ? 70 : 140;
         const gap = isMobile ? 8 : 15;
 
@@ -3327,18 +3344,20 @@ class KoreaMapQuiz {
                 if (this.mapGroup) {
                     this.mapGroup.attr('transform', event.transform);
 
-                    // 줌 배율에 반비례하여 라벨 크기 보정 (글씨가 비정상적으로 커지는 것 방지)
+                    // 줌 배율에 따라 라벨 크기 보정
+                    // k^1.2 사용: 줌인 시 라벨이 점진적으로 작아짐 (화면 가득 채우지 않음)
                     const k = event.transform.k;
                     const isMobile = width < 600;
+                    const labelScale = Math.pow(k, 1.2);
 
                     this.mapGroup.selectAll('.region-label:not(.province-label):not(.subregion-label)')
-                        .attr('font-size', `${(isMobile ? 14 : 24) / k}px`);
+                        .attr('font-size', `${(isMobile ? 14 : 24) / labelScale}px`);
                     this.mapGroup.selectAll('.region-label.province-label')
-                        .attr('font-size', `${(isMobile ? 12 : 18) / k}px`);
+                        .attr('font-size', `${(isMobile ? 12 : 18) / labelScale}px`);
                     this.mapGroup.selectAll('.region-label.subregion-label')
-                        .attr('font-size', `${(isMobile ? 10 : 14) / k}px`);
+                        .attr('font-size', `${(isMobile ? 10 : 14) / labelScale}px`);
                     this.mapGroup.selectAll('.district-label')
-                        .attr('font-size', `${(isMobile ? 10 : 18) / k}px`);
+                        .attr('font-size', `${(isMobile ? 10 : 18) / labelScale}px`);
 
                     // stroke-width도 보정 (줌인 시 테두리가 두꺼워지는 것 방지)
                     this.mapGroup.selectAll('.district, .province')
